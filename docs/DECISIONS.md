@@ -78,6 +78,8 @@ Validation on Node 26.4.0/npm 11.17.0: `npm run typecheck` passed both kernel an
 
 The current limits remain small dense linear circuits, restricted one-storage-element algebraic extraction, noncertified conditioning/rank diagnostics, and first-order fixed-step backward Euler. Phase 1A adds no wiring editor, nonlinear devices, broad symbolic algebra, internal stability theorem, reduction/synthesis UI, or deployment. The next milestone requires its own bounded specification.
 
+Local preview follow-up: a user encountered an occupied default port after a successful build. The preview now tries port 4173 first and, only when `PORT` is unset and that port is occupied, binds an available loopback port and prints its actual URL. An explicit `PORT` remains exact and reports conflicts clearly. This changes only the development server; static assets and kernel behavior are unchanged. Verified with occupied 4173: `npm run dev` served `/circuits/` on the printed fallback port with HTTP 200; `PORT=4173 npm run preview` exited with a clear conflict message. `npm test` passed 39/39, `npm run typecheck` passed, and `git diff --check` passed.
+
 ## Maintenance format
 
 For each later substantive decision, record date, context, choice, consequence, and validation. For a completed milestone, record the tested source revision when available and the actual test/build commands. Keep short entries; preserve mathematical rationale in the relevant specification or implementation note.

@@ -20,7 +20,7 @@ Use Node.js 22 or newer and npm. After `npm ci`, run:
 npm run dev
 ```
 
-Open `http://127.0.0.1:4173/circuits/`. `npm run dev` builds the kernel and app once, then serves the static files. After edits to source files, restart it to rebuild. If port 4173 is occupied, use `PORT=4188 npm run dev` and open the corresponding URL. To build for static hosting, run `npm run build:app`; the self-contained assets are in `dist/`, with relative paths that work when served under `/circuits/`. `npm run preview` serves the current build. This milestone has not been deployed.
+Open the `Circuits Unfolded:` URL printed by the server, normally `http://127.0.0.1:4173/circuits/`. If port 4173 is occupied, the server selects a free local port and prints that URL instead. Set `PORT=4188 npm run dev` when you need an exact port; an occupied explicit port reports an error. `npm run dev` builds the kernel and app once, then serves the static files. After edits to source files, restart it to rebuild. To build for static hosting, run `npm run build:app`; the self-contained assets are in `dist/`, with relative paths that work when served under `/circuits/`. `npm run preview` serves the current build. This milestone has not been deployed.
 
 Start with **RC low-pass**, select **R**, and change 1000 Ω to 2000 Ω. The AC result at the inspect frequency changes from `0.5−0.5j` to `0.2−0.4j`, and the transfer and transient plots recompute. Select R again to see its terminal law and highlighted `K` matrix contributions. Source DC, RMS AC phasors, time waveform, and initial storage state have separate controls. Exported JSON is the strict kernel document, without drawing metadata.
 
