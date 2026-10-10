@@ -1,0 +1,18 @@
+# Installed dependencies and generated application output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Private author-supplied book/reference materials
+/.local-reference/
+
+# Local credentials and environment configuration
+.env
+.env.*
+!.env.example
+
+# Local logs and temporary artifacts
+*.log
+/tmp/
+.DS_Store
