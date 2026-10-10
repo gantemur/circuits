@@ -9,9 +9,12 @@
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "scripts": {
     "build": "tsc && esbuild src/index.ts --bundle --platform=browser --format=esm --outfile=dist/browser.js",
-    "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test test/*.test.mjs",
-    "demo": "npm run build && node examples/demo.mjs"
+    "build:app": "npm run build && node scripts/build-app.mjs",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.web.json",
+    "test": "npm run build:app && node --test test/*.test.mjs",
+    "demo": "npm run build && node examples/demo.mjs",
+    "preview": "node scripts/serve.mjs",
+    "dev": "npm run build:app && npm run preview"
   },
   "devDependencies": { "typescript": "5.9.3", "esbuild": "0.25.12" }
 }

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12262b">
+  <title>Circuits Unfolded · Linear Lab</title>
+  <meta name="description" content="A transparent browser laboratory for small linear electrical circuits.">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#results">Skip to results</a>
+  <header class="topbar">
+    <div class="brand"><span class="brandmark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M4 20h8l4-8 6 16 4-8h6"/></svg></span><span>Circuits <em>Unfolded</em></span></div>
+    <span class="phase">PHASE 1A <span class="phase-dot" aria-hidden="true"></span> LINEAR LAB</span>
+  </header>
+  <div class="page">
+    <section class="intro" aria-labelledby="page-title">
+      <div class="eyebrow">WORK WITH THE CIRCUIT, NOT A BLACK BOX</div>
+      <h1 id="page-title">Trace the answer <span>back to the circuit.</span></h1>
+      <p>Change a value, inspect the response, and see the element laws that built the equations.</p>
+    </section>
+    <div id="global-status" role="status" aria-live="polite"></div>
+    <div class="lab-grid">
+      <aside class="sidebar" aria-label="Circuit controls">
+        <section class="panel" aria-labelledby="examples-title"><div class="panel-head"><div><span class="kicker">01 / START</span><h2 id="examples-title">Examples</h2></div><button id="reset-example" type="button" class="button quiet">Reset example</button></div><div id="example-list"></div></section>
+        <section class="panel" aria-labelledby="component-title"><div class="panel-head"><div><span class="kicker">02 / ADJUST</span><h2 id="component-title">Components</h2></div></div><div id="component-list"></div><div id="component-editor"></div></section>
+        <section class="panel" aria-labelledby="source-title"><div class="panel-head"><div><span class="kicker">03 / EXCITE</span><h2 id="source-title">Source &amp; start</h2></div></div><div id="source-editor"></div></section>
+        <section class="panel" aria-labelledby="files-title"><div class="panel-head"><div><span class="kicker">04 / KEEP</span><h2 id="files-title">Native files</h2></div></div><p class="muted small">Version 1 JSON keeps the circuit and experiment together.</p><div class="file-actions"><label class="button outline" for="import-file">Import JSON</label><input id="import-file" type="file" accept="application/json,.json" class="visually-hidden"><button id="export-json" type="button" class="button outline">Export JSON</button></div><p id="import-error" class="field-error" role="alert"></p></section>
+      </aside>
+      <main class="main">
+        <section class="panel schematic-panel" aria-labelledby="schematic-title"><div class="panel-head"><div><span class="kicker">CIRCUIT VIEW</span><h2 id="schematic-title">Selected network</h2></div><span id="schematic-badge" class="badge"></span></div><div id="schematic"></div><p id="schematic-note" class="muted small"></p></section>
+        <section class="panel controls-panel" aria-labelledby="analysis-title"><div class="panel-head"><div><span class="kicker">DEFINE THE EXPERIMENT</span><h2 id="analysis-title">Analysis settings</h2></div><span class="badge">SI units</span></div><div id="analysis-controls"></div></section>
+        <div id="results">
+          <section class="panel result-panel" aria-labelledby="dc-title"><div class="panel-head"><div><span class="kicker">STEADY STATE</span><h2 id="dc-title">DC solution</h2></div><span class="badge">Kx = Bu</span></div><div id="dc-results"></div></section>
+          <section class="panel result-panel" aria-labelledby="frequency-title"><div class="panel-head"><div><span class="kicker">ZERO-STATE / UNIT INPUT</span><h2 id="frequency-title">Transfer response</h2></div><button id="export-frequency" class="button quiet" type="button">↓ CSV</button></div><div id="frequency-results"></div></section>
+          <section class="panel result-panel" aria-labelledby="time-title"><div class="panel-head"><div><span class="kicker">TIME DOMAIN</span><h2 id="time-title">Transient response</h2></div><button id="export-transient" class="button quiet" type="button">↓ CSV</button></div><div id="transient-results"></div></section>
+          <section class="panel result-panel" aria-labelledby="equations-title"><div class="panel-head"><div><span class="kicker">INSIDE THE KERNEL</span><h2 id="equations-title">Equations &amp; provenance</h2></div><span class="badge">E·ẋ + K·x = B·u</span></div><div id="equations-results"></div></section>
+        </div>
+      </main>
+    </div>
+    <footer><span>Circuits Unfolded · Linear models, visible assumptions.</span><span>All values use SI units · Frequency in Hz · Phase in degrees</span></footer>
+  </div>
+</body>
+</html>

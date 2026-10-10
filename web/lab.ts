@@ -1,0 +1,136 @@
+import { assemble, complex, currentRow, extractFirstOrder, inputValues, outputValue,
+  parseDocument, serializeDocument, solveDC, solveFrequency, transfer, transient,
+  type AnalysisResult, type Assembly, type Complex, type FirstOrderTransfer,
+  type NativeDocument, type NotSupported, type TransientResult, type Unit } from '../src/index.js';
+import { copyDocument, matchingPreset, presets } from './presets.js';
+
+export interface Settings { minHz: number; maxHz: number; points: number; inspectHz: number; duration: number; step: number }
+export interface LabState {
+  document: NativeDocument; presetId: string | null; input: string; output: string;
+  selectedComponent: string | null; settings: Settings; revision: number;
+}
+export interface SweepPoint {
+  frequencyHz: number; status: string; value: Complex | null; magnitude: number | null;
+  magnitudeDb: number | null; phaseDegrees: number | null; message: string;
+}
+export interface LabAnalysis {
+  revision: number; assembly: Assembly; dc: AnalysisResult; ac: AnalysisResult;
+  sweep: SweepPoint[]; transferUnit: `${Unit}/${Unit}`;
+  algebraic: FirstOrderTransfer | NotSupported;
+  transient: TransientResult;
+  settings: Settings;
+}
+export interface EditResult { ok: boolean; error?: string }
+const defaults = (preset: string): Settings => ({ minHz: 1, maxHz: preset === 'rlc' ? 1e5 : 1e4,
+  points: 81, inspectHz: preset === 'rc' ? 1/(2*Math.PI*.001) : 1000,
+  duration: preset === 'rlc' ? .003 : .005, step: preset === 'rlc' ? 1e-5 : 5e-5 });
+
+export function createLab(presetId = 'rc'): LabState {
+  const p = presets.find(p => p.id === presetId);
+  if (!p) throw new RangeError(`Unknown example ${presetId}`);
+  return { document: copyDocument(p.document), presetId, input: p.document.experiment.sources[0]?.id ?? '',
+    output: p.defaultOutput, selectedComponent: null, settings: defaults(presetId), revision: 0 };
+}
+export function resetExample(state: LabState): LabState {
+  return createLab(state.presetId ?? 'rc');
+}
+export function updateDocument(state: LabState, mutate: (d: NativeDocument) => void): EditResult {
+  try {
+    const next = copyDocument(state.document); mutate(next);
+    parseDocument(JSON.stringify(next));
+    state.document = next; state.revision++;
+    return { ok: true };
+  } catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) }; }
+}
+export function importNative(state: LabState, json: string): EditResult {
+  try {
+    const next = parseDocument(json);
+    const p = matchingPreset(next.circuit);
+    state.document = next; state.presetId = p?.id ?? null;
+    state.input = next.experiment.sources[0]?.id ?? '';
+    state.output = next.circuit.observations.find(o => o.type === 'voltage')?.id ?? next.circuit.observations[0]?.id ?? '';
+    state.selectedComponent = null; state.revision++;
+    return { ok: true };
+  } catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) }; }
+}
+export const exportNative = (state: LabState): string => serializeDocument(state.document);
+
+export function parseFinite(text: string, name: string, positive = false): number {
+  if (!text.trim()) throw new RangeError(`${name} is required`);
+  const value = Number(text);
+  if (!Number.isFinite(value) || (positive && value <= 0))
+    throw new RangeError(`${name} must be ${positive ? 'a positive' : 'a'} finite number`);
+  return value;
+}
+export function validateSettings(s: Settings, sourceEvents = 0): string[] {
+  const errors: string[] = [];
+  if (!Number.isFinite(s.minHz) || s.minHz < .001 || s.minHz > 1e9) errors.push('Minimum frequency must be from 0.001 to 1e9 Hz');
+  if (!Number.isFinite(s.maxHz) || s.maxHz <= s.minHz || s.maxHz > 1e9) errors.push('Maximum frequency must exceed minimum and be at most 1e9 Hz');
+  if (!Number.isInteger(s.points) || s.points < 2 || s.points > 241) errors.push('Sweep points must be an integer from 2 to 241');
+  if (!Number.isFinite(s.inspectHz) || s.inspectHz < s.minHz || s.inspectHz > s.maxHz) errors.push('AC inspect frequency must lie within the sweep');
+  if (!Number.isFinite(s.duration) || s.duration <= 0 || s.duration > 10) errors.push('Duration must be in (0, 10] s');
+  if (!Number.isFinite(s.step) || s.step <= 0 || s.duration/s.step + sourceEvents > 3000)
+    errors.push('Step must be positive and the run must use at most 3000 intervals, including source events');
+  return errors;
+}
+export function dimensionless(unit: `${Unit}/${Unit}`): boolean { return unit === 'V/V' || unit === 'A/A'; }
+export function analyze(state: LabState): LabAnalysis {
+  const events = state.document.experiment.sources.filter(s => s.waveform?.type === 'step' && s.waveform.at >= 0 && s.waveform.at <= state.settings.duration).length;
+  const errors = validateSettings(state.settings, events);
+  if (errors.length) throw new RangeError(errors.join('; '));
+  const assembly = assemble(state.document.circuit);
+  if (!assembly.inputs.some(i => i.id === state.input) || !assembly.outputs.some(o => o.id === state.output))
+    throw new RangeError('Choose an independent source and a named output');
+  const unit = `${assembly.outputs.find(o => o.id === state.output)!.unit}/${assembly.inputs.find(i => i.id === state.input)!.unit}` as `${Unit}/${Unit}`;
+  const dc = solveDC(assembly, state.document.experiment);
+  const ac = solveFrequency(assembly, state.document.experiment, complex(0, 2*Math.PI*state.settings.inspectHz));
+  const sweep: SweepPoint[] = [];
+  const { minHz, maxHz, points } = state.settings;
+  for (let i = 0; i < points; i++) {
+    const frequencyHz = minHz * (maxHz/minHz)**(i/(points-1));
+    const result = transfer(assembly, state.input, state.output, complex(0, 2*Math.PI*frequencyHz));
+    if (result.status !== 'ok') {
+      sweep.push({ frequencyHz, status: result.status, value: null, magnitude: null, magnitudeDb: null,
+        phaseDegrees: null, message: result.message });
+    } else {
+      const { value, magnitude } = result.transfer;
+      sweep.push({ frequencyHz, status: magnitude === 0 ? 'zero-magnitude' : 'ok', value, magnitude,
+        magnitudeDb: magnitude > 0 && dimensionless(unit) ? 20*Math.log10(magnitude) : null,
+        phaseDegrees: magnitude > 0 ? result.transfer.phaseRadians * 180 / Math.PI : null,
+        message: magnitude === 0 ? 'Magnitude is zero; phase is undefined' : '' });
+    }
+  }
+  const algebraic = extractFirstOrder(assembly, state.input, state.output);
+  const time = transient(assembly, state.document.experiment, { stop: state.settings.duration, step: state.settings.step, maxSteps: 3000 });
+  return { revision: state.revision, assembly, dc, ac, sweep, transferUnit: unit, algebraic, transient: time, settings: { ...state.settings } };
+}
+
+/** DC currents reconstructed by the kernel's own branch laws, including unobserved branches. */
+export function dcBranchCurrents(analysis: LabAnalysis, state: LabState): { id: string; value: number; unit: 'A' }[] {
+  if (analysis.dc.status !== 'ok') return [];
+  const u = inputValues(analysis.assembly, state.document.experiment, 'dc');
+  const caps = new Map(state.document.circuit.components.filter(c => c.type === 'C').map(c => [c.id, complex(0)]));
+  return state.document.circuit.components.map(c => ({ id: c.id,
+    value: outputValue(currentRow(analysis.assembly, c), analysis.dc.status === 'ok' ? analysis.dc.x : [], u, caps).re, unit: 'A' }));
+}
+function csvCell(value: string | number | null): string {
+  const str = value === null ? '' : String(value);
+  return `"${str.replaceAll('"', '""')}"`;
+}
+const csvRow = (values: (string | number | null)[]) => values.map(csvCell).join(',');
+export function csvFor(analysis: LabAnalysis, state: LabState, kind: 'frequency' | 'transient'): string {
+  if (analysis.revision !== state.revision) throw new RangeError('Results are stale; rerun analyses');
+  if (kind === 'frequency') {
+    const unit = analysis.transferUnit, magUnit = dimensionless(unit) ? 'dB' : unit;
+    return [csvRow(['frequency_Hz', `magnitude_${magUnit}`, 'phase_deg', 'real', 'imaginary', 'ratio_unit', 'status', 'message']),
+      ...analysis.sweep.map(p => csvRow([p.frequencyHz, dimensionless(unit) ? p.magnitudeDb : p.magnitude,
+        p.phaseDegrees, p.value?.re ?? null, p.value?.im ?? null, unit, p.status, p.message]))].join('\n') + '\n';
+  }
+  const measureUnit = analysis.assembly.outputs.find(o => o.id === state.output)!.unit;
+  const samples = analysis.transient.samples;
+  const rows = [csvRow(['time_s', `value_${measureUnit}`, 'side', 'method', 'status', 'message']),
+    ...samples.map(s => csvRow([s.time, s.observations[state.output]?.value.re ?? null, s.side, s.currentConvention, 'ok', '']))];
+  if (analysis.transient.status !== 'ok')
+    rows.push(csvRow([analysis.transient.time, null, '', 'backward-Euler', analysis.transient.status, analysis.transient.message]));
+  return rows.join('\n') + '\n';
+}

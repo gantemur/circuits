@@ -16,7 +16,8 @@ Initial entry: 10 October 2026.
 | D08 | Book and research references remain outside public source | Use private reference files and public self-contained fixtures |
 | D09 | Public lab planning includes classical device/theorem/synthesis goals | Separate research programs do not expand implementation scope |
 | D10 | Original starter documentation and code use MIT | Companion book and third-party materials retain separate rights |
-| D11 | Phase 0 is the active milestone | Follow `MVP_SPECIFICATION.md` before adding later capabilities |
+| D11 | Phase 0 was the first implementation milestone | Preserve its `MVP_SPECIFICATION.md` acceptance contract and passing kernel tests |
+| D20 | Phase 1A is the active milestone | Follow `PHASE_1_SPECIFICATION.md` for the bounded browser laboratory; keep browser code outside the kernel |
 
 Repository visibility is an owner-controlled setting. The documents are prepared for public release; they do not imply that visibility has been changed. If the repository already has a different license, reconcile it before committing this bundle rather than overwriting it automatically.
 
@@ -26,8 +27,8 @@ Repository visibility is an owner-controlled setting. The documents are prepared
 - Phase 0 implementation: complete, including R/C/L, V/I and all four controlled sources, labeled/provenance-bearing MNA, DC and complex-frequency solves, numerical transfer, restricted scalar dynamic elimination, backward Euler transients, native JSON, and resistor Kron reduction.
 - Phase 0 acceptance tests: **31 tests passing**, covering MVP sections A–H plus validation, numerical diagnostics, waveform units, explicit unsupported cases, and Kron overflow regressions.
 - Reproducible headless demo and browser bundle: implemented and verified.
-- Browser UI and deployment: not implemented.
-- Next bounded milestone: Phase 1 browser linear lab; requires its own acceptance contract before implementation. Phase 0 remains the repository's bounded scope until then.
+- Browser UI: Phase 1A implemented on `codex/phase-1-browser-lab`; deployment has not been performed.
+- Active milestone: Phase 1A browser linear lab, specified in `PHASE_1_SPECIFICATION.md`. Its implementation and validation status follows below.
 
 Implementation is on task branch `codex/phase-0-kernel`, based on documentation commit `460771c`. Validation below applies to the Phase 0 checkpoint containing this entry, committed with the subject `feat: implement Phase 0 linear circuit kernel`. The checkpoint preserves `main` and does not merge or deploy the implementation. No private book was available or needed; public conventions and fixture equations supplied the acceptance contract.
 
@@ -66,6 +67,16 @@ Remaining limits include dense small-system numerics, noncertified conditioning/
 Follow-up to checkpoint `65bda78`: require nonempty string edge IDs and check numeric range at conductance calculation, full Laplacian assembly, and Schur-complement output. Preserve the existing function signatures: invalid inputs and unrepresentable assembly throw `RangeError`; nonfinite reduction results return the existing `ill-conditioned` failure shape. Successful reductions contain only finite matrices. No tolerances were loosened and no clipping or regularization was introduced.
 
 Five regression tests cover invalid ID types, reciprocal overflow, retained-block accumulation overflow with an invertible internal block, Schur overflow from a finite full matrix while eliminating two internal nodes, and finite large-conductance success cases. The first four tests failed against the checkpoint and pass with the fix. `npm run typecheck`, `npm test` (all 31 tests, including `npm run build`), and `git diff --check` passed. The original checkpoint's validation record above remains historical; these checks cover the follow-up fix.
+
+## Phase 1A browser laboratory — 10 October 2026
+
+Phase 1A is implemented on `codex/phase-1-browser-lab` from Phase 0 fix `02671bf`. Six validated fixture documents provide editable RC, loaded RC, connected RC cascade, RL, RLC, and loaded VCVS examples. Browser-only code in `web/` calls the unchanged headless kernel for assembly and every numerical result. Preset topology metadata and SVG geometry stay outside the strict native document; imports with unfamiliar topology show an honest node/component table. `scripts/build-app.mjs` emits relative static assets suitable for `/circuits/`. The local Node server is a preview aid, not a runtime dependency of the built app.
+
+The UI separates source DC, configured RMS AC, time waveform, unit-input transfer, measured output, and initial storage values. It shows signed DC branch currents, numerical frequency and transient plots, restricted algebraic transfer when available, matrix labels and kernel-recorded component contributions, physical residuals, and CSV/JSON exports. Invalid edits retain the last validated document and hide the prior result. Sweep work is limited to 241 points and transients to 3000 intervals; solver failures and undefined phase remain explicit statuses and plot gaps.
+
+Validation on Node 26.4.0/npm 11.17.0: `npm run typecheck` passed both kernel and browser TypeScript checks; `npm test` passed all **39** tests and built both bundles; `npm run build` and `npm run build:app` passed. Browser exercise at `http://127.0.0.1:4188/circuits/` confirmed all six examples, RC resistor edit changing AC output from `0.5−0.5j` to `0.2−0.4j`, component provenance, invalid resistor feedback with old results hidden, and no horizontal overflow at a 390 px viewport. The browser console had no errors. Port 4173 was occupied by another local service, so the preview used `PORT=4188 npm run preview`. Final diff and commit checks are recorded in the delivery handoff.
+
+The current limits remain small dense linear circuits, restricted one-storage-element algebraic extraction, noncertified conditioning/rank diagnostics, and first-order fixed-step backward Euler. Phase 1A adds no wiring editor, nonlinear devices, broad symbolic algebra, internal stability theorem, reduction/synthesis UI, or deployment. The next milestone requires its own bounded specification.
 
 ## Maintenance format
 
