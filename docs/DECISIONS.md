@@ -27,7 +27,7 @@ Repository visibility is an owner-controlled setting. The documents are prepared
 - Phase 0 implementation: complete, including R/C/L, V/I and all four controlled sources, labeled/provenance-bearing MNA, DC and complex-frequency solves, numerical transfer, restricted scalar dynamic elimination, backward Euler transients, native JSON, and resistor Kron reduction.
 - Phase 0 acceptance tests: **31 tests passing**, covering MVP sections A–H plus validation, numerical diagnostics, waveform units, explicit unsupported cases, and Kron overflow regressions.
 - Reproducible headless demo and browser bundle: implemented and verified.
-- Browser UI: Phase 1A and release preparation are integrated into `main`; GitHub Pages is not yet enabled, so the public site is not live.
+- Browser UI: Phase 1A and release preparation are integrated into `main`; the original six-example site is live on GitHub Pages. The divider, high-pass, and JSON editor are on a separate task branch.
 - Active milestone: Phase 1A browser linear lab, specified in `PHASE_1_SPECIFICATION.md`. Its implementation and validation status follows below.
 
 Implementation is on task branch `codex/phase-0-kernel`, based on documentation commit `460771c`. Validation below applies to the Phase 0 checkpoint containing this entry, committed with the subject `feat: implement Phase 0 linear circuit kernel`. The checkpoint preserves `main` and does not merge or deploy the implementation. No private book was available or needed; public conventions and fixture equations supplied the acceptance contract.
@@ -99,3 +99,15 @@ Validation runs on pushes and pull requests with Node 24 and the committed lockf
 ## Maintenance format
 
 For each later substantive decision, record date, context, choice, consequence, and validation. For a completed milestone, record the tested source revision when available and the actual test/build commands. Keep short entries; preserve mathematical rationale in the relevant specification or implementation note.
+
+## Elementary examples, native JSON editor, and publication verification — 10 October 2026
+
+The divider fixture is now the first/default browser preset. Its rectangular-resistor drawing shows Vin, R1, R2, ground, and output. The UI explains the unloaded divider identity but uses kernel DC and transfer solves for displayed values. The example has no storage element, time constant, or dynamic pole; its time samples are described as algebraic. Reset returns the selected fixture to its original parameters, and reset after a nonpreset custom topology returns to the default divider. The RC low-pass inspect-frequency default remains at its cutoff after reset.
+
+The RC high-pass fixture uses C from in to out and R from out to ground, with capacitor voltage oriented `V(in)-V(out)`. Independent checks give `H(s)=sRC/(1+sRC)`, zero DC output, `(1+j)/2` at `omega=1/RC`, a one-volt output jump at the source step with continuous zero capacitor voltage, and subsequent backward Euler output `(1+h/RC)^(-n)`. The current restricted scalar extractor honestly returns `not-supported` for its off-diagonal storage stamp; numerical frequency and time results remain available.
+
+The sidebar now displays the strict native JSON document in an accessible multiline editor. Explicit Apply uses the same parser as file import; invalid text stays in the editor, gives a translated error, and preserves the last valid circuit and analysis. Restore copies the current validated document back into the editor. A valid custom document updates controls and calculations, and a nonpreset topology uses the actual node/component table. Drafts and translated errors survive language switching. Preset drawing metadata is not added to the native schema. Graphical wiring remains future work.
+
+The earlier release blocker was resolved outside this branch. The [main-branch Pages run](https://github.com/gantemur/circuits/actions/runs/38090056684) for `3490e69` completed successfully; the public `/circuits/` page, JavaScript, and CSS returned HTTP 200, and the live browser lab loaded, switched languages, and recomputed its RC response after changing R. This task branch is not merged or deployed.
+
+Validation for this follow-up: `npm test` passed 47/47, `npm run typecheck`, `npm run build:site` (including the kernel and application builds), and `git diff --check` passed. The packaged site contains only `index.html`, `style.css`, and `app.js`. In the actual local browser, both new examples and custom JSON entry were exercised in English and Mongolian at 390 px with no page overflow. Valid custom JSON changed the component list, probe choices, AC result, and topology table; invalid JSON retained the previous circuit and result while the translated draft error and text survived a language switch. Node integration tests cover the independent divider/high-pass physics and parser behavior; the actual editor interaction was checked in the browser.

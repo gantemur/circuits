@@ -10,6 +10,8 @@ await build({ entryPoints: ['web/lab.ts'], bundle: true, platform: 'neutral', fo
   target: 'es2022', outfile: 'dist/lab-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/i18n.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/i18n-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/schematic.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/schematic-test.js', logLevel: 'silent' });
 await Promise.all([
   copyFile('web/index.html', 'dist/index.html'),
   copyFile('web/style.css', 'dist/style.css'),

@@ -17,6 +17,8 @@ interface Issue { kind: 'input' | 'setting' | 'document'; code: string; params: 
 let validationIssue: (Issue & { id: string }) | null = null;
 let importIssue: (Issue & { kind: 'document' }) | null = null;
 let importReadFailed = false;
+let jsonDirty = false;
+let jsonIssue: (Issue & { kind: 'document' }) | null = null;
 let notice: Issue | null = null;
 const byId = (id: string): HTMLElement => {
   const value = document.getElementById(id);
@@ -56,12 +58,23 @@ function renderImportIssue(): void {
   byId('import-error').innerHTML = importIssue
     ? `${escapeHtml(t(importReadFailed?'importFailed':'importRejected',{reason:issueText(importIssue)}))}${technical(importIssue.raw)}` : '';
 }
+function jsonEditor(): HTMLTextAreaElement { return byId('json-editor') as HTMLTextAreaElement; }
+function renderJsonIssue(): void {
+  const editor=jsonEditor();
+  editor.setAttribute('aria-invalid',String(!!jsonIssue));
+  byId('json-error').innerHTML=jsonIssue
+    ? `${escapeHtml(t('jsonRejected',{reason:issueText(jsonIssue)}))}${technical(jsonIssue.raw)}` : '';
+}
+function syncJsonEditor(force=false): void {
+  if(force || !jsonDirty) { jsonEditor().value=exportNative(state); jsonDirty=false; }
+  renderJsonIssue();
+}
 function switchLanguage(next: Language): void {
   const drafts = Array.from(document.querySelectorAll<HTMLInputElement|HTMLSelectElement>('[data-kind]'))
     .map(element => ({ id: element.id, value: element.value, invalid: element.getAttribute('aria-invalid') }));
   const focused = (document.activeElement as HTMLElement | null)?.id;
   setLanguage(next); persistLanguage(next, storage);
-  renderStatic(); renderAll(); renderImportIssue();
+  renderStatic(); renderAll(); renderImportIssue(); renderJsonIssue();
   for (const draft of drafts) {
     const element = document.getElementById(draft.id) as HTMLInputElement | HTMLSelectElement | null;
     if (!element) continue;
@@ -88,7 +101,7 @@ function selectField(label:string,kind:string,id:string,options:{value:string;la
 }
 function renderExamples():void {
   byId('example-list').innerHTML=`<div class="example-list">${presets.map(p=>`<button type="button" class="example-item${state.presetId===p.id?' active':''}" data-example="${p.id}" aria-current="${state.presetId===p.id?'true':'false'}"><span><span class="name">${translate(p.titleKey)}</span><span class="detail">${translate(p.subtitleKey)}</span></span><span class="arrow" aria-hidden="true">↗</span></button>`).join('')}</div>`;
-  byId('reset-example').textContent=state.presetId?t('resetExample'):t('loadRc');
+  byId('reset-example').textContent=state.presetId?t('resetExample'):t('loadDivider');
 }
 function renderComponents():void {
   const c=state.document.circuit.components;
@@ -116,13 +129,14 @@ function renderSources():void {
   byId('source-editor').innerHTML=`${blocks||`<p class="muted small">${t('noSource')}</p>`}<div class="subheading">${t('initialization')}</div>${selectField(t('policy'),'initial.kind','policy',[{value:'equilibrium',label:t('equilibriumBefore')},{value:'storage',label:t('specifiedStorage')}],initial.kind)}${initialFields}<p class="muted small">${t('storageHint')}</p>`;
 }
 function renderControls():void {
+  const stateless=!state.document.circuit.components.some(c=>c.type==='C'||c.type==='L');
   const outputs=state.document.circuit.observations.map(o=>({value:o.id,label:`${o.id} · ${o.type==='voltage'?`V(${o.p})−V(${o.n})`:`I(${o.component})`}`}));
   const inputs=state.document.experiment.sources.map(s=>({value:s.id,label:t('inputOption',{id:s.id,unit:sourceUnit(s.id)})}));
   const s=state.settings;
   byId('analysis-controls').innerHTML=`<div class="controls-group"><h3>${t('unitInputTransfer')}</h3><div class="controls-grid">${selectField(t('independentInput'),'selected.input','input',inputs,state.input)}${selectField(t('measuredOutput'),'selected.output','output',outputs,state.output)}${field(t('acInspectFrequency'),'setting','inspectHz',s.inspectHz,'Hz',true)}</div></div>
   <div class="controls-group"><h3>${t('logarithmicSweep')}</h3><div class="controls-grid">${field(t('minimum'),'setting','minHz',s.minHz,'Hz',true)}${field(t('maximum'),'setting','maxHz',s.maxHz,'Hz',true)}${field(t('samples'),'setting','points',s.points,'2–241',true)}</div></div>
-  <div class="controls-group"><h3>${t('backwardEulerTransient')}</h3><div class="controls-grid">${field(t('duration'),'setting','duration',s.duration,'s',true)}${field(t('timeStep'),'setting','step',s.step,'s',true)}</div></div>
-  <div class="controls-summary"><span class="summary-tag">${t('sweepLimit')}</span><span class="summary-tag">${t('transientLimit')}</span><span class="summary-tag">${t('fixedStep')}</span></div>`;
+  <div class="controls-group"><h3>${t(stateless?'statelessSamples':'backwardEulerTransient')}</h3><div class="controls-grid">${field(t('duration'),'setting','duration',s.duration,'s',true)}${field(t(stateless?'sampleSpacing':'timeStep'),'setting','step',s.step,'s',true)}</div></div>
+  <div class="controls-summary"><span class="summary-tag">${t('sweepLimit')}</span><span class="summary-tag">${t(stateless?'algebraicLimit':'transientLimit')}</span><span class="summary-tag">${t(stateless?'sampleSpacing':'fixedStep')}</span></div>`;
 }
 function renderSchematic():void {
   const view=schematic(state);
@@ -150,7 +164,9 @@ function renderFrequency(a:LabAnalysis):void {
   const zero=a.sweep.filter(p=>p.status==='zero-magnitude');
   const ac=a.ac, acInputs=state.document.experiment.sources.map(s=>`${s.id}=${fmt(s.ac?.re??0)}${(s.ac?.im??0)<0?'':'+'}${fmt(s.ac?.im??0)}j ${sourceUnit(s.id)} RMS`).join('; ');
   const acText=ac.status==='ok'?`${fmt(ac.observations[state.output]!.value.re)}${ac.observations[state.output]!.value.im<0?'':'+'}${fmt(ac.observations[state.output]!.value.im)}j ${ac.observations[state.output]!.unit} RMS`:statusSummary(ac.status);
-  const algebraic=a.algebraic.status==='ok'?`<div class="soft-note"><strong>${t('algebraicTitle')}</strong> · ${escapeHtml(t('algebraicFormula',{n0:fmt(a.algebraic.numerator[0]),n1:fmt(a.algebraic.numerator[1]),d0:fmt(a.algebraic.denominator[0]),d1:fmt(a.algebraic.denominator[1]),unit:a.transferUnit,root:fmt(a.algebraic.denominatorRoot)}))} <span class="muted">${t('algebraicRootNote')}</span></div>`:
+  const algebraic=state.presetId==='divider' && state.input==='Vin' && state.output==='out'
+    ? `<div class="soft-note">${escapeHtml(t('dividerFormula'))}</div>`
+    : a.algebraic.status==='ok'?`<div class="soft-note"><strong>${t('algebraicTitle')}</strong> · ${escapeHtml(t('algebraicFormula',{n0:fmt(a.algebraic.numerator[0]),n1:fmt(a.algebraic.numerator[1]),d0:fmt(a.algebraic.denominator[0]),d1:fmt(a.algebraic.denominator[1]),unit:a.transferUnit,root:fmt(a.algebraic.denominatorRoot)}))} <span class="muted">${t('algebraicRootNote')}</span></div>`:
     `<div class="soft-note">${escapeHtml(t('algebraicUnavailable',{reason:algebraicSummary(a.algebraic.reason)}))}${technical(a.algebraic.message)}</div>`;
   byId('frequency-results').innerHTML=`<p class="analysis-note">${escapeHtml(t('transferIntro',{input:state.input,output:state.output,unit:a.transferUnit}))} ${dim?t('gainDbNote'):t('gainPhysicalNote')}</p>
     <div class="plot-grid">${plot(mag,{title:t('magnitude'),xLabel:t('frequencyAxis'),yLabel:magLabel,xLog:true})}${plot(phase,{title:t('phase'),xLabel:t('frequencyAxis'),yLabel:t('phaseWithUnit'),xLog:true,color:'orange'})}</div>
@@ -159,12 +175,13 @@ function renderFrequency(a:LabAnalysis):void {
 }
 function renderTime(a:LabAnalysis):void {
   const time=a.transient, unit=a.assembly.outputs.find(o=>o.id===state.output)!.unit;
+  const stateless=a.assembly.storage.length===0;
   const samples=time.samples.map(s=>({x:s.time,y:s.observations[state.output]?.value.re??null,status:'ok'}));
   if(time.status!=='ok')samples.push({x:time.time,y:null,status:time.status});
   const policy=time.status==='ok'?(time.initialization.kind==='storage'?t('specifiedStorage'):t('equilibriumBefore')):'';
-  const details=time.status==='ok'?`<p class="analysis-note">${escapeHtml(t('transientDetails',{count:time.samples.length,policy}))}</p>`:
+  const details=time.status==='ok'?`<p class="analysis-note">${escapeHtml(stateless?t('statelessDetails',{count:time.samples.length}):t('transientDetails',{count:time.samples.length,policy}))}</p>`:
     statusMarkup(t('transientFailure',{status:statusSummary(time.status),time:fmt(time.time)}),time.message);
-  byId('transient-results').innerHTML=`<p class="analysis-note">${escapeHtml(t('transientSummary',{step:fmt(a.settings.step),duration:fmt(a.settings.duration),output:state.output,unit}))}</p>${plot(samples,{title:t('transientPlot',{output:state.output}),xLabel:t('timeAxis'),yLabel:t('outputAxis',{output:state.output,unit})})}${details}`;
+  byId('transient-results').innerHTML=`<p class="analysis-note">${escapeHtml(t(stateless?'statelessSummary':'transientSummary',{step:fmt(a.settings.step),duration:fmt(a.settings.duration),output:state.output,unit}))}</p>${stateless?`<p class="soft-note">${t('statelessNote')}</p>`:''}${plot(samples,{title:t('transientPlot',{output:state.output}),xLabel:t('timeAxis'),yLabel:t('outputAxis',{output:state.output,unit})})}${details}`;
 }
 function matrix(name:'E'|'K'|'B',a:LabAnalysis):string {
   const assembly=a.assembly, cols=name==='B'?assembly.inputs:assembly.unknowns;
@@ -191,7 +208,7 @@ function renderResults():void {
 function renderStatus():void {
   byId('global-status').innerHTML=notice?`<div class="error-card">${escapeHtml(issueText(notice))}${technical(notice.raw)}</div>`:'';
 }
-function renderAll():void { renderExamples();renderComponents();renderSources();renderControls();renderSchematic();renderStatus();renderResults(); }
+function renderAll():void { renderExamples();renderComponents();renderSources();renderControls();renderSchematic();renderStatus();renderResults();syncJsonEditor(); }
 function recompute():void {
   validationIssue=null;
   try { analysis=analyze(state);notice=null; }
@@ -294,11 +311,17 @@ document.addEventListener('click',event=>{
   const target=event.target as Element;
   const languageButton=target.closest<HTMLButtonElement>('[data-language]');
   if(languageButton){switchLanguage(languageButton.dataset.language as Language);return;}
-  const example=target.closest<HTMLElement>('[data-example]');if(example){state=createLab(example.dataset.example);recompute();return;}
+  const example=target.closest<HTMLElement>('[data-example]');if(example){state=createLab(example.dataset.example);jsonIssue=null;jsonDirty=false;recompute();return;}
   const comp=target.closest<HTMLElement>('[data-component], [data-schematic-component]');
   if(comp){state.selectedComponent=comp.dataset.component??comp.dataset.schematicComponent??null;if(analysis)renderAll();else recompute();return;}
   const button=target.closest<HTMLButtonElement>('button');
-  if(button?.id==='reset-example'){state=resetExample(state);recompute();}
+  if(button?.id==='reset-example'){state=resetExample(state);jsonIssue=null;jsonDirty=false;recompute();}
+  if(button?.id==='apply-json'){
+    const result=importNative(state,jsonEditor().value);
+    if(!result.ok){jsonDirty=true;jsonIssue={kind:'document',code:result.errorCode??'invalid-document',params:result.errorParams??{},raw:result.error};renderJsonIssue();return;}
+    jsonIssue=null;jsonDirty=false;recompute();return;
+  }
+  if(button?.id==='restore-json'){jsonIssue=null;syncJsonEditor(true);return;}
   if(button?.id==='export-json')download('circuits-unfolded.json',exportNative(state),'application/json');
   if(button?.id==='export-frequency'&&analysis)download('circuits-frequency.csv',csvFor(analysis,state,'frequency'),'text/csv');
   if(button?.id==='export-transient'&&analysis)download('circuits-transient.csv',csvFor(analysis,state,'transient'),'text/csv');
@@ -308,6 +331,7 @@ document.addEventListener('keydown',event=>{
   const node=(event.target as Element).closest<HTMLElement>('[data-schematic-component]');
   if(node){event.preventDefault();state.selectedComponent=node.dataset.schematicComponent??null;if(analysis)renderAll();else recompute();}
 });
+jsonEditor().addEventListener('input',()=>{jsonDirty=true;jsonIssue=null;renderJsonIssue();});
 document.addEventListener('change',async event=>{
   const target=event.target;
   if(target instanceof HTMLInputElement&&target.id==='import-file'){
@@ -315,7 +339,7 @@ document.addEventListener('change',async event=>{
     try{
       const result=importNative(state,await file.text());
       if(!result.ok){importReadFailed=false;importIssue={kind:'document',code:result.errorCode??'invalid-document',params:result.errorParams??{},raw:result.error};renderImportIssue();return;}
-      importIssue=null;renderImportIssue();recompute();
+      importIssue=null;renderImportIssue();jsonIssue=null;jsonDirty=false;recompute();
     }catch(error){importReadFailed=true;importIssue={kind:'document',code:'invalid-document',params:{},raw:error instanceof Error?error.message:String(error)};renderImportIssue();}
     finally { target.value=''; }
     return;

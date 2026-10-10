@@ -79,6 +79,6 @@ test('localization: Mongolian numerical and time-method terms stay distinct', ()
   assert.match(t('logarithmicSweep'),/давтамжийн мужийн тооцоо/i);
   assert.match(t('presetRlcSubtitle'),/Далайц нь буурах/);
   assert.equal(t('importRejected',{reason:t('invalidJson')}),
-    'Импорт татгалзагдлаа: Файл зөв JSON биш. Одоогийн баримт өөрчлөгдөөгүй.');
+    'Импорт татгалзагдлаа: JSON бичвэр хүчинтэй биш. Одоогийн баримт өөрчлөгдөөгүй.');
   setLanguage('en');
 });

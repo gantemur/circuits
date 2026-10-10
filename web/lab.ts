@@ -25,17 +25,17 @@ const editError = (error: unknown): EditResult => ({ ok: false, error: error ins
   errorCode: error instanceof ValidationError ? error.code : 'invalid-document',
   errorParams: error instanceof ValidationError ? error.params : {} });
 const defaults = (preset: string): Settings => ({ minHz: 1, maxHz: preset === 'rlc' ? 1e5 : 1e4,
-  points: 81, inspectHz: preset === 'rc' ? 1/(2*Math.PI*.001) : 1000,
+  points: 81, inspectHz: preset === 'rc' || preset === 'rc-high-pass' ? 1/(2*Math.PI*.001) : 1000,
   duration: preset === 'rlc' ? .003 : .005, step: preset === 'rlc' ? 1e-5 : 5e-5 });
 
-export function createLab(presetId = 'rc'): LabState {
+export function createLab(presetId = 'divider'): LabState {
   const p = presets.find(p => p.id === presetId);
   if (!p) throw new RangeError(`Unknown example ${presetId}`);
   return { document: copyDocument(p.document), presetId, input: p.document.experiment.sources[0]?.id ?? '',
     output: p.defaultOutput, selectedComponent: null, settings: defaults(presetId), revision: 0 };
 }
 export function resetExample(state: LabState): LabState {
-  return createLab(state.presetId ?? 'rc');
+  return createLab(state.presetId ?? 'divider');
 }
 export function updateDocument(state: LabState, mutate: (d: NativeDocument) => void): EditResult {
   try {
@@ -140,8 +140,10 @@ export function csvFor(analysis: LabAnalysis, state: LabState, kind: 'frequency'
   const measureUnit = analysis.assembly.outputs.find(o => o.id === state.output)!.unit;
   const samples = analysis.transient.samples;
   const rows = [csvRow(['time_s', `value_${measureUnit}`, 'side', 'method', 'status', 'message']),
-    ...samples.map(s => csvRow([s.time, s.observations[state.output]?.value.re ?? null, s.side, s.currentConvention, 'ok', '']))];
+    ...samples.map(s => csvRow([s.time, s.observations[state.output]?.value.re ?? null, s.side,
+      analysis.assembly.storage.length ? s.currentConvention : 'algebraic-at-sample', 'ok', '']))];
   if (analysis.transient.status !== 'ok')
-    rows.push(csvRow([analysis.transient.time, null, '', 'backward-Euler', analysis.transient.status, analysis.transient.message]));
+    rows.push(csvRow([analysis.transient.time, null, '', analysis.assembly.storage.length ? 'backward-Euler' : 'algebraic-at-sample',
+      analysis.transient.status, analysis.transient.message]));
   return rows.join('\n') + '\n';
 }

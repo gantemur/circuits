@@ -1,5 +1,7 @@
 import type { NativeDocument, Circuit } from '../src/model.js';
 import rc from '../fixtures/rc.json';
+import divider from '../fixtures/divider.json';
+import highpass from '../fixtures/rc-high-pass.json';
 import loaded from '../fixtures/rc-loaded.json';
 import cascade from '../fixtures/rc-cascade.json';
 import rl from '../fixtures/rl.json';
@@ -9,7 +11,9 @@ import type { TranslationKey } from './i18n.js';
 
 export interface Preset { id: string; titleKey: TranslationKey; subtitleKey: TranslationKey; document: NativeDocument; defaultOutput: string; }
 export const presets: Preset[] = [
+  { id: 'divider', titleKey: 'presetDividerTitle', subtitleKey: 'presetDividerSubtitle', document: divider as NativeDocument, defaultOutput: 'out' },
   { id: 'rc', titleKey: 'presetRcTitle', subtitleKey: 'presetRcSubtitle', document: rc as NativeDocument, defaultOutput: 'out' },
+  { id: 'rc-high-pass', titleKey: 'presetHighpassTitle', subtitleKey: 'presetHighpassSubtitle', document: highpass as NativeDocument, defaultOutput: 'out' },
   { id: 'rc-loaded', titleKey: 'presetLoadedTitle', subtitleKey: 'presetLoadedSubtitle', document: loaded as NativeDocument, defaultOutput: 'out' },
   { id: 'rc-cascade', titleKey: 'presetCascadeTitle', subtitleKey: 'presetCascadeSubtitle', document: cascade as NativeDocument, defaultOutput: 'out' },
   { id: 'rl', titleKey: 'presetRlTitle', subtitleKey: 'presetRlSubtitle', document: rl as NativeDocument, defaultOutput: 'inductor' },

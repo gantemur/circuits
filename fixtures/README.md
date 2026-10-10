@@ -7,6 +7,7 @@ All values are SI. Each native JSON file contains a circuit (including its load 
 | A | `divider.json` | Vin=12 V, R1=1000 ohm, R2=2000 ohm: Vout=8 V, I(Vin)=-4 mA, I(R1)=4 mA; total absorbed power zero |
 | A | `current-parallel.json` | Iin=3 mA from ground into R1=1000 and R2=2000 ohm: Vout=Iin/(1/R1+1/R2)=2 V |
 | B, E | `rc.json` | R=1000 ohm, C=1 uF: H(s)=1/(1+0.001s), fc=1/(2*pi*0.001) Hz; H(j/RC)=(1-j)/2; pole -1000/s |
+| B, E | `rc-high-pass.json` | C=1 uF from in to out, R=1000 ohm from out to ground: H(s)=sRC/(1+sRC), H(0)=0, H(j/RC)=(1+j)/2; a 1 V step with vC(0)=0 gives out(0-)=0, out(0+)=1 V and vC continuous at 0, then out,n=(1+h/RC)^-n V by backward Euler |
 | B | `rc-loaded.json` | Extra RL=2000 ohm: H(s)=1/(1.5+0.001s); pole -1500/s |
 | B | `rc-cascade.json` | Two directly connected identical RC sections: H(s)=1/(1+3sRC+(sRC)^2), different from (1+sRC)^-2 |
 | C | `vcvs.json` | Vin=2 V, mu=3, RL=1000 ohm: Vout=6 V, I(load)=6 mA, I(dependent)=-6 mA |

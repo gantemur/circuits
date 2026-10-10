@@ -1,13 +1,66 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createLab, analyze, updateDocument, importNative, exportNative, csvFor,
+import { createLab, resetExample, analyze, updateDocument, importNative, exportNative, csvFor,
   parseFinite, validateSettings } from '../dist/lab-test.js';
 import { parseDocument } from '../dist/index.js';
+import { schematic } from '../dist/schematic-test.js';
 
 const near=(actual,expected,tolerance=1e-8)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 const ok=result=>{assert.equal(result.status,'ok',result.message);return result;};
 const atCutoff=state=>{const fc=1/(2*Math.PI*.001);state.settings={...state.settings,minHz:fc,maxHz:fc*100,points:3,inspectHz:fc};return fc;};
+
+test('divider is the default, stateless example and edits both resistors and source',()=>{
+  const state=createLab();assert.equal(state.presetId,'divider');
+  const first=analyze(state);near(ok(first.dc).observations.out.value.re,8);
+  for(const p of first.sweep){near(p.value.re,2/3);near(p.value.im,0);}
+  assert.equal(first.assembly.storage.length,0);
+  assert.ok(first.transient.samples.every(s=>Math.abs(s.observations.out.value.re-8)<1e-10));
+  assert.match(csvFor(first,state,'transient'),/algebraic-at-sample/);
+  assert.doesNotMatch(csvFor(first,state,'transient'),/backward-Euler/);
+  assert.match(schematic(state).html,/<rect class="symbol"[^>]+width="74"/);
+  assert.equal(updateDocument(state,d=>{d.circuit.components.find(c=>c.id==='R1').value=2000;d.circuit.components.find(c=>c.id==='R2').value=1000;d.experiment.sources[0].dc=9;}).ok,true);
+  const changed=analyze(state);near(ok(changed.dc).observations.out.value.re,3);
+  for(const p of changed.sweep)near(p.value.re,1/3);
+  near(ok(analyze(resetExample(state)).dc).observations.out.value.re,8);
+  const rc=createLab('rc');rc.settings.inspectHz=1000;
+  near(resetExample(rc).settings.inspectHz,1/(2*Math.PI*.001));
+});
+
+test('RC high-pass transfer and step follow independent capacitor law and backward Euler recurrence',()=>{
+  const state=createLab('rc-high-pass'),fc=atCutoff(state),result=analyze(state);
+  near(ok(result.dc).observations.out.value.re,0);
+  const cutoff=result.sweep.find(p=>Math.abs(p.frequencyHz-fc)<1e-10);
+  near(cutoff.magnitude,1/Math.sqrt(2));near(cutoff.phaseDegrees,45);
+  near(cutoff.value.re,.5);near(cutoff.value.im,.5);
+  assert.equal(result.algebraic.status,'not-supported');
+  const samples=ok(result.transient).samples,h=state.settings.step,tau=.001;
+  assert.equal(samples[0].side,'left');assert.equal(samples[1].side,'right');
+  near(samples[0].observations.out.value.re,0);near(samples[1].observations.out.value.re,1);
+  near(samples[0].observations.capacitorVoltage.value.re,0);near(samples[1].observations.capacitorVoltage.value.re,0);
+  for(const n of [1,5,20,80]){
+    near(samples[n+1].observations.out.value.re,(1+h/tau)**-n);
+    near(samples[n+1].observations.capacitorVoltage.value.re,1-(1+h/tau)**-n);
+  }
+  assert.match(schematic(state).html,/data-schematic-component="C"/);
+  assert.equal(updateDocument(state,d=>{d.circuit.components.find(c=>c.id==='R').value=2000;d.circuit.components.find(c=>c.id==='C').value=2e-6;d.experiment.sources[0].waveform.after=2;d.experiment.initial.values[0].value=.2;}).ok,true);
+  assert.equal(analyze(state).transient.status,'ok');
+});
+
+test('custom JSON applies all native fields; invalid draft keeps document and topology fallback is honest',async()=>{
+  const state=createLab(),saved=exportNative(state),revision=state.revision;
+  const draft='{';
+  assert.equal(importNative(state,draft).ok,false);
+  assert.equal(draft,'{');assert.equal(exportNative(state),saved);assert.equal(state.revision,revision);
+  const custom=await readFile(new URL('../fixtures/current-parallel.json',import.meta.url),'utf8');
+  assert.equal(importNative(state,custom).ok,true);assert.equal(state.presetId,null);
+  assert.equal(schematic(state).schematic,false);
+  assert.match(schematic(state).html,/unknown-layout/);
+  assert.deepEqual(state.document,parseDocument(custom));
+  assert.equal(analyze(state).dc.status,'ok');
+  assert.notEqual(exportNative(state),saved);
+  assert.equal(resetExample(state).presetId,'divider');
+});
 
 test('browser model: RC cutoff magnitude and phase from independent 1/(1+sRC)',()=>{
   const state=createLab('rc'),fc=atCutoff(state),result=analyze(state);

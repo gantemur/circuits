@@ -29,6 +29,10 @@ function branchResistor(state:LabState,id:string,x:number):string {
 function capacitor(state:LabState,id:string,x:number):string {
   return wire(x,120,x,173)+group(state,id,`<path class="symbol" d="M${x-22} 183h44M${x-22} 195h44"/>`,x,160)+wire(x,195,x,256)+ground(x);
 }
+function capacitorHorizontal(state:LabState,id:string,x1:number,x2:number):string {
+  const x=(x1+x2)/2;
+  return wire(x1,120,x-7,120)+group(state,id,`<path class="symbol" d="M${x-7} 98v44M${x+7} 98v44"/>`,x,75)+wire(x+7,120,x2,120);
+}
 function inductorVertical(state:LabState,id:string,x:number):string {
   return wire(x,120,x,160)+group(state,id,`<path class="symbol" d="M${x} 160c-24 0-24 15 0 15c-24 0-24 15 0 15c-24 0-24 15 0 15c-24 0-24 15 0 15"/>`,x,150)+wire(x,220,x,256)+ground(x);
 }
@@ -51,6 +55,14 @@ function wrap(state:LabState,body:string,note:string):{html:string;note:string;s
 export function schematic(state:LabState):{html:string;note:string;schematic:boolean} {
   const preset=state.presetId, selected=state.document.circuit.observations.find(o=>o.id===state.output);
   const selectedNode=selected?.type==='voltage'&&selected.n==='0'?selected.p:'';
+  if(preset==='divider') {
+    const svg=node(88,'in',selectedNode==='in')+node(467,'out',selectedNode==='out')+wire(88,120,218,120)+resistor(state,'R1',218,292)+wire(292,120,467,120)+dot(88,120)+dot(467,120)+source(state,'Vin',88,'V')+branchResistor(state,'R2',467);
+    return wrap(state,svg,t('schematicDivider'));
+  }
+  if(preset==='rc-high-pass') {
+    const svg=node(88,'in',selectedNode==='in')+node(467,'out',selectedNode==='out')+wire(88,120,218,120)+capacitorHorizontal(state,'C',218,292)+wire(292,120,467,120)+dot(88,120)+dot(467,120)+source(state,'Vin',88,'V')+branchResistor(state,'R',467);
+    return wrap(state,svg,t('schematicHighpass'));
+  }
   if (preset==='rc'||preset==='rc-loaded') {
     let svg=node(88,'in',selectedNode==='in')+node(467,'out',selectedNode==='out')+wire(88,120,218,120)+resistor(state,'R',218,292)+wire(292,120,467,120)+dot(88,120)+dot(467,120)+source(state,'Vin',88,'V')+capacitor(state,'C',467);
     if(preset==='rc-loaded')svg+=wire(467,120,585,120)+dot(585,120)+branchResistor(state,'RL',585);
