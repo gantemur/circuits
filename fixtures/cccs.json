@@ -1,0 +1,96 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "cccs",
+    "nodes": [
+      "0",
+      "in",
+      "sense",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "Rs",
+        "type": "R",
+        "p": "in",
+        "n": "sense",
+        "value": 1000
+      },
+      {
+        "id": "Vsense",
+        "type": "V",
+        "p": "sense",
+        "n": "0"
+      },
+      {
+        "id": "D",
+        "type": "CCCS",
+        "p": "out",
+        "n": "0",
+        "control": "Vsense",
+        "gain": 3
+      },
+      {
+        "id": "RL",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 1000
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "load",
+        "type": "current",
+        "component": "RL"
+      },
+      {
+        "id": "control",
+        "type": "current",
+        "component": "Vsense"
+      },
+      {
+        "id": "dependent",
+        "type": "current",
+        "component": "D"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "cccs experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 2,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      },
+      {
+        "id": "Vsense",
+        "dc": 0,
+        "ac": {
+          "re": 0,
+          "im": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}

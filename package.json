@@ -1,0 +1,17 @@
+{
+  "name": "circuits-unfolded",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Inspectable, browser-compatible linear circuit kernel",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "scripts": {
+    "build": "tsc && esbuild src/index.ts --bundle --platform=browser --format=esm --outfile=dist/browser.js",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "demo": "npm run build && node examples/demo.mjs"
+  },
+  "devDependencies": { "typescript": "5.9.3", "esbuild": "0.25.12" }
+}

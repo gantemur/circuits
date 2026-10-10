@@ -1,0 +1,85 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rc-delayed-step",
+    "nodes": [
+      "0",
+      "in",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "R",
+        "type": "R",
+        "p": "in",
+        "n": "out",
+        "value": 1000
+      },
+      {
+        "id": "C",
+        "type": "C",
+        "p": "out",
+        "n": "0",
+        "value": 0.000001
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "in",
+        "type": "voltage",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "capacitor",
+        "type": "current",
+        "component": "C"
+      },
+      {
+        "id": "resistor",
+        "type": "current",
+        "component": "R"
+      },
+      {
+        "id": "source",
+        "type": "current",
+        "component": "Vin"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rc-delayed-step experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 0,
+        "ac": {
+          "re": 1,
+          "im": 0
+        },
+        "waveform": {
+          "type": "step",
+          "at": 0.0012345,
+          "before": 0,
+          "after": 1
+        }
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}

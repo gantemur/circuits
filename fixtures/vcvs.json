@@ -1,0 +1,70 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "vcvs",
+    "nodes": [
+      "0",
+      "in",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "D",
+        "type": "VCVS",
+        "p": "out",
+        "n": "0",
+        "cp": "in",
+        "cn": "0",
+        "gain": 3
+      },
+      {
+        "id": "RL",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 1000
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "load",
+        "type": "current",
+        "component": "RL"
+      },
+      {
+        "id": "dependent",
+        "type": "current",
+        "component": "D"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "vcvs experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 2,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}

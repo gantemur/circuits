@@ -1,0 +1,74 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "parallel-unequal",
+    "nodes": [
+      "0",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "V1",
+        "type": "V",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "V2",
+        "type": "V",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "R",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 1000
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "source1",
+        "type": "current",
+        "component": "V1"
+      },
+      {
+        "id": "source2",
+        "type": "current",
+        "component": "V2"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "parallel-unequal experiment",
+    "sources": [
+      {
+        "id": "V1",
+        "dc": 1,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      },
+      {
+        "id": "V2",
+        "dc": 2,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}

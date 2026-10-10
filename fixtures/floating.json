@@ -1,0 +1,36 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "floating",
+    "nodes": [
+      "0",
+      "a",
+      "b"
+    ],
+    "components": [
+      {
+        "id": "R",
+        "type": "R",
+        "p": "a",
+        "n": "b",
+        "value": 1000
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "a",
+        "n": "b"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "floating experiment",
+    "sources": [],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rc-discharge",
+    "nodes": [
+      "0",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "R",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 1000
+      },
+      {
+        "id": "C",
+        "type": "C",
+        "p": "out",
+        "n": "0",
+        "value": 0.000001
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "capacitor",
+        "type": "current",
+        "component": "C"
+      },
+      {
+        "id": "resistor",
+        "type": "current",
+        "component": "R"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rc-discharge experiment",
+    "sources": [],
+    "initial": {
+      "kind": "storage",
+      "values": [
+        {
+          "id": "C",
+          "value": 2
+        }
+      ]
+    }
+  }
+}

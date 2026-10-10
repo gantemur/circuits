@@ -1,0 +1,74 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rl",
+    "nodes": [
+      "0",
+      "in",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "R",
+        "type": "R",
+        "p": "in",
+        "n": "out",
+        "value": 100
+      },
+      {
+        "id": "L",
+        "type": "L",
+        "p": "out",
+        "n": "0",
+        "value": 0.1
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "inductor",
+        "type": "current",
+        "component": "L"
+      },
+      {
+        "id": "source",
+        "type": "current",
+        "component": "Vin"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rl experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 1,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "storage",
+      "values": [
+        {
+          "id": "L",
+          "value": 0
+        }
+      ]
+    }
+  }
+}

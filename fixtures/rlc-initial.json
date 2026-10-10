@@ -1,0 +1,86 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rlc-initial",
+    "nodes": [
+      "0",
+      "in",
+      "mid",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "R",
+        "type": "R",
+        "p": "in",
+        "n": "mid",
+        "value": 10
+      },
+      {
+        "id": "L",
+        "type": "L",
+        "p": "mid",
+        "n": "out",
+        "value": 0.01
+      },
+      {
+        "id": "C",
+        "type": "C",
+        "p": "out",
+        "n": "0",
+        "value": 0.000001
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "inductor",
+        "type": "current",
+        "component": "L"
+      },
+      {
+        "id": "capacitor",
+        "type": "current",
+        "component": "C"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rlc-initial experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 0,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "storage",
+      "values": [
+        {
+          "id": "L",
+          "value": 0
+        },
+        {
+          "id": "C",
+          "value": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "divider",
+    "nodes": [
+      "0",
+      "in",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "R1",
+        "type": "R",
+        "p": "in",
+        "n": "out",
+        "value": 1000
+      },
+      {
+        "id": "R2",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 2000
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "r1v",
+        "type": "voltage",
+        "p": "in",
+        "n": "out"
+      },
+      {
+        "id": "r1i",
+        "type": "current",
+        "component": "R1"
+      },
+      {
+        "id": "source",
+        "type": "current",
+        "component": "Vin"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "divider experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 12,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}

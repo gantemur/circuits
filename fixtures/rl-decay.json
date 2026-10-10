@@ -1,0 +1,53 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rl-decay",
+    "nodes": [
+      "0",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "R",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 100
+      },
+      {
+        "id": "L",
+        "type": "L",
+        "p": "out",
+        "n": "0",
+        "value": 0.1
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "inductor",
+        "type": "current",
+        "component": "L"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rl-decay experiment",
+    "sources": [],
+    "initial": {
+      "kind": "storage",
+      "values": [
+        {
+          "id": "L",
+          "value": 0.02
+        }
+      ]
+    }
+  }
+}

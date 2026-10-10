@@ -1,0 +1,28 @@
+{
+  "nodes": [
+    "a",
+    "b",
+    "c",
+    "hidden"
+  ],
+  "edges": [
+    {
+      "id": "Ra",
+      "p": "a",
+      "n": "hidden",
+      "resistance": 1
+    },
+    {
+      "id": "Rb",
+      "p": "b",
+      "n": "hidden",
+      "resistance": 0.5
+    },
+    {
+      "id": "Rc",
+      "p": "c",
+      "n": "hidden",
+      "resistance": 0.3333333333333333
+    }
+  ]
+}

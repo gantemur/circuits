@@ -1,0 +1,62 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "current-parallel",
+    "nodes": [
+      "0",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Iin",
+        "type": "I",
+        "p": "0",
+        "n": "out"
+      },
+      {
+        "id": "R1",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 1000
+      },
+      {
+        "id": "R2",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 2000
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "source",
+        "type": "current",
+        "component": "Iin"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "current-parallel experiment",
+    "sources": [
+      {
+        "id": "Iin",
+        "dc": 0.003,
+        "ac": {
+          "re": 1,
+          "im": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}
