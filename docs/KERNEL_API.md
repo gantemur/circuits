@@ -108,6 +108,8 @@ The dense solver row-equilibrates by each row's maximum coefficient magnitude, t
 
 `resistorLaplacian({nodes,edges})` builds a full ungrounded conductance Laplacian. Edges have `{id,p,n,resistance}`. `kronReduce(network, retained)` returns the ordered retained terminals, eliminated nodes, full and reduced matrices in S, or a linear-solver failure. It solves with the internal block to compute the Schur complement. A node named `0` is an ordinary terminal here; this helper is intentionally independent of grounded MNA. Disconnected singular internal blocks are rejected.
 
+Edge IDs must be nonempty strings and unique. Both entry points throw `RangeError` for invalid network data, conductance overflow (`1/resistance`), or nonfinite assembled Laplacian entries. If a finite Laplacian produces a nonfinite Schur-complement result, `kronReduce` returns `ill-conditioned`; `rank` and `size` then describe the solved internal block. An `ok` result always contains finite `full` and `reduced` matrices, including when every node is retained. Extreme finite inputs may therefore be rejected rather than returning an infinite matrix.
+
 ## Limits
 
 The kernel targets small dense linear networks. Numerical rank diagnostics are not a comprehensive topology classifier or certified condition estimator. Extreme scales can exceed floating-point range or the declared tolerances and are rejected. A small residual checks the declared equations, not physical device accuracy. There is no general high-index initialization, ideal impulse handling, adaptive integration, symbolic component algebra, arbitrary-order rational extraction, eigenvalue solver, nonlinear model, UI, or synthesis. See the fixture manifest for exactly what has been validated.

@@ -24,7 +24,7 @@ Repository visibility is an owner-controlled setting. The documents are prepared
 
 - Phase 0 architecture review: complete; no contradiction in the public specification required a scope change.
 - Phase 0 implementation: complete, including R/C/L, V/I and all four controlled sources, labeled/provenance-bearing MNA, DC and complex-frequency solves, numerical transfer, restricted scalar dynamic elimination, backward Euler transients, native JSON, and resistor Kron reduction.
-- Phase 0 acceptance tests: **26 tests passing**, covering MVP sections A–H plus validation, numerical diagnostics, waveform units, and explicit unsupported cases.
+- Phase 0 acceptance tests: **31 tests passing**, covering MVP sections A–H plus validation, numerical diagnostics, waveform units, explicit unsupported cases, and Kron overflow regressions.
 - Reproducible headless demo and browser bundle: implemented and verified.
 - Browser UI and deployment: not implemented.
 - Next bounded milestone: Phase 1 browser linear lab; requires its own acceptance contract before implementation. Phase 0 remains the repository's bounded scope until then.
@@ -60,6 +60,12 @@ The browser bundle was also executed in an isolated JavaScript realm with neithe
 RC step maximum continuous-solution errors on common times through 5tau were approximately **0.00901004, 0.00455118, 0.00228735 V** for h=tau/20, tau/40, tau/80. Ratios are about 1.980 and 1.990. Maximum discrete recurrence error was below 7.4e-15 V, and maximum reconstructed ground-current residual below 2.4e-17 A in that demo. These measurements establish the tested first-order behavior; they do not promise this accuracy for arbitrary circuit scales.
 
 Remaining limits include dense small-system numerics, noncertified conditioning/rank diagnostics, the declared restricted transfer subset, and unsupported impulsive/high-index initialization. Phase 1 should expose the validated kernel and diagnostics through a bounded browser workspace before adding new device physics or synthesis.
+
+## Kron validation hardening — 10 October 2026
+
+Follow-up to checkpoint `65bda78`: require nonempty string edge IDs and check numeric range at conductance calculation, full Laplacian assembly, and Schur-complement output. Preserve the existing function signatures: invalid inputs and unrepresentable assembly throw `RangeError`; nonfinite reduction results return the existing `ill-conditioned` failure shape. Successful reductions contain only finite matrices. No tolerances were loosened and no clipping or regularization was introduced.
+
+Five regression tests cover invalid ID types, reciprocal overflow, retained-block accumulation overflow with an invertible internal block, Schur overflow from a finite full matrix while eliminating two internal nodes, and finite large-conductance success cases. The first four tests failed against the checkpoint and pass with the fix. `npm run typecheck`, `npm test` (all 31 tests, including `npm run build`), and `git diff --check` passed. The original checkpoint's validation record above remains historical; these checks cover the follow-up fix.
 
 ## Maintenance format
 
