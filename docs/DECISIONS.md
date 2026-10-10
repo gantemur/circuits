@@ -80,6 +80,12 @@ The current limits remain small dense linear circuits, restricted one-storage-el
 
 Local preview follow-up: a user encountered an occupied default port after a successful build. The preview now tries port 4173 first and, only when `PORT` is unset and that port is occupied, binds an available loopback port and prints its actual URL. An explicit `PORT` remains exact and reports conflicts clearly. This changes only the development server; static assets and kernel behavior are unchanged. Verified with occupied 4173: `npm run dev` served `/circuits/` on the printed fallback port with HTTP 200; `PORT=4173 npm run preview` exited with a clear conflict message. `npm test` passed 39/39, `npm run typecheck` passed, and `git diff --check` passed.
 
+## English/Mongolian interface follow-up — 10 October 2026
+
+English (`en`) and Mongolian Cyrillic (`mn`) are continuing interface requirements for Phase 1A and future user-facing features. A typed catalog in `web/i18n.ts` owns application text and interpolation; explicit selection is stored when browser storage permits, with browser-language fallback. Switching rerenders the interface while retaining the native document, analysis, selected example/component, and invalid drafts. The kernel retains its English technical messages for API compatibility; stable validation codes, extraction reasons, and status identifiers drive localized summaries. JSON and CSV remain language-neutral. `docs/LOCALIZATION.md` records the terminology and export convention.
+
+Focused tests cover dictionary/placeholder parity, preference and storage fallback, edited-document/analysis/CSV invariance, and stable import/extraction identifiers. Browser checks at `/circuits/` exercised six examples in both languages, a 390 px Mongolian layout without horizontal overflow, an invalid component draft across a language switch, and translated restricted-extraction explanations. Chrome's file chooser blocked the invalid-JSON upload because its extension lacks local file-URL access; the parser and UI-facing diagnostic code passed automated tests. Final command results and commit are recorded in the delivery handoff.
+
 ## Maintenance format
 
 For each later substantive decision, record date, context, choice, consequence, and validation. For a completed milestone, record the tested source revision when available and the actual test/build commands. Keep short entries; preserve mathematical rationale in the relevant specification or implementation note.

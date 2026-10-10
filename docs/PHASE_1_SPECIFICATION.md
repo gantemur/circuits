@@ -24,6 +24,10 @@ The kernel stays headless. Browser rendering, controls, preset drawing geometry,
 - Show `E*xdot + K*x = B*u`, deterministic row/unknown/input labels, output relation, and matrix values. Selecting a component highlights only its kernel-recorded contributions and displays its terminal law. Display physical row and ground-KCL residuals plus numerical diagnostics and explanation of units/scaling.
 - Export CSV for frequency and transient data with headers including units, sample status, and failed/undefined values. CSV contains data from the current valid run only.
 
+## Continuing interface language requirement
+
+Every new user-facing feature must provide complete English (`en`) and Mongolian Cyrillic (`mn`) interface text through the shared typed localization catalog. The browser remembers an explicit language choice, otherwise follows a Mongolian browser preference and defaults to English. Language changes preserve the native document, analysis state, and uncommitted input drafts. Scientific identifiers, SI symbols, native JSON, and CSV data conventions are language-independent. Diagnostic summaries use stable codes or statuses; technical English details may appear in a clearly labeled expandable section. Maintain the terminology in [LOCALIZATION.md](LOCALIZATION.md).
+
 ## Acceptance and verification
 
 Keep Phase 0 tests passing. Add focused browser model/integration tests with independent formulas for:
@@ -36,3 +40,5 @@ Keep Phase 0 tests passing. Add focused browser model/integration tests with ind
 6. Solver failures appear as error statuses/gaps, never as valid plotted samples.
 
 Check source/time parameter validation, explicit AC versus transfer distinction, provenance highlighting, zero magnitude/undefined phase, CSV statuses, and workload bounds where practical. Run tests, typecheck, kernel and app builds, and `git diff --check`. Exercise the actual app in a browser at the `/circuits/` path on a laptop and narrow viewport; report any unavailable check rather than claiming success. Document local development, build, preview, limitations, and the next unresolved milestone in README and DECISIONS.
+
+For language support, verify dictionary and placeholder parity, saved/preferred language behavior, preservation of valid and invalid edits while switching, Mongolian controls/plots/SVG/error messages, and language-independent JSON/CSV exports. Exercise all six examples and narrow-window layout in both languages.

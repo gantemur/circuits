@@ -1,6 +1,6 @@
 # Circuits Unfolded: project vision
 
-Version 0.2, 10 October 2026. This public lab document supersedes the August 2026 founding specification for implementation planning. The active coding scope is defined separately in `MVP_SPECIFICATION.md`.
+Version 0.2, 10 October 2026. This public lab document supersedes the August 2026 founding specification for implementation planning. The active coding scope is defined separately in `PHASE_1_SPECIFICATION.md`; Phase 0 remains specified in `MVP_SPECIFICATION.md`.
 
 ## 1. Purpose
 
@@ -116,6 +116,8 @@ Editor essentials include placement, rotation, wires with unambiguous junctions,
 Circuit semantics must be independent of drawing geometry. A versioned JSON document stores topology, models, parameters, sources, observations, initial conditions, analysis settings, and later geometry and transformation history. Native files, local saving, and modest URL sharing should work without accounts.
 
 Lessons use the same circuit format and kernel as ordinary user circuits. Accessibility includes keyboard editing, high contrast, labels beyond color, readable plots, and reduced-motion transformations.
+
+English and Mongolian Cyrillic are continuing interface languages. Every new user-facing feature, lesson, diagnostic summary, and accessibility label should be available in both, using a shared terminology glossary and language-independent scientific documents and exports.
 
 ## 10. Implementation and validation
 

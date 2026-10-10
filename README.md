@@ -10,6 +10,8 @@ The repository is named `circuits`. **Circuits Unfolded** is the working applica
 
 **Phase 1A is implemented:** a static browser linear lab built on the Phase 0 TypeScript kernel. Six editable examples cover RC, loaded RC, connected RC stages, RL, RLC, and a loaded voltage-controlled voltage source. The lab shows SVG schematics, DC and frequency responses, backward Euler transients, matrix provenance, native JSON, and CSV exports.
 
+The interface supports English and Mongolian Cyrillic. Use the **English / Монгол** buttons in the header to switch immediately; the selected language persists in browser storage when available. The language choice changes presentation only: native JSON field names and values, CSV headers and decimal format, SI symbols, circuit IDs, and computed results stay the same. See the [terminology glossary and export convention](docs/LOCALIZATION.md).
+
 The analytic acceptance suite covers source signs, physical loading, initialization and breakpoints, refinement, singular/contradictory models, matrix provenance, and serialization. Phase 1A adds browser-model acceptance cases and browser checks. A graphical wiring editor remains future work. The longer-term vision below describes planned capabilities.
 
 ## Run the browser lab
@@ -79,6 +81,7 @@ The defining feature is the connection between three views: schematic and physic
 | [docs/VISION.md](docs/VISION.md) | Full product direction and staged development |
 | [docs/MVP_SPECIFICATION.md](docs/MVP_SPECIFICATION.md) | Exact scope and acceptance criteria for Phase 0 |
 | [docs/PHASE_1_SPECIFICATION.md](docs/PHASE_1_SPECIFICATION.md) | Scope and acceptance criteria for the Phase 1A browser lab |
+| [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | English/Mongolian terminology and language-neutral export convention |
 | [docs/MATHEMATICAL_CONVENTIONS.md](docs/MATHEMATICAL_CONVENTIONS.md) | Terminal signs, matrix signs, phasors, units, and evidence conventions |
 | [docs/REFERENCE_WORKFLOW.md](docs/REFERENCE_WORKFLOW.md) | How the companion book is supplied and used without publishing it |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Settled choices and current milestone |

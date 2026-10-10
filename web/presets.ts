@@ -5,15 +5,16 @@ import cascade from '../fixtures/rc-cascade.json';
 import rl from '../fixtures/rl.json';
 import rlc from '../fixtures/rlc.json';
 import vcvs from '../fixtures/vcvs.json';
+import type { TranslationKey } from './i18n.js';
 
-export interface Preset { id: string; title: string; subtitle: string; document: NativeDocument; defaultOutput: string; }
+export interface Preset { id: string; titleKey: TranslationKey; subtitleKey: TranslationKey; document: NativeDocument; defaultOutput: string; }
 export const presets: Preset[] = [
-  { id: 'rc', title: 'RC low-pass', subtitle: 'One storage element · τ = RC', document: rc as NativeDocument, defaultOutput: 'out' },
-  { id: 'rc-loaded', title: 'Loaded RC', subtitle: 'The output load changes the gain', document: loaded as NativeDocument, defaultOutput: 'out' },
-  { id: 'rc-cascade', title: 'Connected RC stages', subtitle: 'The second stage loads the first', document: cascade as NativeDocument, defaultOutput: 'out' },
-  { id: 'rl', title: 'Series RL', subtitle: 'Current rises through an inductor', document: rl as NativeDocument, defaultOutput: 'inductor' },
-  { id: 'rlc', title: 'Series RLC', subtitle: 'A damped second-order response', document: rlc as NativeDocument, defaultOutput: 'out' },
-  { id: 'vcvs', title: 'Voltage amplifier', subtitle: 'VCVS with an explicit load', document: vcvs as NativeDocument, defaultOutput: 'out' },
+  { id: 'rc', titleKey: 'presetRcTitle', subtitleKey: 'presetRcSubtitle', document: rc as NativeDocument, defaultOutput: 'out' },
+  { id: 'rc-loaded', titleKey: 'presetLoadedTitle', subtitleKey: 'presetLoadedSubtitle', document: loaded as NativeDocument, defaultOutput: 'out' },
+  { id: 'rc-cascade', titleKey: 'presetCascadeTitle', subtitleKey: 'presetCascadeSubtitle', document: cascade as NativeDocument, defaultOutput: 'out' },
+  { id: 'rl', titleKey: 'presetRlTitle', subtitleKey: 'presetRlSubtitle', document: rl as NativeDocument, defaultOutput: 'inductor' },
+  { id: 'rlc', titleKey: 'presetRlcTitle', subtitleKey: 'presetRlcSubtitle', document: rlc as NativeDocument, defaultOutput: 'out' },
+  { id: 'vcvs', titleKey: 'presetVcvsTitle', subtitleKey: 'presetVcvsSubtitle', document: vcvs as NativeDocument, defaultOutput: 'out' },
 ];
 
 export const copyDocument = (d: NativeDocument): NativeDocument => JSON.parse(JSON.stringify(d)) as NativeDocument;

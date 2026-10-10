@@ -82,28 +82,28 @@ export interface FirstOrderTransfer {
   denominatorRoot: number; cancellation: boolean;
   note: string;
 }
-export interface NotSupported { status: 'not-supported'; message: string }
+export interface NotSupported { status: 'not-supported'; message: string; reason?: 'derivative-observation' | 'storage-structure' | 'algebraic-block' | 'numeric-range' }
 /** Coefficients are in ascending powers of s; no rational fitting or symbolic engine. */
 export function extractFirstOrder(a: Assembly, input: string, output: string, options: Partial<Tolerances> = {}): FirstOrderTransfer | NotSupported {
   const j = a.inputs.findIndex(i => i.id === input), o = a.outputs.find(o => o.id === output);
   if (j < 0 || !o) throw new RangeError('Unknown transfer input or output');
-  if (o.kind !== 'fixed') return { status: 'not-supported', message: 'Derivative observations require numerical frequency evaluation' };
+  if (o.kind !== 'fixed') return { status: 'not-supported', reason: 'derivative-observation', message: 'Derivative observations require numerical frequency evaluation' };
   const entries = a.E.flatMap((r, i) => r.flatMap((v, j) => v === 0 ? [] : [{ i, j, v }]));
   if (a.storage.length !== 1 || entries.length !== 1 || entries[0]!.i !== entries[0]!.j)
-    return { status: 'not-supported', message: 'Requires one storage element and one nonzero diagonal E entry' };
+    return { status: 'not-supported', reason: 'storage-structure', message: 'Requires one storage element and one nonzero diagonal E entry' };
   const z = entries[0]!.i, e = entries[0]!.v;
   const w = a.unknowns.map((_, i) => i).filter(i => i !== z);
   const Kww = w.map(i => w.map(k => a.K[i]![k]!));
   const v = solveReal(Kww, w.map(i => a.K[i]![z]!), options);
   const b = solveReal(Kww, w.map(i => a.B[i]![j]!), options);
-  if (v.status !== 'ok' || b.status !== 'ok') return { status: 'not-supported', message: 'Algebraic K block is singular or numerically ill-conditioned' };
+  if (v.status !== 'ok' || b.status !== 'ok') return { status: 'not-supported', reason: 'algebraic-block', message: 'Algebraic K block is singular or numerically ill-conditioned' };
   const vz = v.x.map(v => v.re), bz = b.x.map(v => v.re);
   const Kzw = w.map(i => a.K[z]![i]!), Cw = w.map(i => o.C[i]!);
   const kr = a.K[z]![z]! - dot(Kzw, vz), br = a.B[z]![j]! - dot(Kzw, bz);
   const cr = o.C[z]! - dot(Cw, vz), dr = o.D[j]! + dot(Cw, bz);
   const numerator: [number, number] = [dr * kr + cr * br, dr * e], denominator: [number, number] = [kr, e];
   if (![e, kr, br, cr, dr, ...numerator, -kr / e].every(Number.isFinite))
-    return { status: 'not-supported', message: 'Reduction coefficients exceed numeric range' };
+    return { status: 'not-supported', reason: 'numeric-range', message: 'Reduction coefficients exceed numeric range' };
   return { status: 'ok', evidence: 'algebraically-derived-numeric-coefficients', dynamicCoordinate: a.unknowns[z]!,
     input, output, e, kr, br, cr, dr, numerator, denominator, denominatorRoot: -kr / e, cancellation: cr * br === 0,
     note: 'Root of the unreduced scalar denominator. A canceled input-output pole does not establish internal stability; no realization-wide pole computation.' };

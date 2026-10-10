@@ -1,4 +1,4 @@
-import { assemble, complex, currentRow, extractFirstOrder, inputValues, outputValue,
+import { assemble, complex, currentRow, extractFirstOrder, inputValues, outputValue, ValidationError,
   parseDocument, serializeDocument, solveDC, solveFrequency, transfer, transient,
   type AnalysisResult, type Assembly, type Complex, type FirstOrderTransfer,
   type NativeDocument, type NotSupported, type TransientResult, type Unit } from '../src/index.js';
@@ -20,7 +20,10 @@ export interface LabAnalysis {
   transient: TransientResult;
   settings: Settings;
 }
-export interface EditResult { ok: boolean; error?: string }
+export interface EditResult { ok: boolean; error?: string; errorCode?: string; errorParams?: Readonly<Record<string, string | number>> }
+const editError = (error: unknown): EditResult => ({ ok: false, error: error instanceof Error ? error.message : String(error),
+  errorCode: error instanceof ValidationError ? error.code : 'invalid-document',
+  errorParams: error instanceof ValidationError ? error.params : {} });
 const defaults = (preset: string): Settings => ({ minHz: 1, maxHz: preset === 'rlc' ? 1e5 : 1e4,
   points: 81, inspectHz: preset === 'rc' ? 1/(2*Math.PI*.001) : 1000,
   duration: preset === 'rlc' ? .003 : .005, step: preset === 'rlc' ? 1e-5 : 5e-5 });
@@ -40,7 +43,7 @@ export function updateDocument(state: LabState, mutate: (d: NativeDocument) => v
     parseDocument(JSON.stringify(next));
     state.document = next; state.revision++;
     return { ok: true };
-  } catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) }; }
+  } catch (error) { return editError(error); }
 }
 export function importNative(state: LabState, json: string): EditResult {
   try {
@@ -51,7 +54,7 @@ export function importNative(state: LabState, json: string): EditResult {
     state.output = next.circuit.observations.find(o => o.type === 'voltage')?.id ?? next.circuit.observations[0]?.id ?? '';
     state.selectedComponent = null; state.revision++;
     return { ok: true };
-  } catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) }; }
+  } catch (error) { return editError(error); }
 }
 export const exportNative = (state: LabState): string => serializeDocument(state.document);
 
@@ -63,14 +66,22 @@ export function parseFinite(text: string, name: string, positive = false): numbe
   return value;
 }
 export function validateSettings(s: Settings, sourceEvents = 0): string[] {
-  const errors: string[] = [];
-  if (!Number.isFinite(s.minHz) || s.minHz < .001 || s.minHz > 1e9) errors.push('Minimum frequency must be from 0.001 to 1e9 Hz');
-  if (!Number.isFinite(s.maxHz) || s.maxHz <= s.minHz || s.maxHz > 1e9) errors.push('Maximum frequency must exceed minimum and be at most 1e9 Hz');
-  if (!Number.isInteger(s.points) || s.points < 2 || s.points > 241) errors.push('Sweep points must be an integer from 2 to 241');
-  if (!Number.isFinite(s.inspectHz) || s.inspectHz < s.minHz || s.inspectHz > s.maxHz) errors.push('AC inspect frequency must lie within the sweep');
-  if (!Number.isFinite(s.duration) || s.duration <= 0 || s.duration > 10) errors.push('Duration must be in (0, 10] s');
-  if (!Number.isFinite(s.step) || s.step <= 0 || s.duration/s.step + sourceEvents > 3000)
-    errors.push('Step must be positive and the run must use at most 3000 intervals, including source events');
+  const messages: Record<SettingsProblem, string> = {
+    minHz: 'Minimum frequency must be from 0.001 to 1e9 Hz', maxHz: 'Maximum frequency must exceed minimum and be at most 1e9 Hz',
+    points: 'Sweep points must be an integer from 2 to 241', inspectHz: 'AC inspect frequency must lie within the sweep',
+    duration: 'Duration must be in (0, 10] s', step: 'Step must be positive and the run must use at most 3000 intervals, including source events',
+  };
+  return settingsProblems(s, sourceEvents).map(code => messages[code]);
+}
+export type SettingsProblem = keyof Settings;
+export function settingsProblems(s: Settings, sourceEvents = 0): SettingsProblem[] {
+  const errors: SettingsProblem[] = [];
+  if (!Number.isFinite(s.minHz) || s.minHz < .001 || s.minHz > 1e9) errors.push('minHz');
+  if (!Number.isFinite(s.maxHz) || s.maxHz <= s.minHz || s.maxHz > 1e9) errors.push('maxHz');
+  if (!Number.isInteger(s.points) || s.points < 2 || s.points > 241) errors.push('points');
+  if (!Number.isFinite(s.inspectHz) || s.inspectHz < s.minHz || s.inspectHz > s.maxHz) errors.push('inspectHz');
+  if (!Number.isFinite(s.duration) || s.duration <= 0 || s.duration > 10) errors.push('duration');
+  if (!Number.isFinite(s.step) || s.step <= 0 || s.duration/s.step + sourceEvents > 3000) errors.push('step');
   return errors;
 }
 export function dimensionless(unit: `${Unit}/${Unit}`): boolean { return unit === 'V/V' || unit === 'A/A'; }

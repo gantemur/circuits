@@ -26,48 +26,50 @@ export interface Experiment {
 export interface NativeDocument { circuit: Circuit; experiment: Experiment }
 export class ValidationError extends Error {
   readonly status = 'validation-error';
-  constructor(message: string) { super(message); this.name = 'ValidationError'; }
+  constructor(message: string, readonly code = 'invalid-document', readonly params: Readonly<Record<string, string | number>> = {}) {
+    super(message); this.name = 'ValidationError';
+  }
 }
 export const voltageBranch = (c: Component): boolean => ['V', 'VCVS', 'CCVS'].includes(c.type);
 export const independent = (c: Component): boolean => c.type === 'V' || c.type === 'I';
 
 type Obj = Record<string, unknown>;
 function object(v: unknown, at: string): Obj {
-  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new ValidationError(`${at}: expected object`);
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new ValidationError(`${at}: expected object`, 'expected-object', { path: at });
   return v as Obj;
 }
 function fields(v: Obj, keys: string[], at: string) {
-  for (const key of Object.keys(v)) if (!keys.includes(key)) throw new ValidationError(`${at}: unsupported field ${key}`);
+  for (const key of Object.keys(v)) if (!keys.includes(key)) throw new ValidationError(`${at}: unsupported field ${key}`, 'unsupported-field', { path: at, field: key });
 }
 function string(v: unknown, at: string): string {
-  if (typeof v !== 'string' || !v.length) throw new ValidationError(`${at}: expected nonempty string`);
+  if (typeof v !== 'string' || !v.length) throw new ValidationError(`${at}: expected nonempty string`, 'expected-string', { path: at });
   return v;
 }
 function number(v: unknown, at: string): number {
-  if (typeof v !== 'number' || !Number.isFinite(v)) throw new ValidationError(`${at}: expected finite number`);
+  if (typeof v !== 'number' || !Number.isFinite(v)) throw new ValidationError(`${at}: expected finite number`, 'expected-number', { path: at });
   return v;
 }
 function array(v: unknown, at: string): unknown[] {
-  if (!Array.isArray(v)) throw new ValidationError(`${at}: expected array`);
+  if (!Array.isArray(v)) throw new ValidationError(`${at}: expected array`, 'expected-array', { path: at });
   return v;
 }
 function unique(ids: string[], at: string) {
-  if (new Set(ids).size !== ids.length) throw new ValidationError(`${at}: duplicate IDs`);
+  if (new Set(ids).size !== ids.length) throw new ValidationError(`${at}: duplicate IDs`, 'duplicate-ids', { path: at });
 }
 function label(v: Obj) { if (v.label !== undefined) string(v.label, 'label'); }
 function node(v: unknown, nodes: Set<string>): string {
   const id = string(v, 'terminal');
-  if (!nodes.has(id)) throw new ValidationError(`Missing node ${id}`);
+  if (!nodes.has(id)) throw new ValidationError(`Missing node ${id}`, 'missing-node', { id });
   return id;
 }
 export function validateCircuit(value: unknown): Circuit {
   const c = object(value, 'circuit');
   fields(c, ['schemaVersion', 'label', 'nodes', 'components', 'observations'], 'circuit');
-  if (c.schemaVersion !== 1) throw new ValidationError('Unknown circuit schemaVersion');
+  if (c.schemaVersion !== 1) throw new ValidationError('Unknown circuit schemaVersion', 'invalid-schema');
   label(c);
   const nodes = array(c.nodes, 'nodes').map(n => string(n, 'node'));
   unique(nodes, 'nodes');
-  if (!nodes.includes('0')) throw new ValidationError('Missing reference node 0');
+  if (!nodes.includes('0')) throw new ValidationError('Missing reference node 0', 'missing-ground');
   const ns = new Set(nodes);
   const components = array(c.components, 'components').map(raw => {
     const d = object(raw, 'component');
@@ -76,7 +78,7 @@ export function validateCircuit(value: unknown): Circuit {
     switch (d.type) {
       case 'R': case 'C': case 'L':
         fields(d, [...base, 'value'], 'passive');
-        if (number(d.value, 'value') <= 0) throw new ValidationError('Passive value must be positive');
+        if (number(d.value, 'value') <= 0) throw new ValidationError('Passive value must be positive', 'passive-positive');
         break;
       case 'V': case 'I': fields(d, base, 'source'); break;
       case 'VCVS': case 'VCCS':
@@ -85,14 +87,14 @@ export function validateCircuit(value: unknown): Circuit {
       case 'CCVS': case 'CCCS':
         fields(d, [...base, 'control', 'gain'], 'current-controlled source');
         string(d.control, 'control'); number(d.gain, 'gain'); break;
-      default: throw new ValidationError(`Unsupported device type ${String(d.type)}`);
+      default: throw new ValidationError(`Unsupported device type ${String(d.type)}`, 'unsupported-device', { type: String(d.type) });
     }
     return d as unknown as Component;
   });
   unique(components.map(d => d.id), 'components');
   for (const d of components) if (d.type === 'CCVS' || d.type === 'CCCS') {
     const control = components.find(e => e.id === d.control);
-    if (!control || !voltageBranch(control)) throw new ValidationError(`${d.id}: control must name a retained voltage-source-type branch`);
+    if (!control || !voltageBranch(control)) throw new ValidationError(`${d.id}: control must name a retained voltage-source-type branch`, 'invalid-control', { id: d.id });
   }
   const observations = array(c.observations, 'observations').map(raw => {
     const o = object(raw, 'observation'); string(o.id, 'observation.id'); label(o);
@@ -100,8 +102,8 @@ export function validateCircuit(value: unknown): Circuit {
       fields(o, ['id', 'label', 'type', 'p', 'n'], 'observation'); node(o.p, ns); node(o.n, ns);
     } else if (o.type === 'current') {
       fields(o, ['id', 'label', 'type', 'component'], 'observation');
-      if (!components.some(d => d.id === o.component)) throw new ValidationError('Observation names undefined component');
-    } else throw new ValidationError(`Unsupported observation ${String(o.type)}`);
+      if (!components.some(d => d.id === o.component)) throw new ValidationError('Observation names undefined component', 'invalid-observation');
+    } else throw new ValidationError(`Unsupported observation ${String(o.type)}`, 'invalid-observation');
     return o as unknown as Observation;
   });
   unique(observations.map(o => o.id), 'observations');
@@ -110,12 +112,12 @@ export function validateCircuit(value: unknown): Circuit {
 export function validateExperiment(value: unknown, circuit: Circuit): Experiment {
   const e = object(value, 'experiment');
   fields(e, ['schemaVersion', 'label', 'sources', 'initial'], 'experiment'); label(e);
-  if (e.schemaVersion !== 1) throw new ValidationError('Unknown experiment schemaVersion');
+  if (e.schemaVersion !== 1) throw new ValidationError('Unknown experiment schemaVersion', 'invalid-schema');
   const ids = circuit.components.filter(independent).map(c => c.id);
   const sources = array(e.sources, 'sources').map(raw => {
     const s = object(raw, 'source'); fields(s, ['id', 'dc', 'ac', 'waveform'], 'source');
     const id = string(s.id, 'source.id'); number(s.dc, 'dc');
-    if (!ids.includes(id)) throw new ValidationError(`Unknown independent source ${id}`);
+    if (!ids.includes(id)) throw new ValidationError(`Unknown independent source ${id}`, 'unknown-source', { id });
     if (s.ac !== undefined) {
       const ac = object(s.ac, 'ac'); fields(ac, ['re', 'im'], 'ac'); number(ac.re, 'ac.re'); number(ac.im, 'ac.im');
     }
@@ -130,15 +132,15 @@ export function validateExperiment(value: unknown, circuit: Circuit): Experiment
           fields(w, ['type', 'offset', 'amplitudePeak', 'frequencyHz', 'phaseRadians'], 'sinusoid');
           number(w.offset, 'offset'); number(w.phaseRadians, 'phaseRadians');
           if (number(w.amplitudePeak, 'amplitudePeak') < 0 || number(w.frequencyHz, 'frequencyHz') < 0)
-            throw new ValidationError('Sinusoid amplitudePeak and frequencyHz must be nonnegative');
+            throw new ValidationError('Sinusoid amplitudePeak and frequencyHz must be nonnegative', 'invalid-sinusoid');
           break;
-        default: throw new ValidationError('Unsupported waveform');
+        default: throw new ValidationError('Unsupported waveform', 'unsupported-waveform');
       }
     }
     return id;
   });
   unique(sources, 'sources');
-  if (sources.length !== ids.length) throw new ValidationError('Supply every independent source, including zero-valued sources');
+  if (sources.length !== ids.length) throw new ValidationError('Supply every independent source, including zero-valued sources', 'missing-sources');
   const initial = object(e.initial, 'initial');
   if (initial.kind === 'equilibrium') fields(initial, ['kind'], 'initial');
   else if (initial.kind === 'storage') {
@@ -147,12 +149,12 @@ export function validateExperiment(value: unknown, circuit: Circuit): Experiment
     const supplied = array(initial.values, 'initial.values').map(raw => {
       const v = object(raw, 'storage value'); fields(v, ['id', 'value'], 'storage value');
       const id = string(v.id, 'storage.id'); number(v.value, 'storage.value');
-      if (!storage.includes(id)) throw new ValidationError(`Unknown storage component ${id}`);
+      if (!storage.includes(id)) throw new ValidationError(`Unknown storage component ${id}`, 'unknown-storage', { id });
       return id;
     });
     unique(supplied, 'initial values');
-    if (supplied.length !== storage.length) throw new ValidationError('Supply every capacitor voltage and inductor current');
-  } else throw new ValidationError('Unsupported initial condition');
+    if (supplied.length !== storage.length) throw new ValidationError('Supply every capacitor voltage and inductor current', 'missing-storage');
+  } else throw new ValidationError('Unsupported initial condition', 'unsupported-initial');
   return value as Experiment;
 }
 export function validateDocument(value: unknown): NativeDocument {
@@ -162,7 +164,7 @@ export function validateDocument(value: unknown): NativeDocument {
 }
 export function parseDocument(json: string): NativeDocument {
   let value: unknown;
-  try { value = JSON.parse(json); } catch { throw new ValidationError('Invalid JSON'); }
+  try { value = JSON.parse(json); } catch { throw new ValidationError('Invalid JSON', 'invalid-json'); }
   return validateDocument(value);
 }
 export const serializeDocument = (d: NativeDocument): string => JSON.stringify(validateDocument(d), null, 2);

@@ -1,4 +1,5 @@
 import { escapeHtml } from './schematic.js';
+import { t } from './i18n.js';
 
 export interface PlotPoint { x:number; y:number|null; status:string }
 const finite=(x:number|null):x is number=>x!==null&&Number.isFinite(x);
@@ -9,7 +10,7 @@ export function plot(points:PlotPoint[],options:{title:string;xLabel:string;yLab
   const width=560,height=252,left=68,right=24,top=17,bottom=56;
   const xmin=Math.min(...points.map(p=>p.x)),xmax=Math.max(...points.map(p=>p.x));
   if(!valid.length||!Number.isFinite(xmin)||!Number.isFinite(xmax)||xmin===xmax)
-    return `<div class="plot-card"><div class="plot-title">${escapeHtml(options.title)}</div><p class="warning">No finite samples to plot.</p></div>`;
+    return `<div class="plot-card"><div class="plot-title">${escapeHtml(options.title)}</div><p class="warning">${t('noFiniteSamples')}</p></div>`;
   const xs=(x:number)=>options.xLog?Math.log10(x):x;
   const lo=xs(xmin),hi=xs(xmax);
   let ymin=Math.min(...valid.map(p=>p.y!)),ymax=Math.max(...valid.map(p=>p.y!));
@@ -31,7 +32,7 @@ export function plot(points:PlotPoint[],options:{title:string;xLabel:string;yLab
   const failures=points.filter(p=>p.status!=='ok'&&p.status!=='zero-magnitude').map(p=>{
     const x=px(p.x),y=top+8;return `<path class="plot-break" d="M${x-3} ${y-3}l6 6m0-6l-6 6"/>`;}).join('');
   const zero=points.filter(p=>p.status==='zero-magnitude').map(p=>{
-    const x=px(p.x);return `<text class="plot-text schematic-output" x="${x}" y="${top+12}" text-anchor="middle">zero</text>`;}).join('');
-  const svg=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(options.title)}; horizontal axis ${escapeHtml(options.xLabel)}; vertical axis ${escapeHtml(options.yLabel)}"><rect width="${width}" height="${height}" fill="#fbfcfa"/>${grid}${xTicks}<path class="plot-axis" d="M${left} ${top}V${height-bottom}H${width-right}"/><path class="plot-line ${options.color==='orange'?'orange':''}" d="${path.trim()}"/>${failures}${zero}<text class="plot-text" x="${(left+width-right)/2}" y="${height-7}" text-anchor="middle">${escapeHtml(options.xLabel)}</text><text class="plot-text" transform="translate(15 ${(top+height-bottom)/2}) rotate(-90)" text-anchor="middle">${escapeHtml(options.yLabel)}</text></svg>`;
+    const x=px(p.x);return `<text class="plot-text schematic-output" x="${x}" y="${top+12}" text-anchor="middle">${t('zeroMarker')}</text>`;}).join('');
+  const svg=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(t('plotAria',{title:options.title,x:options.xLabel,y:options.yLabel}))}"><rect width="${width}" height="${height}" fill="#fbfcfa"/>${grid}${xTicks}<path class="plot-axis" d="M${left} ${top}V${height-bottom}H${width-right}"/><path class="plot-line ${options.color==='orange'?'orange':''}" d="${path.trim()}"/>${failures}${zero}<text class="plot-text" x="${(left+width-right)/2}" y="${height-7}" text-anchor="middle">${escapeHtml(options.xLabel)}</text><text class="plot-text" transform="translate(15 ${(top+height-bottom)/2}) rotate(-90)" text-anchor="middle">${escapeHtml(options.yLabel)}</text></svg>`;
   return `<div class="plot-card"><div class="plot-title">${escapeHtml(options.title)}</div>${svg}</div>`;
 }
