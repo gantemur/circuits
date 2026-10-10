@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 
-const root = resolve('dist');
+const root = resolve(process.env.SITE_DIR || 'dist');
 const host = '127.0.0.1';
 const explicitPort = process.env.PORT !== undefined;
 const port = explicitPort ? Number(process.env.PORT) : 4173;

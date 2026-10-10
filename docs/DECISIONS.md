@@ -9,7 +9,7 @@ Initial entry: 10 October 2026.
 | D01 | Existing repository slug is `circuits` | Do not rename it during implementation |
 | D02 | Working application name is Circuits Unfolded | Keep the name provisional; no domain or trademark claim |
 | D03 | A transparent lab for supported small circuits | Practical completeness is bounded by declared models and analyses |
-| D04 | Eventual static browser hosting on GitHub Pages | No runtime backend, account, or AI API dependency |
+| D04 | Static browser hosting on GitHub Pages | No runtime backend, account, or AI API dependency |
 | D05 | Browser-compatible TypeScript kernel | Headless tests and analyses precede graphical editing |
 | D06 | Canonical residual form `E * xdot + K * x = B * u` | Translate book state form using `A = -K` |
 | D07 | Explicit experiments and model levels | Input, output, source, load, initialization, and fidelity are visible |
@@ -27,7 +27,7 @@ Repository visibility is an owner-controlled setting. The documents are prepared
 - Phase 0 implementation: complete, including R/C/L, V/I and all four controlled sources, labeled/provenance-bearing MNA, DC and complex-frequency solves, numerical transfer, restricted scalar dynamic elimination, backward Euler transients, native JSON, and resistor Kron reduction.
 - Phase 0 acceptance tests: **31 tests passing**, covering MVP sections A–H plus validation, numerical diagnostics, waveform units, explicit unsupported cases, and Kron overflow regressions.
 - Reproducible headless demo and browser bundle: implemented and verified.
-- Browser UI: Phase 1A implemented on `codex/phase-1-browser-lab`; deployment has not been performed.
+- Browser UI: Phase 1A implemented on `codex/phase-1-browser-lab`; release preparation is in progress. Live deployment is not yet verified.
 - Active milestone: Phase 1A browser linear lab, specified in `PHASE_1_SPECIFICATION.md`. Its implementation and validation status follows below.
 
 Implementation is on task branch `codex/phase-0-kernel`, based on documentation commit `460771c`. Validation below applies to the Phase 0 checkpoint containing this entry, committed with the subject `feat: implement Phase 0 linear circuit kernel`. The checkpoint preserves `main` and does not merge or deploy the implementation. No private book was available or needed; public conventions and fixture equations supplied the acceptance contract.
@@ -87,6 +87,12 @@ English (`en`) and Mongolian Cyrillic (`mn`) are continuing interface requiremen
 Focused tests cover dictionary/placeholder parity, preference and storage fallback, edited-document/analysis/CSV invariance, and stable import/extraction identifiers. Browser checks at `/circuits/` exercised six examples in both languages, a 390 px Mongolian layout without horizontal overflow, an invalid component draft across a language switch, and translated restricted-extraction explanations. Chrome's file chooser blocked the invalid-JSON upload because its extension lacks local file-URL access; the parser and UI-facing diagnostic code passed automated tests. Final command results and commit are recorded in the delivery handoff.
 
 Mongolian terminology follow-up: Gaussian-elimination `pivotRatio` is labeled **Гол элементүүдийн харьцаа (pivot ratio)** to distinguish it from circuit poles. Backward Euler is **Далд Эйлерийн арга**, frequency sweep is described as **давтамжийн мужийн тооцоо**, and the default underdamped RLC example describes decaying oscillation amplitude. The glossary records these meanings. The in-app browser file picker at `/circuits/` accepted malformed JSON and showed the Mongolian error while the loaded RC circuit and its DC result stayed intact. A valid JSON file downloaded with the browser's Export JSON button imported into a fresh tab, replacing the default RC with loaded RC and clearing the error. At 390 px, longer labels wrapped and document width remained within the viewport. `npm test` passed 44/44, and `npm run typecheck`, `npm run build`, and `git diff --check` passed.
+
+## First GitHub Pages release preparation — 10 October 2026
+
+The completed Phase 1A branch, including the Mongolian wording pass at `cd0a287`, is the source for the first public release. The release target is `https://gantemur.github.io/circuits/`, without a custom domain. `npm run build:site` packages only the three runtime assets into ignored `publish/`; `dist/` remains a development build containing additional kernel and test outputs. Assets use relative URLs under `/circuits/`, and the local preview can serve the exact package with `SITE_DIR=publish npm run preview`.
+
+Validation runs on pushes and pull requests with Node 24 and the committed lockfile. The Pages workflow accepts only `main` for deployment, including manual runs, and requires its validation job to pass before packaging and deploying. The repository Pages source must be **GitHub Actions**. Release preparation checks on Node 26.4.0/npm 11.17.0: `npm ci`, `npm test` (44/44), `npm run typecheck`, `npm run build:site`, and `git diff --check` passed. Local browser verification used the packaged assets at `/circuits/`: English and Mongolian rendered, an RC resistor edit updated the AC response and plots, and Mongolian at 390 px had no horizontal overflow. JSON export produced a native file; browser import verification and public deployment status are recorded in the release handoff when known.
 
 ## Maintenance format
 

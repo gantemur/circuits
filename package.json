@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc && esbuild src/index.ts --bundle --platform=browser --format=esm --outfile=dist/browser.js",
     "build:app": "npm run build && node scripts/build-app.mjs",
+    "build:site": "npm run build:app && node scripts/package-site.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.web.json",
     "test": "npm run build:app && node --test test/*.test.mjs",
     "demo": "npm run build && node examples/demo.mjs",

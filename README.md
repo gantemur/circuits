@@ -22,7 +22,13 @@ Use Node.js 22 or newer and npm. After `npm ci`, run:
 npm run dev
 ```
 
-Open the `Circuits Unfolded:` URL printed by the server, normally `http://127.0.0.1:4173/circuits/`. If port 4173 is occupied, the server selects a free local port and prints that URL instead. Set `PORT=4188 npm run dev` when you need an exact port; an occupied explicit port reports an error. `npm run dev` builds the kernel and app once, then serves the static files. After edits to source files, restart it to rebuild. To build for static hosting, run `npm run build:app`; the self-contained assets are in `dist/`, with relative paths that work when served under `/circuits/`. `npm run preview` serves the current build. This milestone has not been deployed.
+Open the `Circuits Unfolded:` URL printed by the server, normally `http://127.0.0.1:4173/circuits/`. If port 4173 is occupied, the server selects a free local port and prints that URL instead. Set `PORT=4188 npm run dev` when you need an exact port; an occupied explicit port reports an error. `npm run dev` builds the kernel and app once, then serves the static files. After edits to source files, restart it to rebuild. `npm run preview` serves the current `dist/` build.
+
+## Publish on GitHub Pages
+
+The release target is [https://gantemur.github.io/circuits/](https://gantemur.github.io/circuits/). Run `npm run build:site` to create `publish/` with only `index.html`, `style.css`, and `app.js`. These assets use relative URLs under `/circuits/`. To preview that exact bundle locally, run `SITE_DIR=publish npm run preview` and open the printed URL. `publish/` is generated and ignored; `dist/` also contains kernel modules, declarations, test bundles, and source maps, so it is not the Pages artifact.
+
+The [validation workflow](.github/workflows/validate.yml) runs on pushes and pull requests with Node 24, `npm ci`, tests, typecheck, and the application build. The [Pages workflow](.github/workflows/pages.yml) runs on `main` after its validation job succeeds, packages the static bundle, and deploys it using GitHub Pages actions. A manual run selected on any branch other than `main` skips deployment. In repository **Settings → Pages**, select **GitHub Actions** as the build and deployment source; the repository owner may need to make this setting. No custom domain is configured. Confirm the deployment job succeeds and check the public URL in a browser before treating a release as live.
 
 Start with **RC low-pass**, select **R**, and change 1000 Ω to 2000 Ω. The AC result at the inspect frequency changes from `0.5−0.5j` to `0.2−0.4j`, and the transfer and transient plots recompute. Select R again to see its terminal law and highlighted `K` matrix contributions. Source DC, RMS AC phasors, time waveform, and initial storage state have separate controls. Exported JSON is the strict kernel document, without drawing metadata.
 
@@ -57,7 +63,7 @@ The solver uses dense floating-point systems for small linear circuits. It repor
 
 Phase 1A intentionally supports six preset drawings; a valid imported topology outside them gets a named node/component table. The lab handles strict native v1 documents but does not offer a wiring editor. Its numerical sweep is capped at 241 points and transient work at 3000 intervals. Zero magnitude has undefined logarithmic magnitude and phase; failed samples are gaps with statuses. Browser plots are numerical, and algebraic extraction remains restricted to the kernel's one-storage-element cases. The app does not infer internal stability from an input-output denominator.
 
-The next unresolved milestone is an explicitly specified Phase 1B or later scope for broader circuit editing and analysis. Nonlinear models, unrestricted symbolic algebra, theorem/reduction UI, synthesis, graphical wiring, and deployment are not part of Phase 1A.
+The next unresolved milestone is an explicitly specified Phase 1B or later scope for broader circuit editing and analysis. Nonlinear models, unrestricted symbolic algebra, theorem/reduction UI, synthesis, and graphical wiring are not part of Phase 1A. GitHub Pages publication is a separate release step for the completed browser lab.
 
 ## Intended laboratory
 
@@ -97,7 +103,7 @@ The book manuscript and its source tree are not distributed in this repository. 
 
 ## Technical direction
 
-The Phase 1A application runs entirely in the browser and produces static assets suitable for eventual GitHub Pages hosting. The mathematical kernel is independent of the interface and also runs under Node for tests and reproducible calculations. It uses TypeScript, modified nodal analysis, small real and complex linear solves, and a descriptor-system formulation.
+The Phase 1A application runs entirely in the browser and produces static assets for GitHub Pages hosting. The mathematical kernel is independent of the interface and also runs under Node for tests and reproducible calculations. It uses TypeScript, modified nodal analysis, small real and complex linear solves, and a descriptor-system formulation.
 
 No account, runtime server, or external AI API is required to use the built app. During development, coding assistants can help implement and check the software.
 
