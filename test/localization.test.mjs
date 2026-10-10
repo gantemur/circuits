@@ -70,3 +70,15 @@ test('localization: import errors and unsupported extraction have stable diagnos
   const cascade=analyze(createLab('rc-cascade'));
   assert.equal(cascade.algebraic.reason,'storage-structure');
 });
+
+test('localization: Mongolian numerical and time-method terms stay distinct', () => {
+  setLanguage('mn');
+  assert.match(t('diagnosticSummary',{residual:0,pivot:1}),/Гол элементүүдийн харьцаа \(pivot ratio\): 1/);
+  assert.doesNotMatch(t('diagnosticSummary',{residual:0,pivot:1}),/туйлын харьцаа/);
+  assert.match(t('transientSummary',{step:0.01,duration:1,output:'out',unit:'V'}),/Далд Эйлерийн арга \(Backward Euler\)/);
+  assert.match(t('logarithmicSweep'),/давтамжийн мужийн тооцоо/i);
+  assert.match(t('presetRlcSubtitle'),/Далайц нь буурах/);
+  assert.equal(t('importRejected',{reason:t('invalidJson')}),
+    'Импорт татгалзагдлаа: Файл зөв JSON биш. Одоогийн баримт өөрчлөгдөөгүй.');
+  setLanguage('en');
+});

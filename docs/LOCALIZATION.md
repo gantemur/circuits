@@ -7,6 +7,7 @@ Phase 1A supports English (`en`) and Mongolian Cyrillic (`mn`). New user-facing 
 | Voltage | Хүчдэл | Node and element voltage |
 | Current | Гүйдэл | Branch and source current |
 | Frequency | Давтамж | Hz, including log sweeps |
+| Frequency sweep | Давтамжийн мужийн тооцоо | Samples across a chosen frequency range; specify a logarithmic scale when used |
 | Transfer function | Дамжуулах функц | Algebraic relation (H(s)) |
 | Transfer response | Дамжуулалтын хариу | Numerical unit-input sweep |
 | Magnitude | Модуль | `\|H\|`; dB only for dimensionless ratios |
@@ -16,8 +17,11 @@ Phase 1A supports English (`en`) and Mongolian Cyrillic (`mn`). New user-facing 
 | Storage state | Хадгалалтын төлөв | Capacitor voltage or inductor current |
 | Peak amplitude | Оргил далайц | Time-domain sinusoid parameter |
 | RMS phasor | RMS фазор | Complex AC source parameter |
-| Backward Euler | Ухрах Эйлер | First-order time integration method |
+| Backward Euler | Далд Эйлерийн арга | First-order implicit time integration; retain “Backward Euler” in explanatory text |
+| Damped oscillation | Далайц нь буурах хэлбэлзэл | Default underdamped series RLC example; damping need not imply oscillation in every circuit |
 | Residual | Үлдэгдэл | Physical or scaled numerical diagnostic |
+| Backward residual | Буцах үлдэгдэл | Numerical solve diagnostic, not a matrix inverse |
+| Pivot ratio | Гол элементүүдийн харьцаа (pivot ratio) | Smallest/largest accepted Gaussian-elimination pivots; not a circuit pole or condition number |
 | Ground / reference node | Газардалт / лавлах зангилаа | Native node ID `0` |
 | Component contribution | Элементийн хувь нэмэр | Kernel-recorded matrix provenance |
 
