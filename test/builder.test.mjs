@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createLab, analyze, exportNative, importNative } from '../dist/lab-test.js';
+import { createLab, analyze, exportNative, importNative, updateDocument } from '../dist/lab-test.js';
 import { addComponent, addNode, addObservation, applyBuilder, builderConflict, changeInitial,
   changeWaveform, componentReferences, createBuilder, documentFromDraft, newBuilder, nodeReferences,
-  reloadBuilder, removeComponent, removeNode, renameNode, touchBuilder } from '../dist/builder-test.js';
+  reloadBuilder, removeComponent, removeNode, renameNode, syncCleanBuilder, touchBuilder } from '../dist/builder-test.js';
 import { parseDocument } from '../dist/index.js';
 import { schematic } from '../dist/schematic-test.js';
 
@@ -93,6 +93,79 @@ test('invalid builder draft and changed-document conflict keep validated results
   assert.equal(applyBuilder(builder, state).ok, false);
   assert.equal(state.presetId, 'rc');
   reloadBuilder(builder, state); assert.equal(builderConflict(builder, state), false);
+});
+
+test('clean builder follows preset switches and cannot apply an obsolete base', () => {
+  const state = createLab(), builder = createBuilder(state), old = builder.base;
+  Object.assign(state, createLab('rc'));
+  const current = exportNative(state);
+  assert.equal(builder.dirty, false);
+  assert.equal(builderConflict(builder, state), true);
+  assert.equal(applyBuilder(builder, state).ok, false);
+  assert.equal(exportNative(state), current);
+  assert.equal(syncCleanBuilder(builder, state), true);
+  assert.equal(builder.base, current);
+  assert.notEqual(builder.base, old);
+  assert.deepEqual(documentFromDraft(builder.draft), state.document);
+  assert.equal(applyBuilder(builder, state).ok, true);
+  assert.equal(exportNative(state), current);
+  assert.equal(updateDocument(state, () => {}).ok, true);
+  assert.equal(exportNative(state), current);
+  assert.equal(builderConflict(builder, state), true);
+  assert.equal(applyBuilder(builder, state).ok, false);
+  assert.equal(syncCleanBuilder(builder, state), true);
+});
+
+test('clean builder follows the shared file/JSON import path and component edits; edited drafts retain conflicts', async () => {
+  const state = createLab(), builder = createBuilder(state);
+  for (const fixture of ['rc-high-pass.json', 'vcvs.json']) {
+    const json = await readFile(new URL(`../fixtures/${fixture}`, import.meta.url), 'utf8');
+    assert.equal(importNative(state, json).ok, true);
+    const imported = exportNative(state);
+    assert.equal(applyBuilder(builder, state).ok, false);
+    assert.equal(exportNative(state), imported);
+    assert.equal(syncCleanBuilder(builder, state), true);
+    assert.equal(applyBuilder(builder, state).ok, true);
+    assert.equal(exportNative(state), imported);
+  }
+  assert.equal(updateDocument(state, d => { d.circuit.components.find(c => c.id === 'RL').value = 2200; }).ok, true);
+  const edited = exportNative(state);
+  assert.equal(applyBuilder(builder, state).ok, false);
+  assert.equal(exportNative(state), edited);
+  assert.equal(syncCleanBuilder(builder, state), true);
+  assert.equal(applyBuilder(builder, state).ok, true);
+  assert.equal(exportNative(state), edited);
+  builder.draft.circuit.components.find(c => c.id === 'RL').value = '3300'; touchBuilder(builder);
+  assert.equal(updateDocument(state, d => { d.circuit.components.find(c => c.id === 'RL').value = 4700; }).ok, true);
+  assert.equal(syncCleanBuilder(builder, state), false);
+  assert.equal(builder.draft.circuit.components.find(c => c.id === 'RL').value, '3300');
+  assert.equal(builderConflict(builder, state), true);
+  assert.equal(applyBuilder(builder, state).ok, false);
+  assert.equal(state.document.circuit.components.find(c => c.id === 'RL').value, 4700);
+});
+
+test('node rename uses ground ID, validates first, and updates all voltage references', async () => {
+  const state = createLab('vcvs');
+  const document = parseDocument(await readFile(new URL('../fixtures/vcvs.json', import.meta.url), 'utf8'));
+  document.circuit.nodes = ['in', '0', 'out'];
+  document.circuit.observations.push({ id: 'input', type: 'voltage', p: 'in', n: '0' });
+  assert.equal(importNative(state, JSON.stringify(document)).ok, true);
+  const saved = exportNative(state), builder = createBuilder(state);
+  const draftBefore = structuredClone(builder.draft);
+  for (const [name, code] of [['', 'builderNodeEmpty'], ['   ', 'builderNodeEmpty'], ['0', 'builderNodeGroundName'], ['out', 'builderNodeDuplicate']]) {
+    assert.deepEqual(renameNode(builder, 0, name), { ok: false, code });
+    assert.deepEqual(builder.draft, draftBefore);
+    assert.equal(exportNative(state), saved);
+    near(ok(analyze(state).dc).observations.out.value.re, 6);
+  }
+  assert.deepEqual(renameNode(builder, 1, 'earth'), { ok: false, code: 'builderGroundProtected' });
+  assert.deepEqual(renameNode(builder, 0, 'input-node'), { ok: true });
+  assert.deepEqual(builder.draft.circuit.nodes, ['input-node', '0', 'out']);
+  assert.equal(builder.draft.circuit.components.find(c => c.id === 'Vin').p, 'input-node');
+  assert.equal(builder.draft.circuit.components.find(c => c.id === 'D').cp, 'input-node');
+  assert.equal(builder.draft.circuit.observations.find(o => o.id === 'input').p, 'input-node');
+  assert.equal(applyBuilder(builder, state).ok, true);
+  near(ok(analyze(state).dc).observations.out.value.re, 6);
 });
 
 test('controlled-source controls and inconsistent ideal-source documents survive builder Apply', async () => {

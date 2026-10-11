@@ -18,7 +18,7 @@ export interface BuilderDraft {
   experiment: { schemaVersion: 1; label?: string; sources: { id: string; dc: NumberText; ac?: { re: NumberText; im: NumberText }; waveform?: DraftWaveform }[];
     initial: { kind: 'equilibrium' } | { kind: 'storage'; values: { id: string; value: NumberText }[] } };
 }
-export interface BuilderState { draft: BuilderDraft; base: string; dirty: boolean; error: BuilderError | null }
+export interface BuilderState { draft: BuilderDraft; base: string; baseDocument: NativeDocument; dirty: boolean; error: BuilderError | null }
 export interface BuilderError { code: string; params: Readonly<Record<string, string | number>>; field?: string; raw?: string }
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const text = (value: number): string => String(value);
@@ -43,7 +43,7 @@ export function draftFromDocument(document: NativeDocument): BuilderDraft {
       : { kind: 'equilibrium' } } };
 }
 export function createBuilder(state: LabState): BuilderState {
-  return { draft: draftFromDocument(state.document), base: exportNative(state), dirty: false, error: null };
+  return { draft: draftFromDocument(state.document), base: exportNative(state), baseDocument: state.document, dirty: false, error: null };
 }
 export function reloadBuilder(builder: BuilderState, state: LabState): void {
   Object.assign(builder, createBuilder(state));
@@ -51,10 +51,15 @@ export function reloadBuilder(builder: BuilderState, state: LabState): void {
 export function newBuilder(builder: BuilderState, state: LabState): void {
   builder.draft = { circuit: { schemaVersion: 1, nodes: ['0'], components: [], observations: [] },
     experiment: { schemaVersion: 1, sources: [], initial: { kind: 'equilibrium' } } };
-  builder.base = exportNative(state); builder.dirty = true; builder.error = null;
+  builder.base = exportNative(state); builder.baseDocument = state.document; builder.dirty = true; builder.error = null;
 }
 export function builderConflict(builder: BuilderState, state: LabState): boolean {
-  return builder.dirty && builder.base !== exportNative(state);
+  return builder.baseDocument !== state.document || builder.base !== exportNative(state);
+}
+export function syncCleanBuilder(builder: BuilderState, state: LabState): boolean {
+  if (builder.dirty || !builderConflict(builder, state)) return false;
+  reloadBuilder(builder, state);
+  return true;
 }
 export function touchBuilder(builder: BuilderState): void { builder.dirty = true; builder.error = null; }
 export function freshId(prefix: string, ids: readonly string[]): string {
@@ -65,9 +70,15 @@ export function addNode(builder: BuilderState): string {
   const id = freshId('n', builder.draft.circuit.nodes);
   builder.draft.circuit.nodes.push(id); touchBuilder(builder); return id;
 }
-export function renameNode(builder: BuilderState, index: number, id: string): void {
-  if (index === 0 || builder.draft.circuit.nodes[index] === '0') return;
-  const old = builder.draft.circuit.nodes[index]; if (old === undefined) return;
+export type RenameNodeResult = { ok: true } | { ok: false; code: 'builderNodeEmpty' | 'builderNodeDuplicate' | 'builderNodeGroundName' | 'builderGroundProtected' | 'builderUnknownNode' };
+export function renameNode(builder: BuilderState, index: number, id: string): RenameNodeResult {
+  const old = builder.draft.circuit.nodes[index];
+  if (old === undefined) return { ok: false, code: 'builderUnknownNode' };
+  if (old === '0') return { ok: false, code: 'builderGroundProtected' };
+  if (!id.trim()) return { ok: false, code: 'builderNodeEmpty' };
+  if (id === '0') return { ok: false, code: 'builderNodeGroundName' };
+  if (id !== old && builder.draft.circuit.nodes.includes(id)) return { ok: false, code: 'builderNodeDuplicate' };
+  if (id === old) return { ok: true };
   // Rename is a deliberate refactor of this draft, so every reference follows it.
   builder.draft.circuit.nodes[index] = id;
   for (const c of builder.draft.circuit.components) {
@@ -78,6 +89,7 @@ export function renameNode(builder: BuilderState, index: number, id: string): vo
     if (o.p === old) o.p = id; if (o.n === old) o.n = id;
   }
   touchBuilder(builder);
+  return { ok: true };
 }
 export function nodeReferences(builder: BuilderState, id: string): string[] {
   return [...builder.draft.circuit.components.filter(c => c.p === id || c.n === id || ('cp' in c && (c.cp === id || c.cn === id))).map(c => c.id),
