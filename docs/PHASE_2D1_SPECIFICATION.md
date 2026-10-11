@@ -1,6 +1,6 @@
 # Phase 2D1 — visual transformations and guided existing examples
 
-Status: implemented on `codex/phase-2d-visual-learning`; this specification was written before implementation. The branch begins at Phase 2C commit `d182c04`; Phase 2C and Phase 2D1 have not been merged or published. This milestone improves the presentation and use of existing analyses and resistor transformations without adding devices, mathematical algorithms, native fields, or a new global workspace.
+Status: implemented on `codex/phase-2d-visual-learning` and published on `main` from reviewed commit `edffe839` after successful [validation](https://github.com/gantemur/circuits/actions/runs/38182928106) and [Pages deployment](https://github.com/gantemur/circuits/actions/runs/38182928373). This specification was written before implementation. The branch began at Phase 2C commit `d182c04`. The milestone improves the presentation and use of existing analyses and resistor transformations without adding devices, mathematical algorithms, native fields, or a new global workspace.
 
 ## Transform workflow
 
@@ -39,3 +39,5 @@ In the actual local in-app browser, the default divider's resistor edit changed 
 ### Pre-release presentation correction
 
 Compact resistor drawings now require continuous leads to exact terminal centers and reject geometry in which a wire or symbol reaches an unrelated node or branches cross without a junction. A rejected layout displays exact topology tables. Position maps preserve prototype-property IDs, and the boundary sentence renders markup-like IDs literally. Finite currents remain labeled in amperes when milliamp conversion overflows. Preset RC capacitor and circular-source leads meet their symbols. The numerical helper and native document are unchanged. Findings, focused regressions, full checks, and browser evidence are recorded in [DECISIONS.md](DECISIONS.md#phase-2d1-presentation-correction--11-october-2026).
+
+The final pre-release guard also rejects symbol–symbol and wire–symbol collisions between distinct resistor branches, accounting for rotated rectangles and visible strokes. Its five-resistor Kron case retains the independently expected `5000/3 Ω` result with an exact-table fallback. The [decision record](DECISIONS.md#compact-resistor-drawing-collision-guard--11-october-2026) separates those local regressions from the later public release checks.

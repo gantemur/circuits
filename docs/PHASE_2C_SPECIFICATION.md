@@ -1,6 +1,6 @@
 # Phase 2C — linear port analysis and loading
 
-Status: implemented and locally checked on `codex/phase-2c-port-analysis`; not merged or published. This specification was written before implementation. Phase 2B remains the published baseline. This milestone adds frequency-domain terminal experiments for existing linear R, C, L, independent, and controlled sources. It does not change native v1 JSON, the DC Thévenin/Norton Transform method, or the meaning of any existing analysis.
+Status: implemented on `codex/phase-2c-port-analysis`, integrated through reviewed Phase 2D1 commit `edffe839`, and published on `main` after successful [validation](https://github.com/gantemur/circuits/actions/runs/38182928106) and [Pages deployment](https://github.com/gantemur/circuits/actions/runs/38182928373). This specification was written before implementation. The milestone adds frequency-domain terminal experiments for existing linear R, C, L, independent, and controlled sources. It does not change native v1 JSON, the DC Thévenin/Norton Transform method, or the meaning of any existing analysis.
 
 ## Model boundary and signs
 
