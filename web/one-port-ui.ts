@@ -46,8 +46,7 @@ export class OnePortUI {
   private p = '';
   private q = '';
   private loadText = '2000';
-  private document: LabState['document'] | null = null;
-  private topology = '';
+  private selectionInitialized = false;
   private representation: 'thevenin' | 'norton' = 'thevenin';
   private showOriginal = true;
   private resultDocument: LabState['document'] | null = null;
@@ -79,22 +78,18 @@ export class OnePortUI {
     });
   }
   useSelection(p: string, q: string, load: number): void {
-    this.p = p; this.q = q; this.loadText = String(load); this.render();
+    this.p = p; this.q = q; this.loadText = String(load); this.selectionInitialized = true; this.render();
   }
   render(): void {
     const state = this.getState(), nodes = state.document.circuit.nodes;
-    if (state.document !== this.document) {
-      this.document = state.document;
-      const topology = JSON.stringify({ nodes, components: state.document.circuit.components.map(c =>
-        ({ id: c.id, type: c.type, p: c.p, n: c.n })) });
+    if (!this.selectionInitialized) {
       const probe = state.document.circuit.observations.find((o): o is Extract<typeof o, { type: 'voltage' }> => o.type === 'voltage' && o.p !== o.n);
-      if (topology !== this.topology || !nodes.includes(this.p) || !nodes.includes(this.q)) {
-        this.p = probe?.p ?? nodes.find(n => n !== '0') ?? '0';
-        this.q = probe?.n ?? (this.p === '0' ? nodes.find(n => n !== '0') ?? '0' : '0');
-      }
-      this.topology = topology;
+      this.p = probe?.p ?? nodes.find(n => n !== '0') ?? '0';
+      this.q = probe?.n ?? (this.p === '0' ? nodes.find(n => n !== '0') ?? '0' : '0');
+      this.selectionInitialized = true;
     }
-    const options = (selected: string) => nodes.map(n => `<option value="${e(n)}"${n === selected ? ' selected' : ''}>${e(n)}</option>`).join('');
+    const options = (selected: string, field: string) => `${nodes.includes(selected) ? '' : `<option value="" selected>${e(t('onePortReselect',{field,terminal:selected}))}</option>`}${nodes.map(n => `<option value="${e(n)}"${n === selected ? ' selected' : ''}>${e(n)}</option>`).join('')}`;
+    const missingPort = !nodes.includes(this.p) || !nodes.includes(this.q);
     const load = Number(this.loadText), validLoad = this.loadText.trim() !== '' && Number.isFinite(load) && load > 0;
     const key = JSON.stringify([this.p,this.q,this.loadText]);
     if (this.resultDocument !== state.document || this.resultKey !== key || !this.result) {
@@ -104,6 +99,7 @@ export class OnePortUI {
     const result = this.result;
     const original = schematic(state);
     let outcome = `<div class="warning" role="status">${e(statusText(result))}</div>`;
+    let equivalent = `<p class="warning" role="status">${e(statusText(result))}</p>`;
     if (result.status === 'ok') {
       const rows = [
         [t('onePortOriginal'), result.original.voltage, result.original.current, '', '', ''],
@@ -114,13 +110,12 @@ export class OnePortUI {
       ] as const;
       outcome = `<div class="metric-grid one-port-metrics"><div class="metric"><div class="metric-label">Vth</div><div class="metric-value">${fmt(result.vth)} V</div></div><div class="metric"><div class="metric-label">Rth</div><div class="metric-value">${fmt(result.rth)} Ω</div></div><div class="metric"><div class="metric-label">IN</div><div class="metric-value">${fmt(result.inorton)} A</div></div></div>
         <p class="analysis-note">${t('onePortTestResult',{current:fmt(result.testCurrent),voltage:fmt(result.rth*result.testCurrent)})} ${t('onePortShortCheck',{short:fmt(result.shortCurrent),difference:fmt(result.shortDifference),limit:fmt(result.shortLimit),status:result.shortPassed?t('onePortAgree'):t('onePortDisagree')})}</p>
-        <div class="one-port-representation" role="group" aria-label="${e(t('equivalentView'))}"><button type="button" class="button ${this.representation === 'thevenin' ? '' : 'quiet'}" data-one-port-representation="thevenin" aria-pressed="${this.representation === 'thevenin'}">${t('onePortThevenin')}</button><button type="button" class="button ${this.representation === 'norton' ? '' : 'quiet'}" data-one-port-representation="norton" aria-pressed="${this.representation === 'norton'}">${t('onePortNorton')}</button></div>
-        <div class="one-port-equivalent">${circuitDiagram(this.representation,this.p,this.q)}</div>
         <div class="table-wrap"><table class="result-table"><caption>${t('onePortComparison')}</caption><thead><tr><th>${t('onePortCircuit')}</th><th>VL (V)</th><th>IL (A)</th><th>|ΔV| (V)</th><th>|ΔI| (A)</th><th>${t('onePortAgreement')}</th></tr></thead><tbody>${rows.map(row => `<tr><th>${e(row[0])}</th><td>${fmt(row[1])}</td><td>${fmt(row[2])}</td><td>${typeof row[3]==='number'?fmt(row[3]):'—'}</td><td>${typeof row[4]==='number'?fmt(row[4]):'—'}</td><td>${row[5]}</td></tr>`).join('')}</tbody></table></div>
         <p class="analysis-note">${t('onePortLoadFormula')}</p>`;
+      equivalent = `<div class="one-port-representation" role="group" aria-label="${e(t('equivalentView'))}"><button type="button" class="button ${this.representation === 'thevenin' ? '' : 'quiet'}" data-one-port-representation="thevenin" aria-pressed="${this.representation === 'thevenin'}">${t('onePortThevenin')}</button><button type="button" class="button ${this.representation === 'norton' ? '' : 'quiet'}" data-one-port-representation="norton" aria-pressed="${this.representation === 'norton'}">${t('onePortNorton')}</button></div><div class="one-port-equivalent">${circuitDiagram(this.representation,this.p,this.q)}</div>`;
     } else if (result.vth !== undefined || result.rth !== undefined) {
       outcome += `<p class="analysis-note">${result.vth === undefined ? '' : `Vth = ${fmt(result.vth)} V · `}${result.rth === undefined ? '' : `Rth = ${fmt(result.rth)} Ω`}</p>`;
     }
-    this.root.innerHTML = `<p class="analysis-note">${t('onePortIntro')}</p><div class="controls-grid one-port-controls"><div class="field"><label for="one-port-p">${t('onePortPositive')}</label><select id="one-port-p">${options(this.p)}</select></div><div class="field"><label for="one-port-q">${t('onePortNegative')}</label><select id="one-port-q">${options(this.q)}</select></div><div class="field"><label for="one-port-load">${t('onePortLoad')}</label><input id="one-port-load" type="number" step="any" value="${e(this.loadText)}" aria-invalid="${!validLoad}" aria-describedby="one-port-load-help"><small id="one-port-load-help" class="field-error">${validLoad?'':t('onePortInvalidLoad')}</small></div></div><p class="soft-note">${t('onePortConvention')}</p><p class="analysis-note">${t('onePortSuppression',{sources:state.document.experiment.sources.map(s=>s.id).join(', ')||t('noSourcesShort'),controlled:state.document.circuit.components.filter(c=>['VCVS','VCCS','CCVS','CCCS'].includes(c.type)).map(c=>c.id).join(', ')||t('noSourcesShort')})}</p><div class="one-port-view-switch" role="group"><button type="button" class="button quiet" data-one-port-view="original" aria-pressed="${this.showOriginal}">${t('originalView')}</button><button type="button" class="button quiet" data-one-port-view="equivalent" aria-pressed="${!this.showOriginal}">${t('equivalentOnly')}</button></div><div class="one-port-layout"><div class="one-port-original ${this.showOriginal ? 'mobile-selected' : ''}"><h3>${t('onePortNetworkView')}</h3><div class="one-port-network">${original.html}</div><p class="muted small">${e(original.note)}</p></div><div class="one-port-result ${this.showOriginal ? '' : 'mobile-selected'}">${outcome}</div></div>${diagnostics(result.solves)}`;
+    this.root.innerHTML = `<p class="analysis-note">${t('onePortIntro')}</p><div class="controls-grid one-port-controls"><div class="field"><label for="one-port-p">${t('onePortPositive')}</label><select id="one-port-p" aria-invalid="${!nodes.includes(this.p)}">${options(this.p,t('onePortPositive'))}</select></div><div class="field"><label for="one-port-q">${t('onePortNegative')}</label><select id="one-port-q" aria-invalid="${!nodes.includes(this.q)}">${options(this.q,t('onePortNegative'))}</select></div><div class="field"><label for="one-port-load">${t('onePortLoad')}</label><input id="one-port-load" type="number" step="any" value="${e(this.loadText)}" aria-invalid="${!validLoad}" aria-describedby="one-port-load-help"><small id="one-port-load-help" class="field-error">${validLoad?'':t('onePortInvalidLoad')}</small></div></div>${missingPort?`<p class="warning" role="status">${t('onePortMissingSelection')}</p>`:''}<p class="soft-note">${t('onePortConvention')}</p><p class="analysis-note">${t('onePortSuppression',{sources:state.document.experiment.sources.map(s=>s.id).join(', ')||t('noSourcesShort'),controlled:state.document.circuit.components.filter(c=>['VCVS','VCCS','CCVS','CCCS'].includes(c.type)).map(c=>c.id).join(', ')||t('noSourcesShort')})}</p><div class="one-port-view-switch" role="group"><button type="button" class="button quiet" data-one-port-view="original" aria-pressed="${this.showOriginal}">${t('originalView')}</button><button type="button" class="button quiet" data-one-port-view="equivalent" aria-pressed="${!this.showOriginal}">${t('equivalentOnly')}</button></div><div class="one-port-layout"><div class="one-port-original ${this.showOriginal ? 'mobile-selected' : ''}"><h3>${t('onePortNetworkView')}</h3><div class="one-port-network">${original.html}</div><p class="muted small">${e(original.note)}</p></div><div class="one-port-equivalent-view ${this.showOriginal ? '' : 'mobile-selected'}">${equivalent}</div></div><div class="one-port-result">${outcome}</div>${diagnostics(result.solves)}`;
   }
 }

@@ -15,6 +15,14 @@ const validationKeys: Record<string, TranslationKey> = {
 export function validationSummary(code: string | undefined, params: Readonly<Record<string, string | number>> = {}): string {
   return translate(validationKeys[code ?? ''] ?? 'documentRejected', { ...params });
 }
+export type DocumentIssue =
+  | { kind: 'validation'; code: string; params: Readonly<Record<string, string | number>> }
+  | { kind: 'read' };
+export function documentIssueText(issue: DocumentIssue, surface: 'json' | 'import'): string {
+  const reason = issue.kind === 'read' ? t('importReadError') : validationSummary(issue.code, issue.params);
+  return surface === 'json' ? t('jsonRejected', { reason }) :
+    t(issue.kind === 'read' ? 'importFailed' : 'importRejected', { reason });
+}
 export function statusSummary(status: string): string {
   switch (status) {
     case 'inconsistent': return t('statusInconsistent');

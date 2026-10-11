@@ -3,11 +3,11 @@ import { createLab, exportNative, importNative, updateDocument, } from './lab.js
 import { presets } from './presets.js';
 import { escapeHtml, schematic } from './schematic.js';
 import { plot } from './plot.js';
-import { algebraicSummary, statusSummary, validationSummary } from './diagnostics.js';
+import { algebraicSummary, documentIssueText, statusSummary, type DocumentIssue } from './diagnostics.js';
 import { language, persistLanguage, readLanguage, setLanguage, t, translate, type Language, type TranslationKey } from './i18n.js';
 import { BuilderUI } from './builder-ui.js';
 import { OnePortUI } from './one-port-ui.js';
-import { addPanel, createWorkspace, editPanelNumber, editPanelSelection, movePanel, PanelCalculator,
+import { addPanel, createWorkspace, handlePanelFieldChange, movePanel, PanelCalculator,
   panelCsv, reconcilePanels, removePanel, suggestedLayout, type PanelConfig, type PanelResult,
   type PanelType, type WorkspaceView, type NumericPanelField } from './workspace.js';
 import type { Component, SourceValue, Waveform } from '../src/model.js';
@@ -29,8 +29,8 @@ const calculator = new PanelCalculator();
 let previousView: Exclude<WorkspaceView, 'editor'> = 'analyze';
 let jsonDirty = false;
 let jsonBase = exportNative(state);
-let jsonIssue: string | null = null;
-let importIssue: string | null = null;
+let jsonIssue: DocumentIssue | null = null;
+let importIssue: DocumentIssue | null = null;
 let sourceOpen = false;
 let inspectorContribOpen = false;
 const inputDrafts = new Map<string, string>();
@@ -58,7 +58,7 @@ function renderJson(): void {
   if (!jsonDirty) { nativeJson().value = exportNative(state); jsonBase = exportNative(state); }
   const conflict = jsonDirty && jsonBase !== exportNative(state);
   nativeJson().setAttribute('aria-invalid', String(conflict || !!jsonIssue));
-  byId('json-error').textContent = conflict ? t('jsonConflict') : jsonIssue ? t('jsonRejected', { reason: jsonIssue }) : '';
+  byId('json-error').textContent = conflict ? t('jsonConflict') : jsonIssue ? documentIssueText(jsonIssue, 'json') : '';
 }
 function renderView(): void {
   for (const name of ['analyze', 'transform', 'editor'] as const) byId(`${name}-view`).hidden = workspace.view !== name;
@@ -220,7 +220,7 @@ function renderAll(): void {
   (byId('sources-details') as HTMLDetailsElement).open = sourceOpen;
   if (workspace.view==='analyze') renderPanels();
   if (workspace.view!=='editor') renderJson();
-  byId('import-error').textContent=importIssue?t('importRejected',{reason:importIssue}):'';
+  byId('import-error').textContent=importIssue?documentIssueText(importIssue,'import'):'';
 }
 function validatedChange(): void {
   const focused = (document.activeElement as HTMLElement | null)?.id;
@@ -302,8 +302,8 @@ document.addEventListener('change',async event=>{
   const target=event.target;
   if(target instanceof HTMLInputElement&&target.id==='import-file'){
     const file=target.files?.[0];if(!file)return;
-    try{const result=importNative(state,await file.text());if(!result.ok){importIssue=validationSummary(result.errorCode??'invalid-document',result.errorParams??{});renderAll();return;}importIssue=null;validatedChange();}
-    catch{importIssue=t('importFailed',{reason:t('invalidJson')});renderAll();}
+    try{const result=importNative(state,await file.text());if(!result.ok){importIssue={kind:'validation',code:result.errorCode??'invalid-document',params:result.errorParams??{}};renderAll();return;}importIssue=null;validatedChange();}
+    catch{importIssue={kind:'read'};renderAll();}
     finally{target.value='';}return;
   }
   if(target instanceof HTMLSelectElement&&target.id==='circuit-select'){
@@ -314,13 +314,8 @@ document.addEventListener('change',async event=>{
     validatedChange();return;
   }
   if((target instanceof HTMLInputElement||target instanceof HTMLSelectElement)&&target.dataset.panelField){
-    const panel=workspace.panels.find(p=>p.id===target.dataset.panelId);if(!panel)return;
-    const field=target.dataset.panelField;
-    if(field==='type'&&panelTypes.includes(target.value as PanelType)){
-      panel.type=target.value as PanelType;panel.collapsed=false;panel.settingsOpen=false;panel.errors={};panel.pending={};
-    } else if(field==='input'||field==='output'||field==='p'||field==='q')editPanelSelection(panel,field,target.value,state);
-    else editPanelNumber(panel,state,field as NumericPanelField,target.value);
-    workspace.layoutIsSuggested=false;renderPanels();return;
+    if(handlePanelFieldChange(workspace,state,target.dataset.panelId??'',target.dataset.panelField,target.value)) renderPanels();
+    return;
   }
   if((target instanceof HTMLInputElement||target instanceof HTMLSelectElement)&&target.dataset.kind)editField(target);
 });
@@ -359,7 +354,7 @@ document.addEventListener('click',event=>{
   if(button.id==='apply-json'){
     if(jsonDirty&&jsonBase!==exportNative(state)){renderJson();return;}
     const result=importNative(state,nativeJson().value);
-    if(!result.ok){jsonDirty=true;jsonIssue=validationSummary(result.errorCode??'invalid-document',result.errorParams??{});renderJson();return;}
+    if(!result.ok){jsonDirty=true;jsonIssue={kind:'validation',code:result.errorCode??'invalid-document',params:result.errorParams??{}};renderJson();return;}
     jsonDirty=false;jsonIssue=null;validatedChange();return;
   }
   if(button.id==='restore-json'){jsonDirty=false;jsonIssue=null;renderJson();return;}

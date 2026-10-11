@@ -76,9 +76,13 @@ export function reconcilePanels(workspace: WorkspaceState, state: LabState): voi
       p.type === 'port' && (!nodes.includes(p.p) || !nodes.includes(p.q)) ? 'port' : null;
     p.selectionNeeded = missing;
   }
-  if (!nodes.includes(workspace.transform.p) || !nodes.includes(workspace.transform.q)) {
-    [workspace.transform.p, workspace.transform.q] = defaultPort(state);
-  }
+}
+/** The panel type selector's production transition, including reference reconciliation. */
+export function changePanelType(workspace: WorkspaceState, panel: PanelConfig, type: PanelType, state: LabState): void {
+  panel.type = type; panel.collapsed = false; panel.settingsOpen = false;
+  panel.errors = {}; panel.pending = {};
+  reconcilePanels(workspace, state);
+  workspace.layoutIsSuggested = false;
 }
 const limits = (p: PanelConfig, state: LabState): string | null => {
   if (p.type === 'frequency') {
@@ -111,6 +115,22 @@ export function editPanelSelection(panel: PanelConfig, field: 'input' | 'output'
   panel.selectionNeeded = panel.type === 'frequency' && !inputs.includes(panel.input) ? 'input' :
     ['frequency', 'transient', 'equations'].includes(panel.type) && !outputs.includes(panel.output) ? 'output' :
     panel.type === 'port' && (!nodes.includes(panel.p) || !nodes.includes(panel.q)) ? 'port' : null;
+}
+/** Shared transition used by the panel field change event and interaction tests. */
+export function handlePanelFieldChange(workspace: WorkspaceState, state: LabState,
+  panelId: string, field: string, value: string): boolean {
+  const panel = workspace.panels.find(p => p.id === panelId);
+  if (!panel) return false;
+  if (field === 'type') {
+    if (!['dc','frequency','transient','equations','port'].includes(value)) return false;
+    changePanelType(workspace, panel, value as PanelType, state);
+  } else if (field === 'input' || field === 'output' || field === 'p' || field === 'q') {
+    editPanelSelection(panel, field, value, state);
+  } else if (['minHz','maxHz','points','inspectHz','duration','step','load'].includes(field)) {
+    editPanelNumber(panel, state, field as NumericPanelField, value);
+  } else return false;
+  workspace.layoutIsSuggested = false;
+  return true;
 }
 export class PanelCalculator {
   private cache = new Map<string, PanelResult>();

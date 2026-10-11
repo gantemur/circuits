@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLab, updateDocument } from '../dist/lab-test.js';
-import { addPanel, createWorkspace, editPanelNumber, editPanelSelection, movePanel,
+import { addPanel, createWorkspace, editPanelNumber, editPanelSelection, handlePanelFieldChange, movePanel,
   PanelCalculator, panelCsv, reconcilePanels, removePanel, suggestedLayout } from '../dist/workspace-test.js';
 import { plot } from '../dist/plot-test.js';
 
@@ -62,6 +62,32 @@ test('missing references are explicit after topology change; DC remains independ
   assert.equal(frequency.selectionNeeded,null);
   assert.equal(calc.calculate(frequency,state).type,'frequency');
   suggestedLayout(ws,state);assert.deepEqual(ws.panels.map(p=>p.type),['frequency','transient']);
+});
+
+test('panel type change interaction clears obsolete references and requires new ones',()=>{
+  const state=createLab('rc'),ws=createWorkspace(state),calc=new PanelCalculator();
+  const panel=ws.panels[0],id=panel.id,oldStep=panel.step,oldInput=panel.input;
+  assert.equal(updateDocument(state,d=>{d.circuit.observations=d.circuit.observations.filter(o=>o.id!=='out');}).ok,true);
+  reconcilePanels(ws,state);
+  assert.equal(panel.selectionNeeded,'output');
+  assert.equal(handlePanelFieldChange(ws,state,id,'type','dc'),true);
+  assert.equal(panel.selectionNeeded,null);
+  assert.equal(calc.calculate(panel,state).dc.status,'ok');
+  assert.equal(panel.id,id);assert.equal(panel.step,oldStep);assert.equal(panel.input,oldInput);
+  assert.equal(handlePanelFieldChange(ws,state,id,'type','transient'),true);
+  assert.equal(panel.selectionNeeded,'output');
+  assert.equal(handlePanelFieldChange(ws,state,id,'type','frequency'),true);
+  assert.equal(panel.selectionNeeded,'output');
+  panel.input='removed-source';
+  reconcilePanels(ws,state);
+  assert.equal(panel.selectionNeeded,'input');
+  assert.equal(handlePanelFieldChange(ws,state,id,'type','port'),true);
+  assert.equal(panel.selectionNeeded,null);
+  panel.p='missing';
+  assert.equal(handlePanelFieldChange(ws,state,id,'type','dc'),true);
+  assert.equal(panel.selectionNeeded,null);
+  assert.equal(handlePanelFieldChange(ws,state,id,'type','port'),true);
+  assert.equal(panel.selectionNeeded,'port');
 });
 
 test('plot paths cannot fill triangles; failed samples break lines and constants remain drawable',()=>{

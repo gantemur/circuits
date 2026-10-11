@@ -17,6 +17,10 @@ await build({ entryPoints: ['web/builder.ts'], bundle: true, platform: 'neutral'
   target: 'es2022', outfile: 'dist/builder-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/workspace.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/workspace-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/one-port-ui.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/one-port-ui-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['test/support/diagnostics-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/diagnostics-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/plot.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/plot-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['test/support/builder-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
