@@ -8,6 +8,8 @@ import { language, persistLanguage, readLanguage, setLanguage, t, translate, typ
 import { BuilderUI } from './builder-ui.js';
 import { OnePortUI } from './one-port-ui.js';
 import { ResistorTransformUI } from './resistor-transform-ui.js';
+import { guideFor, referenceFor, referenceStatus, type GuideAction } from './study-guide.js';
+import { guideNavigation } from './guide-navigation.js';
 import { openPortComparison } from './transform-navigation.js';
 import { addPanel, createWorkspace, handlePanelFieldChange, movePanel, PanelCalculator,
   panelCsv, reconcilePanels, removePanel, suggestedLayout, type PanelConfig, type PanelResult,
@@ -36,11 +38,19 @@ let jsonIssue: DocumentIssue | null = null;
 let importIssue: DocumentIssue | null = null;
 let sourceOpen = false;
 let inspectorContribOpen = false;
+let guideOpen = false;
+let pendingGuideAction: GuideAction | null = null;
 const inputDrafts = new Map<string, string>();
 const inputIssues = new Map<string, TranslationKey>();
 const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => validatedChange());
 const onePortUI = new OnePortUI(byId('one-port'), () => state);
-const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => state);
+const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => state, {
+  hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty,
+  apply: json => { const result=importNative(state,json); if(!result.ok)return false; validatedChange();return true; },
+  refresh: () => renderAll(),
+  loadExample: id => loadPreset(id),
+  openAnalyze: () => openView('analyze'),
+});
 const transformMethod: { method: 'dc' | 'resistor' } = { method: 'dc' };
 const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'port', 'port-frequency'];
 const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort', 'port-frequency': 'panelPortFrequency' };
@@ -80,6 +90,20 @@ function renderView(): void {
   byId('transform-scope').textContent = t(transformMethod.method === 'dc' ? 'transformScope' : 'resScope');
   (byId('transform-method') as HTMLSelectElement).value = transformMethod.method;
   if (workspace.view === 'transform') { if (transformMethod.method === 'dc') onePortUI.render(); else resistorUI.render(); }
+}
+function renderGuide(): void {
+  const root=byId('study-guide');
+  root.hidden=workspace.view==='editor';
+  if(root.hidden)return;
+  const origin=resistorUI.guideOrigin();
+  const id=origin??state.presetId;
+  const guide=guideFor(id);
+  const reference=referenceFor(id);
+  const preset=presets.find(p=>p.id===id);
+  const changed=referenceStatus(state,id)==='edited';
+  const actions=guide?.steps.map(step=>`<li><span>${e(step.text)}</span> <button type="button" class="button quiet" data-guide-action="${step.action}">${e(t('guideGo',{workspace:step.action==='transform'?t('workspaceTransform'):t('workspaceAnalyze')}))}</button></li>`).join('')??'';
+  const replace=pendingGuideAction?`<div class="warning" role="status"><p>${t('guideReplace')}</p><label for="guide-replace-panel">${t('panelType')}</label><select id="guide-replace-panel">${workspace.panels.map(p=>`<option value="${e(p.id)}">${e(p.id)} · ${e(translate(panelKeys[p.type]))}</option>`).join('')}</select><button type="button" id="guide-replace-confirm" class="button">${t('guideReplaceButton')}</button><button type="button" id="guide-replace-cancel" class="button quiet">${t('guideReplaceCancel')}</button></div>`:'';
+  root.innerHTML=`<details id="study-guide-details" ${guideOpen?'open':''}><summary>${t('guideTitle')}</summary>${origin&&preset?`<p class="soft-note">${t('guideOriginal',{name:translate(preset.titleKey)})}</p>`:''}${guide?`<div class="guide-content"><h3>${t('guideQuestion')}</h3><p>${e(guide.question)}</p><h3>${t('guideConditions')}</h3><p>${e(guide.conditions)}</p><h3>${t('guideEquation')}</h3><p class="equation-line">${e(guide.equation)}</p>${reference?`<p class="soft-note">${t(changed?'guideBaseline':'guideBaselineUnchanged')}: ${e(reference.formula)} (${e(reference.unit)}); ${e(reference.fixture)}.</p>`:''}<h3>${t('guideTry')}</h3><ol>${actions}</ol><h3>${t('guideCompare')}</h3><p>${e(guide.compare)}</p>${replace}</div>`:`<p>${t('guideCustom')}</p>`}</details>`;
 }
 function renderCircuitChoice(): void {
   const select = byId('circuit-select') as HTMLSelectElement;
@@ -329,6 +353,7 @@ function renderPanels(): void {
 }
 function renderAll(): void {
   renderStatic(); renderCircuitChoice(); renderView(); renderSchematic(); renderInspector(); renderSources();
+  renderGuide();
   (byId('sources-details') as HTMLDetailsElement).open = sourceOpen;
   if (workspace.view==='analyze') renderPanels();
   if (workspace.view!=='editor') renderJson();
@@ -344,6 +369,12 @@ function openView(view: WorkspaceView): void {
   workspace.view=view; renderAll();
   const target = view==='editor' ? byId('return-workspace') : view==='analyze' ? byId('schematic-title') : byId('transform-method');
   target.setAttribute('tabindex','-1'); target.focus({preventScroll:true});
+}
+function loadPreset(id: string): void {
+  const wasSuggested=workspace.layoutIsSuggested&&workspace.panels.every(p=>!Object.keys(p.pending).length);
+  state=createLab(id);
+  if(wasSuggested)suggestedLayout(workspace,state);
+  validatedChange();
 }
 function editField(target: HTMLInputElement | HTMLSelectElement): void {
   const kind=target.dataset.kind,id=target.dataset.id??'',key=`${kind}:${id}`;
@@ -415,6 +446,7 @@ document.addEventListener('focusout', event => {
 document.addEventListener('toggle',event=>{
   const target=event.target;
   if(target instanceof HTMLDetailsElement&&target.id==='sources-details')sourceOpen=target.open;
+  if(target instanceof HTMLDetailsElement&&target.id==='study-guide-details')guideOpen=target.open;
   if(target instanceof HTMLDetailsElement&&target.dataset.panelSettings){
     const panel=workspace.panels.find(p=>p.id===target.dataset.panelSettings);if(panel)panel.settingsOpen=target.open;
   }
@@ -432,10 +464,7 @@ document.addEventListener('change',async event=>{
   }
   if(target instanceof HTMLSelectElement&&target.id==='circuit-select'){
     if(target.value==='custom')return;
-    const wasSuggested=workspace.layoutIsSuggested&&workspace.panels.every(p=>!Object.keys(p.pending).length);
-    state=createLab(target.value);
-    if(wasSuggested)suggestedLayout(workspace,state);
-    validatedChange();return;
+    loadPreset(target.value);return;
   }
   if((target instanceof HTMLInputElement||target instanceof HTMLSelectElement)&&target.dataset.panelField){
     if(handlePanelFieldChange(workspace,state,target.dataset.panelId??'',target.dataset.panelField,target.value)) renderPanels();
@@ -445,12 +474,28 @@ document.addEventListener('change',async event=>{
 });
 document.addEventListener('click',event=>{
   const target=event.target;if(!(target instanceof Element))return;
+  const guideAction=target.closest<HTMLButtonElement>('[data-guide-action]');
+  if(guideAction){openGuideAction(guideAction.dataset.guideAction as GuideAction);return;}
+  if(target.closest('#guide-replace-cancel')){pendingGuideAction=null;renderGuide();return;}
+  if(target.closest('#guide-replace-confirm')&&pendingGuideAction){
+    const selected=(byId('guide-replace-panel') as HTMLSelectElement).value;
+    const panel=workspace.panels.find(p=>p.id===selected);
+    if(panel){const next=pendingGuideAction;pendingGuideAction=null;const result=guideNavigation(workspace,state,next,panel.id);if(result.kind==='focus')focusGuidePanel(result.panelId);}
+    return;
+  }
   const lang=target.closest<HTMLButtonElement>('[data-language]');
   if(lang){const focus=(document.activeElement as HTMLElement|null)?.id;setLanguage(lang.dataset.language as Language);persistLanguage(language(),storage);renderAll();if(focus)document.getElementById(focus)?.focus({preventScroll:true});return;}
   const view=target.closest<HTMLButtonElement>('[data-view]');if(view){openView(view.dataset.view as WorkspaceView);return;}
   const editorView=target.closest<HTMLButtonElement>('[data-editor-view]');if(editorView){workspace.editorView=editorView.dataset.editorView==='json'?'json':'form';renderView();return;}
   const comp=target.closest<HTMLElement>('[data-component],[data-schematic-component]');
-  if(comp){state.selectedComponent=comp.dataset.component??comp.dataset.schematicComponent??null;inspectorContribOpen=false;renderInspector();renderSchematic();if(workspace.view==='analyze')renderPanels();return;}
+  if(comp){
+    const fromSchematic=comp.dataset.schematicComponent!==undefined;
+    state.selectedComponent=comp.dataset.component??comp.dataset.schematicComponent??null;
+    inspectorContribOpen=false;renderInspector();renderSchematic();if(workspace.view==='analyze')renderPanels();
+    if(fromSchematic){const replacement=Array.from(document.querySelectorAll<HTMLElement>('[data-schematic-component]'))
+      .find(element=>element.dataset.schematicComponent===state.selectedComponent);replacement?.focus({preventScroll:true});}
+    return;
+  }
   const panelButton=target.closest<HTMLButtonElement>('[data-panel-action]');
   if(panelButton){const panel=workspace.panels.find(p=>p.id===panelButton.dataset.panelId);if(!panel)return;
     const action=panelButton.dataset.panelAction;
@@ -484,4 +529,23 @@ document.addEventListener('click',event=>{
   if(button.id==='restore-json'){jsonDirty=false;jsonIssue=null;renderJson();return;}
   if(button.id==='export-json')download('circuits-unfolded.json',exportNative(state),'application/json');
 });
+document.addEventListener('keydown',event=>{
+  if(event.key!=='Enter'&&event.key!==' ')return;
+  const target=event.target;
+  if(target instanceof Element&&target.matches('[data-schematic-component]')){
+    event.preventDefault();target.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+  }
+});
+function focusGuidePanel(id: string): void {
+  workspace.layoutIsSuggested=false;
+  openView('analyze');
+  const panel=document.querySelector<HTMLElement>(`[data-panel="${id}"]`);
+  panel?.setAttribute('tabindex','-1');panel?.focus({preventScroll:true});panel?.scrollIntoView({block:'nearest'});
+}
+function openGuideAction(action:GuideAction): void {
+  const result=guideNavigation(workspace,state,action);
+  if(result.kind==='transform'){transformMethod.method='resistor';openView('transform');}
+  else if(result.kind==='focus')focusGuidePanel(result.panelId);
+  else if(result.kind==='replacement-required'){pendingGuideAction=action;renderGuide();}
+}
 renderAll();

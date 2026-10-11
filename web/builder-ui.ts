@@ -36,6 +36,7 @@ export class BuilderUI {
     root.addEventListener('change', event => this.edit(event.target, true));
     root.addEventListener('click', event => this.click(event.target));
   }
+  hasUnappliedDraft(): boolean { return this.builder.dirty || this.nodePending.size > 0; }
   startNew(): void { this.clearNodeEdits(); newBuilder(this.builder, this.state()); this.render(); }
   private fieldName(path: string): string {
     const [section, index, field] = path.split(':');

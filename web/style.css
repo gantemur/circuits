@@ -30,3 +30,30 @@
 .panel-icon{min-width:1.8rem;max-width:none;min-height:1.7rem;font-size:1rem;font-weight:700;line-height:1;text-align:center}.panel-tools{flex-wrap:nowrap}.panel-heading{min-width:0}.panel-heading select{width:100%}
 @media(max-width:650px){.analysis-panel .panel-head{flex-wrap:wrap}.analysis-panel .panel-tools{width:100%;justify-content:flex-start}}
 .analysis-panel .matrix-grid > div{min-width:0}
+/* Honest node-edge layouts keep native IDs and values visible at narrow widths. */
+.network-diagram{display:block;width:100%;height:auto;min-width:0;border:1px solid var(--line);border-radius:8px;background:#fafcf9}
+.network-wire{stroke:#31595a;stroke-width:2.4;fill:none}
+.network-resistor{stroke:#245855;stroke-width:2.4;fill:#fff}
+.network-node circle{fill:#31595a}.network-node text,.network-edge-label{font:12px var(--font);fill:#254c4d;paint-order:stroke;stroke:#fafcf9;stroke-width:3px;stroke-linejoin:round}
+.network-edge-label{font-size:11px;font-weight:700}.network-ground{stroke:#54726d;stroke-width:2;fill:none}
+.network-edge.removed .network-resistor,.network-node.eliminated circle{stroke:#a54e30;fill:#fff0e8;stroke-dasharray:5 3}
+.network-edge.removed .network-wire{stroke:#a54e30;stroke-dasharray:5 3}
+.network-edge.generated .network-resistor,.network-node.introduced circle{stroke:#276e65;fill:#e5f6ef;stroke-width:3}
+.network-edge.selected .network-resistor,.network-edge:focus-visible .network-resistor{stroke:#b25731;stroke-width:4}
+.network-edge[role="button"]{cursor:pointer;pointer-events:bounding-box}.network-edge[role="button"]:focus-visible{outline:2px solid #b25731}
+.res-equation{font-size:1.2rem;font-weight:700;overflow-wrap:anywhere}.res-diagram-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+.res-local,.res-detail,.schematic-topology{margin-top:.8rem}.res-local summary,.res-detail summary,.schematic-topology summary{cursor:pointer;font-weight:700}
+.res-detail .table-wrap,.schematic-topology .table-wrap,.res-preview .table-wrap{max-width:100%;overflow-x:auto}
+.res-preview .result-table{min-width:420px}.res-preview .network-diagram{max-height:330px}
+.study-guide{margin:1.2rem 0}.study-guide summary{cursor:pointer;font:700 1.05rem var(--display)}
+.guide-content{max-width:80ch}.guide-content h3{font-size:.84rem;margin:1rem 0 .2rem}.guide-content p{margin:.25rem 0 .6rem;line-height:1.5}
+.guide-content ol{padding-left:1.3rem}.guide-content li{margin:.6rem 0;line-height:1.5}.guide-content li .button{margin-left:.4rem}
+@media(max-width:650px){.res-diagram-grid{grid-template-columns:1fr}.res-preview .result-table{min-width:420px}.study-guide .button{white-space:normal}}
+@media(max-width:650px){
+  #schematic{overflow-x:auto}
+  #schematic .network-diagram{min-width:540px}
+  .res-layout>div,.res-diagram-grid>div{overflow-x:auto}
+  .res-layout .network-diagram,.res-diagram-grid .network-diagram{min-width:540px}
+}
+.schematic-observation{display:inline-block;margin:.4rem .6rem;padding:.25rem .45rem;border-radius:6px;background:#fff0e8;color:#9e4e31;font-weight:700}
+@media(max-width:650px){.circuit-overview .schematic-panel #schematic svg.network-diagram{min-width:540px}}

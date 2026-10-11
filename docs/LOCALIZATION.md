@@ -60,3 +60,18 @@ The UX workspaces branch continues English (`en`) and Mongolian Cyrillic (`mn`) 
 Component IDs, node IDs, user-provided labels, device codes, equations, and SI symbols remain unchanged in both languages. Native JSON uses the version-1 English field names and finite JSON numbers. Frequency and transient CSV headers, statuses, decimal points, and numerical values are likewise locale-neutral so exports round-trip and compare identically across languages. The interface translates labels and diagnostic summaries; expandable **Technical details (English)** retains original kernel messages where useful.
 
 An explicit language choice is stored under `circuits-unfolded-language` in browser localStorage. If storage is unavailable, the in-memory choice still works for the current visit. Without a saved choice, the first browser-preferred language selects Mongolian when its tag is `mn` or `mn-*`; English is the fallback.
+
+## Phase 2D1 visual-learning terms
+
+| English | Монгол | Use |
+| --- | --- | --- |
+| Preview transformation | Хувиргалтыг урьдчилан харах | Explicit operation before any circuit replacement |
+| Use transformed circuit | Хувиргасан хэлхээг хэрэглэх | Revalidated resistor result only |
+| Return to original circuit | Анхны хэлхээнд буцах | Session snapshot, with draft protection |
+| Local rewrite illustration | Хэсэгчилсэн хувиргалтын зураг | Only the changed subnetwork; never the full circuit |
+| Terminal equations | Туйлын тэгшитгэл | Ordered `I_B=ΛV_B`, Λ in S, current in A |
+| Clamped terminal | Тогтоон барьсан туйл | Set to 0 V in the illustrative experiment, not left open |
+| Baseline fixture target | Суурь жишээний зорилт | Authored reference, not a recalculation after edits |
+| Study guide | Математик ба санал болгох туршилтууд | Shared Analyze/Transform lesson |
+
+Exact node/component IDs, generated resistor names, equations, units, and JSON remain untranslated. The 1 V boundary experiment is explained separately from the existing independent equivalence checks. Source/storage blocker labels are translated, but the native device codes remain exact.

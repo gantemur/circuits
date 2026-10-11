@@ -4,7 +4,7 @@
 
 At the start of a task, read this file, `docs/DECISIONS.md`, and the specification for the active milestone. Read `docs/MATHEMATICAL_CONVENTIONS.md` before changing circuit equations, device laws, or analyses. Use `docs/VISION.md` for context; it is not an instruction to implement all planned capabilities at once.
 
-The active milestone is **Phase 2C linear port analysis and loading**, specified in `docs/PHASE_2C_SPECIFICATION.md`. The released Phase 2B resistor methods remain in `docs/PHASE_2B_SPECIFICATION.md`; workspace behavior is documented in `docs/UX_SPECIFICATION.md`, Phase 2A in `docs/PHASE_2A_SPECIFICATION.md`, Phase 1B in `docs/PHASE_1B_SPECIFICATION.md`, Phase 1A in `docs/PHASE_1_SPECIFICATION.md`, and Phase 0 in `docs/MVP_SPECIFICATION.md`. Inspect the actual repository before assuming code or build commands exist.
+The active milestone is **Phase 2D1 visual transformations and guided existing examples**, specified in `docs/PHASE_2D1_SPECIFICATION.md`. It builds on unmerged Phase 2C (`docs/PHASE_2C_SPECIFICATION.md`) and the released Phase 2B resistor methods (`docs/PHASE_2B_SPECIFICATION.md`); workspace behavior is documented in `docs/UX_SPECIFICATION.md`, Phase 2A in `docs/PHASE_2A_SPECIFICATION.md`, Phase 1B in `docs/PHASE_1B_SPECIFICATION.md`, Phase 1A in `docs/PHASE_1_SPECIFICATION.md`, and Phase 0 in `docs/MVP_SPECIFICATION.md`. Inspect the actual repository before assuming code or build commands exist.
 
 ## Authority and scope
 

@@ -21,6 +21,10 @@ await build({ entryPoints: ['web/one-port-ui.ts'], bundle: true, platform: 'neut
   target: 'es2022', outfile: 'dist/one-port-ui-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/resistor-transform-ui.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/resistor-transform-ui-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/study-guide.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/study-guide-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/guide-navigation.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/guide-navigation-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/transform-navigation.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/transform-navigation-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['test/support/diagnostics-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',

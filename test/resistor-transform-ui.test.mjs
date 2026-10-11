@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseDocument, resistorCandidates } from '../dist/index.js';
-import { ResistorTransformUI } from '../dist/resistor-transform-ui-test.js';
+import { ResistorTransformUI, terminalExperiment } from '../dist/resistor-transform-ui-test.js';
 import { openPortComparison } from '../dist/transform-navigation-test.js';
 import { setLanguage } from '../dist/i18n-test.js';
 
@@ -16,7 +16,7 @@ const document=(nodes,edges,observations=[])=>parseDocument(JSON.stringify({circ
   components:edges.map(([id,p,n,value])=>({id,type:'R',p,n,value})),observations},
   experiment:{schemaVersion:1,sources:[],initial:{kind:'equilibrium'}}}));
 function view(document){
-  const events=new Map(),holder={document};
+  const events=new Map(),holder={document,revision:0,presetId:null};
   const root={innerHTML:'',addEventListener(type,handler){events.set(type,handler);}};
   const ui=new ResistorTransformUI(root,()=>holder);ui.render();
   return {ui,root,holder,
@@ -42,6 +42,8 @@ test('UI candidate selection transforms the intended colon-containing edge pair'
   const choices=resistorCandidates({nodes:d.circuit.nodes,edges:d.circuit.components.map(c=>({id:c.id,p:c.p,n:c.n,resistance:c.value}))},['a','0']);
   const selected=choices.find(c=>JSON.stringify(c.selection.edges)===JSON.stringify(['a','b:c']));
   v.change('res-choice',selected.key);
+  assert.equal(v.ui.latestJson,null);
+  v.click('#res-preview');
   assert.match(v.root.innerHTML,/Removed branches: a, b:c/);
   const exported=parseDocument(v.ui.latestJson);
   assert.deepEqual(exported.circuit.components.filter(c=>!c.id.startsWith('R_parallel')).map(c=>c.id),['a:b','c']);
@@ -50,8 +52,9 @@ test('UI candidate selection transforms the intended colon-containing edge pair'
 
 test('ordered terminal selectors preserve comma and whitespace IDs through preview and strict export',()=>{
   for(const id of ['a,b',' a,b ']){
-    const d=document(['0',id],[['R',id,'0',1000]],[{id:'V',type:'voltage',p:id,n:'0'}]);
+    const d=document(['0',id,'x'],[['R1',id,'x',1000],['R2','x','0',2000]],[{id:'V',type:'voltage',p:id,n:'0'}]);
     const v=view(d);
+    v.click('#res-preview');
     assert.match(v.root.innerHTML,/Strict native JSON preview/);
     assert.deepEqual(parseDocument(v.ui.latestJson).circuit.nodes,[id,'0']);
     v.click('[data-res-terminal-action]',{resTerminalAction:'add'});
@@ -62,11 +65,14 @@ test('ordered terminal selectors preserve comma and whitespace IDs through previ
     v.change('res-terminal-2','0',{resTerminal:'2'});
     assert.equal(v.ui.latestJson,null);
     v.click('[data-res-terminal-action]',{resTerminalAction:'remove',resTerminalIndex:'2'});
+    v.click('#res-preview');
     assert.deepEqual(parseDocument(v.ui.latestJson).circuit.nodes,[id,'0']);
     v.click('[data-res-terminal-action]',{resTerminalAction:'down',resTerminalIndex:'0'});
+    v.click('#res-preview');
     assert.deepEqual(parseDocument(v.ui.latestJson).circuit.nodes,['0',id]);
     assert.match(v.root.innerHTML,new RegExp(`Original terminal response[\\s\\S]*?i ↓ / u →[\\s\\S]*?<th>0</th>`));
     v.click('[data-res-terminal-action]',{resTerminalAction:'up',resTerminalIndex:'1'});
+    v.click('#res-preview');
     setLanguage('mn');v.ui.render();
     assert.deepEqual(parseDocument(v.ui.latestJson).circuit.nodes,[id,'0']);
     setLanguage('en');
@@ -75,12 +81,13 @@ test('ordered terminal selectors preserve comma and whitespace IDs through previ
 
 test('missing native IDs stay selected and escaped until explicit reselection',()=>{
   const id='<node,a>';
-  const v=view(document(['0',id],[['R',id,'0',1000]],[{id:'V',type:'voltage',p:id,n:'0'}]));
-  v.holder.document=document(['0','other'],[['R','other','0',1000]],[{id:'V',type:'voltage',p:'other',n:'0'}]);
+  const v=view(document(['0',id,'x'],[['R1',id,'x',1000],['R2','x','0',2000]],[{id:'V',type:'voltage',p:id,n:'0'}]));
+  v.holder.document=document(['0','other','x'],[['R1','other','x',1000],['R2','x','0',2000]],[{id:'V',type:'voltage',p:'other',n:'0'}]);
   v.ui.render();
   assert.equal(v.ui.latestJson,null);
   assert.match(v.root.innerHTML,/Missing: &quot;&lt;node,a&gt;&quot;/);
   assert.doesNotMatch(v.root.innerHTML,/<node,a>/);
   v.change('res-terminal-0','other',{resTerminal:'0'});
+  v.click('#res-preview');
   assert.deepEqual(parseDocument(v.ui.latestJson).circuit.nodes,['other','0']);
 });
