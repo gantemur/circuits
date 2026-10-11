@@ -1,6 +1,6 @@
 # UX workspaces: implemented scope
 
-Status: implemented on `codex/ux-workspaces` from released `main` at `f3097bbb`, 11 October 2026. This task is a reviewable branch change, not a public deployment. It supersedes the earlier Phase 2B interface layout plan without importing unreviewed reduction mathematics.
+Status: reviewed implementation `01bd698` was fast-forwarded to `main` and published at [https://gantemur.github.io/circuits/](https://gantemur.github.io/circuits/) on 11 October 2026. The [validation](https://github.com/gantemur/circuits/actions/runs/38116427472) and [Pages deployment](https://github.com/gantemur/circuits/actions/runs/38116427451) succeeded, and the live three-file package matched the local build byte for byte. This redesign supersedes the earlier Phase 2B interface layout plan without importing unreviewed reduction mathematics.
 
 ## Working model
 
