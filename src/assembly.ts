@@ -70,7 +70,8 @@ export function assemble(raw: Circuit): Assembly {
     if (k !== undefined) v.forEach((w, i) => stamp(d, 'K', i, k, w, 'KCL: branch current enters p and leaves n'));
     switch (d.type) {
       case 'R': case 'C': {
-        // v=aᵀx. Resistor i=(aᵀx)/R stamps aaᵀ/R in K;
+        // The local vector v is the branch incidence a; its scalar branch
+        // voltage is aᵀx = Vp-Vn. Resistor i=(aᵀx)/R stamps aaᵀ/R in K;
         // capacitor i=C aᵀxdot stamps C aaᵀ in E.
         const matrix = d.type === 'R' ? 'K' : 'E';
         const coefficient = d.type === 'R' ? 1 / d.value : d.value;

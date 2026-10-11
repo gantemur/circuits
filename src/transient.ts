@@ -11,7 +11,8 @@ export interface Initialized { status: 'ok'; solution: Solution; storageValues: 
 /**
  * Find an instantaneous state compatible with prescribed capacitor voltages
  * and inductor currents q (V and A respectively) at real source values u.
- * Assembly supplies E=F*S. Solve the (N+M)×(N+M) augmented system
+ * With N MNA unknowns and m storage states, F is N×m and S is m×N.
+ * Assembly supplies E=F*S. Solve the (N+m)×(N+m) augmented system
  * [K F; S 0][x; qdot]=[Bu; q], rather than inverting possibly singular E.
  * The top rows retain physical KCL/branch laws; the lower rows enforce q=Sx.
  * Nonunique, contradictory, impulsive, and unsupported high-index starts are
