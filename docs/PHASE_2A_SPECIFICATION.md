@@ -1,6 +1,6 @@
 # Phase 2A: DC one-port equivalence and loading
 
-Status: implemented and locally verified on task branch `codex/phase-2a-one-port`, 10 October 2026. Phase 1B on `main` remains the published release until a separately authorized integration and deployment.
+Status: implemented and locally verified from task branch `codex/phase-2a-one-port`, 10 October 2026. Public release status is recorded in README and DECISIONS after deployment verification.
 
 ## Scope and conventions
 
