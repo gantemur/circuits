@@ -33,3 +33,16 @@ For the RC step, `vn=1-(1+h/tau)^-n` is the independent backward Euler recurrenc
 Orientation variants are derived in tests by reversing specified terminals and the corresponding signed excitation/state/probe. Controlled-source tests separately reverse the control pair/sensor and output terminals. Invalid model tests mutate these public fixtures to exercise every validation category. Other derived tests add a second independent input, remove R from the series RLC for a singular lossless resonance, and test nonzero complex excitation, explicit waveform units, simultaneous events, and derivative outputs.
 
 H applies to all device families: summed per-component contributions, label dimensions, deterministic ordering under reversed input arrays, native JSON round trips, and equivalent Node/browser-bundle imports. No expected matrix is copied from the implementation as a physics oracle.
+
+## Phase 2A DC one-port cases
+
+These standalone native documents are public acceptance inputs for `dcOnePort`. The test expectations come from KCL and divider equations, not from the helper. The selected port has `v=V(p)-V(q)` and external load current `p→q`.
+
+| Fixture | Independent terminal expectation |
+| --- | --- |
+| `divider.json` | `p=out,q=0`: `Vth=12·2000/(1000+2000)=8 V`; zeroed source leaves `Rth=1000∥2000=2000/3 Ω`; `IN=0.012 A`. A 2000 Ω added load gives `VL=6 V`, `IL=0.003 A`. The original R2 remains connected during the open solve. |
+| `one-port-bridge.json` | Branch midpoints are `Va=12·2000/3000=8 V` and `Vb=12·3000/6000=6 V`. For `p=a,q=b`, `Vth=2 V`. Suppressing Vin gives `Rth=(1000∥2000)+(3000∥3000)=6500/3 Ω`. At 1000 Ω, `VL=12/19 V`, `IL=12/19000 A`. Reverse the port to reverse signed voltage/current while retaining resistance. |
+| `one-port-vccs.json` | KCL at out is `0.002=(1/1000+0.001)Vout`, hence `Vth=1 V`. The VCCS remains active under source suppression, giving `Rth=1/(0.001+0.001)=500 Ω`, `IN=0.002 A`. A 1000 Ω external load gives `VL=2/3 V`. |
+| `one-port-current-source.json` | A 1 A ideal source injects at out with no return path. The open-circuit DC solve is inconsistent; no finite `Vth` is invented. |
+
+Additional mutations test zero original excitation, retained current-control sensing branches, collision-safe temporary IDs, a zero-resistance ideal-voltage-source port, negative resistance from a controlled source, storage rejection, invalid ports, and invalid loads. The test-current default is 1 A; extreme scales can exceed the numeric range or solver diagnostics and then fail explicitly.

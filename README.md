@@ -8,9 +8,11 @@ The repository is named `circuits`. **Circuits Unfolded** is the working applica
 
 ## Status
 
-**Phase 1A and Phase 1B are implemented in the release source:** the browser lab has eight editable examples, including the default voltage divider and an RC high-pass, plus native JSON editing and a form-based **Build / edit circuit** panel. The form constructs supported linear circuits without writing JSON. The Phase 0 TypeScript kernel computes DC and frequency responses, backward Euler transients where storage is present, and matrix provenance; the browser also provides verified preset schematics and JSON/CSV exports.
+**Phase 1A and Phase 1B are published on `main`:** the browser lab has eight editable examples, including the default voltage divider and an RC high-pass, plus native JSON editing and a form-based **Build / edit circuit** panel. The form constructs supported linear circuits without writing JSON. The Phase 0 TypeScript kernel computes DC and frequency responses, backward Euler transients where storage is present, and matrix provenance; the browser also provides verified preset schematics and JSON/CSV exports.
 
 **Phase 1B is published on `main`:** the form builder includes draft validation, conflict protection, node-reference renaming, and English/Mongolian errors. A graphical wiring editor remains future work.
+
+**Phase 2A is under development on `codex/phase-2a-one-port`:** a DC Thévenin/Norton teaching panel lets users select two terminals and an external load, then compares the original circuit with independently solved equivalent realizations. It is not yet merged or deployed; the public site remains at Phase 1B.
 
 **Release status:** Phase 1B first deployed from `eacb35a` at [https://gantemur.github.io/circuits/](https://gantemur.github.io/circuits/) after successful [validation](https://github.com/gantemur/circuits/actions/runs/38104326176) and [Pages deployment](https://github.com/gantemur/circuits/actions/runs/38104326149). A public browser check verified the default divider and RC high-pass analyses, form-built custom circuit, invalid-draft preservation, builder synchronization and conflict behavior, node-name correction, and both languages at 390 px. Valid and malformed file imports worked. The browser did not capture the JSON export download event in this release check, so that interaction remains unverified here; an earlier browser pass verified export and round-trip import. This status update changes documentation only, not the application assets.
 
@@ -39,6 +41,8 @@ The [validation workflow](.github/workflows/validate.yml) runs on pushes and pul
 Start with the **voltage divider**: change R1, R2, or Vin and inspect the kernel-computed DC value and constant transfer. Choose **RC high-pass** to see zero DC gain and the output jump at a source step. Use **Edit circuit JSON** to enter a supported native document, **Apply JSON** to validate and load it, or **Restore current circuit** to discard the editor draft. Invalid JSON leaves the current circuit intact. For the original low-pass demonstration, select **RC low-pass**, select **R**, and change 1000 Ω to 2000 Ω. The AC result at the inspect frequency changes from `0.5−0.5j` to `0.2−0.4j`, and the transfer and transient plots recompute. Select R again to see its terminal law and highlighted `K` matrix contributions. Source DC, RMS AC phasors, time waveform, and initial storage state have separate controls. Exported JSON is the strict kernel document, without drawing metadata.
 
 Use **Build / edit circuit** to start an empty circuit or copy the current one. Add nodes, components, sources, and named outputs; choose terminals and control branches; then **Apply circuit** to validate and analyze. **Discard draft** reloads the current validated circuit. An incomplete draft does not change results. An untouched form follows example changes and imports; an edited form retains its draft and blocks Apply if the analyzed circuit changes. Rejected node names remain correctable through other node additions and removals. Only the validated circuit is exported. The form supports all existing kernel devices and source waveforms; it does not draw custom wiring.
+
+On the Phase 2A task branch, use **Equivalent circuit** to choose distinct positive and negative port nodes and a positive external load resistance. The panel reports open-circuit voltage, test-source resistance, and Norton current, then solves the original, Thévenin, and Norton circuits with that load. It shows signs, source suppression, the short-circuit cross-check, physical residuals, and numerical agreement limits. Existing components across the selected port remain part of the original network. This DC experiment explicitly rejects capacitors and inductors; it does not change the saved native document or an unapplied form/JSON draft.
 
 ## Run the kernel
 
@@ -71,7 +75,7 @@ The solver uses dense floating-point systems for small linear circuits. It repor
 
 The lab supports eight preset drawings; a valid custom or imported topology outside them gets a named node/component table. The form builder and JSON editor both create strict native v1 documents, alongside file import/export. There is no draggable wiring canvas or automatic custom schematic layout. Its numerical sweep is capped at 241 points and transient work at 3000 intervals. Zero magnitude has undefined logarithmic magnitude and phase; failed samples are gaps with statuses. Browser plots are numerical, and algebraic extraction remains restricted to the kernel's one-storage-element cases. The app does not infer internal stability from an input-output denominator.
 
-The next unresolved milestone is an explicitly specified Phase 1C or later scope. Nonlinear models, unrestricted symbolic algebra, theorem/reduction UI, synthesis, and graphical wiring are not part of Phase 1B.
+Phase 2A is the active task-branch milestone. Its finite-positive-resistance DC one-port workflow is specified in [PHASE_2A_SPECIFICATION.md](docs/PHASE_2A_SPECIFICATION.md). Frequency/transient equivalents, general theorem/reduction UI, nonlinear models, synthesis, and graphical wiring remain later work. The current full-state solver can reject a network with undetermined internal currents even if terminal behavior is unique.
 
 ## Intended laboratory
 
@@ -96,6 +100,7 @@ The defining feature is the connection between three views: schematic and physic
 | [docs/MVP_SPECIFICATION.md](docs/MVP_SPECIFICATION.md) | Exact scope and acceptance criteria for Phase 0 |
 | [docs/PHASE_1_SPECIFICATION.md](docs/PHASE_1_SPECIFICATION.md) | Scope and acceptance criteria for the Phase 1A browser lab |
 | [docs/PHASE_1B_SPECIFICATION.md](docs/PHASE_1B_SPECIFICATION.md) | Scope and acceptance criteria for the Phase 1B form builder |
+| [docs/PHASE_2A_SPECIFICATION.md](docs/PHASE_2A_SPECIFICATION.md) | DC one-port scope, conventions, and acceptance cases |
 | [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | English/Mongolian terminology and language-neutral export convention |
 | [docs/MATHEMATICAL_CONVENTIONS.md](docs/MATHEMATICAL_CONVENTIONS.md) | Terminal signs, matrix signs, phasors, units, and evidence conventions |
 | [docs/REFERENCE_WORKFLOW.md](docs/REFERENCE_WORKFLOW.md) | How the companion book is supplied and used without publishing it |
@@ -112,7 +117,7 @@ The book manuscript and its source tree are not distributed in this repository. 
 
 ## Technical direction
 
-The Phase 1B application runs entirely in the browser and produces static assets for GitHub Pages hosting. The mathematical kernel is independent of the interface and also runs under Node for tests and reproducible calculations. It uses TypeScript, modified nodal analysis, small real and complex linear solves, and a descriptor-system formulation.
+The Phase 2A task-branch application runs entirely in the browser and produces static assets for GitHub Pages hosting. The mathematical kernel, including the DC one-port helper, is independent of the interface and also runs under Node for tests and reproducible calculations. It uses TypeScript, modified nodal analysis, small real and complex linear solves, and a descriptor-system formulation.
 
 No account, runtime server, or external AI API is required to use the built app. During development, coding assistants can help implement and check the software.
 

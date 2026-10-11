@@ -4,7 +4,7 @@
 
 At the start of a task, read this file, `docs/DECISIONS.md`, and the specification for the active milestone. Read `docs/MATHEMATICAL_CONVENTIONS.md` before changing circuit equations, device laws, or analyses. Use `docs/VISION.md` for context; it is not an instruction to implement all planned capabilities at once.
 
-The active milestone is **Phase 1B**, specified in `docs/PHASE_1B_SPECIFICATION.md`. Phase 1A remains documented in `docs/PHASE_1_SPECIFICATION.md`; Phase 0's contract remains in `docs/MVP_SPECIFICATION.md`. Inspect the actual repository before assuming code or build commands exist.
+The active milestone is **Phase 2A**, specified in `docs/PHASE_2A_SPECIFICATION.md`. Phase 1B remains documented in `docs/PHASE_1B_SPECIFICATION.md`, Phase 1A in `docs/PHASE_1_SPECIFICATION.md`, and Phase 0 in `docs/MVP_SPECIFICATION.md`. Inspect the actual repository before assuming code or build commands exist.
 
 ## Authority and scope
 

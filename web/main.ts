@@ -7,6 +7,7 @@ import { algebraicSummary, statusSummary, validationSummary } from './diagnostic
 import { language, persistLanguage, readLanguage, setLanguage, t, translate,
   type Language, type TranslationKey } from './i18n.js';
 import { BuilderUI } from './builder-ui.js';
+import { OnePortUI } from './one-port-ui.js';
 import type { Component, SourceValue, Waveform } from '../src/model.js';
 
 let storage: Storage | undefined;
@@ -28,6 +29,7 @@ const byId = (id: string): HTMLElement => {
   return value;
 };
 const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => recompute());
+const onePortUI = new OnePortUI(byId('one-port'), () => state);
 const fmt = (value: number, digits = 5): string => {
   if (!Number.isFinite(value)) return String(value);
   if (value === 0) return '0';
@@ -212,7 +214,7 @@ function renderResults():void {
 function renderStatus():void {
   byId('global-status').innerHTML=notice?`<div class="error-card">${escapeHtml(issueText(notice))}${technical(notice.raw)}</div>`:'';
 }
-function renderAll():void { renderExamples();renderComponents();renderSources();renderControls();renderSchematic();renderStatus();renderResults();syncJsonEditor();builderUI.render(); }
+function renderAll():void { renderExamples();renderComponents();renderSources();renderControls();renderSchematic();renderStatus();renderResults();syncJsonEditor();builderUI.render();onePortUI.render(); }
 function recompute():void {
   validationIssue=null;
   try { analysis=analyze(state);notice=null; }

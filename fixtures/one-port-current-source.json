@@ -1,0 +1,14 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "ideal current-source port",
+    "nodes": ["0", "out"],
+    "components": [{ "id": "I", "type": "I", "p": "0", "n": "out" }],
+    "observations": [{ "id": "out", "type": "voltage", "p": "out", "n": "0" }]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "sources": [{ "id": "I", "dc": 1 }],
+    "initial": { "kind": "equilibrium" }
+  }
+}

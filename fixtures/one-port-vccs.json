@@ -1,0 +1,18 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "controlled-source one-port",
+    "nodes": ["0", "out"],
+    "components": [
+      { "id": "Iin", "type": "I", "p": "0", "n": "out" },
+      { "id": "R", "type": "R", "p": "out", "n": "0", "value": 1000 },
+      { "id": "D", "type": "VCCS", "p": "out", "n": "0", "cp": "out", "cn": "0", "gain": 0.001 }
+    ],
+    "observations": [{ "id": "out", "type": "voltage", "p": "out", "n": "0" }]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "sources": [{ "id": "Iin", "dc": 0.002 }],
+    "initial": { "kind": "equilibrium" }
+  }
+}

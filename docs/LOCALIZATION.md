@@ -1,6 +1,6 @@
 # Interface terminology and data conventions
 
-Phase 1B continues English (`en`) and Mongolian Cyrillic (`mn`). New user-facing features should add both translations to the typed catalog in `web/i18n.ts`, keep interpolation placeholders aligned, and use stable diagnostic codes rather than parsing English messages. Technical wording here is a reviewable working glossary.
+Phase 2A continues English (`en`) and Mongolian Cyrillic (`mn`). New user-facing features should add both translations to the typed catalog in `web/i18n.ts`, keep interpolation placeholders aligned, and use stable diagnostic codes rather than parsing English messages. Technical wording here is a reviewable working glossary.
 
 | English | Монгол | Use |
 | --- | --- | --- |
@@ -28,6 +28,14 @@ Phase 1B continues English (`en`) and Mongolian Cyrillic (`mn`). New user-facing
 | Unapplied draft | Хэрэглэгдээгүй ноорог | Editable form or JSON text that is not the analyzed circuit |
 | Controlling branch | Удирдах салаа | Retained voltage-type branch for CCVS/CCCS control |
 | Ordered terminals | Эрэмбэлсэн туйлууд | `V(p)−V(n)` and positive current `p→n` |
+| Equivalent circuit | Эквивалент хэлхээ | DC one-port terminal behavior |
+| Thévenin | Тевенен | Signed open-circuit voltage and equivalent resistance |
+| Norton | Нортон | Current-source arrow `q→p`, signed current `IN` |
+| Open circuit | Нээлттэй хэлхээ | No **additional** external port load; existing branches remain |
+| Short circuit | Богино холболт | Added zero-volt source across the port |
+| Test source | Туршилтын үүсгүүр | Inject current `q→p` after zeroing independent DC coordinates |
+| Load current | Ачааллын гүйдэл | External resistor current `p→q`, opposite injected port current |
+| Agreement criterion | Нийцлийн нөхцөл | Separate voltage/current absolute floors and relative terms |
 
 Component IDs, node IDs, user-provided labels, device codes, equations, and SI symbols remain unchanged in both languages. Native JSON uses the version-1 English field names and finite JSON numbers. Frequency and transient CSV headers, statuses, decimal points, and numerical values are likewise locale-neutral so exports round-trip and compare identically across languages. The interface translates labels and diagnostic summaries; expandable **Technical details (English)** retains original kernel messages where useful.
 

@@ -1,0 +1,20 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "differential bridge port",
+    "nodes": ["0", "in", "a", "b"],
+    "components": [
+      { "id": "Vin", "type": "V", "p": "in", "n": "0" },
+      { "id": "Ra1", "type": "R", "p": "in", "n": "a", "value": 1000 },
+      { "id": "Ra2", "type": "R", "p": "a", "n": "0", "value": 2000 },
+      { "id": "Rb1", "type": "R", "p": "in", "n": "b", "value": 3000 },
+      { "id": "Rb2", "type": "R", "p": "b", "n": "0", "value": 3000 }
+    ],
+    "observations": [{ "id": "port", "type": "voltage", "p": "a", "n": "b" }]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "sources": [{ "id": "Vin", "dc": 12 }],
+    "initial": { "kind": "equilibrium" }
+  }
+}
