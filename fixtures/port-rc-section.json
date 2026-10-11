@@ -1,0 +1,12 @@
+{
+  "circuit": {
+    "schemaVersion": 1, "label": "Source-free RC section",
+    "nodes": ["0", "in", "out"],
+    "components": [
+      {"id":"R","type":"R","p":"in","n":"out","value":1000},
+      {"id":"C","type":"C","p":"out","n":"0","value":0.000001}
+    ],
+    "observations": [{"id":"out","type":"voltage","p":"out","n":"0"}]
+  },
+  "experiment": {"schemaVersion":1,"sources":[],"initial":{"kind":"equilibrium"}}
+}

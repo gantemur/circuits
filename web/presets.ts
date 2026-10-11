@@ -10,6 +10,9 @@ import vcvs from '../fixtures/vcvs.json';
 import resSeries from '../fixtures/res-series.json';
 import resStar from '../fixtures/res-star.json';
 import resBridge from '../fixtures/res-bridge.json';
+import portT from '../fixtures/port-t.json';
+import portRc from '../fixtures/port-rc-section.json';
+import portCascade from '../fixtures/port-rc-cascade.json';
 import type { TranslationKey } from './i18n.js';
 
 export interface Preset { id: string; titleKey: TranslationKey; subtitleKey: TranslationKey; document: NativeDocument; defaultOutput: string; }
@@ -25,6 +28,9 @@ export const presets: Preset[] = [
   { id: 'res-series', titleKey: 'presetResSeriesTitle', subtitleKey: 'presetResSeriesSubtitle', document: resSeries as NativeDocument, defaultOutput: 'out' },
   { id: 'res-star', titleKey: 'presetResStarTitle', subtitleKey: 'presetResStarSubtitle', document: resStar as NativeDocument, defaultOutput: 'Va' },
   { id: 'res-bridge', titleKey: 'presetResBridgeTitle', subtitleKey: 'presetResBridgeSubtitle', document: resBridge as NativeDocument, defaultOutput: 'Va' },
+  { id: 'port-t', titleKey: 'presetPortTTitle', subtitleKey: 'presetPortTSubtitle', document: portT as NativeDocument, defaultOutput: 'out' },
+  { id: 'port-rc-section', titleKey: 'presetPortRcTitle', subtitleKey: 'presetPortRcSubtitle', document: portRc as NativeDocument, defaultOutput: 'out' },
+  { id: 'port-rc-cascade', titleKey: 'presetPortCascadeTitle', subtitleKey: 'presetPortCascadeSubtitle', document: portCascade as NativeDocument, defaultOutput: 'out' },
 ];
 
 export const copyDocument = (d: NativeDocument): NativeDocument => JSON.parse(JSON.stringify(d)) as NativeDocument;

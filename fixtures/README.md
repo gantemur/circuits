@@ -58,3 +58,15 @@ These native documents have no independent source, use equilibrium initializatio
 | `res-bridge.json` | Five-resistor unbalanced bridge between `(a,0)` has no initial series or parallel pair. Internal KCL in `(x,y)` independently gives the terminal conductance tested in `test/resistor-transform.test.mjs`; bulk Kron removes both nodes. Its degree-three nodes **do** allow star–delta, so “no elementary move of any kind” would be false. |
 
 Tests also cover reversed parallel orientation, delta→star legs, four-terminal fill-in, sequential elimination orders, retained-node ordering, disconnected internal components, ID collisions, extreme values, immutability, and strict export round-trip.
+
+## Phase 2C source-free port cases
+
+These native v1 documents have no source branches. The example selector suggests exact ordered ports `(in,0)` and `(out,0)`; temporary characterization and loading sources are added only to copies. See `test/port-analysis.test.mjs` for independent analytic expectations.
+
+| Fixture | Independent expectation |
+| --- | --- |
+| `port-t.json` | `Ra=1000 Ω` from `in` to junction, `Rb=2000 Ω` from junction to `out`, `Rc=3000 Ω` from junction to `0`. `Z=[[4000,3000],[3000,5000]] Ω`; `Y=Z⁻¹` as an *independent expected equation*, while the implementation measures Y by voltage clamps. |
+| `port-rc-section.json` | `R=1000 Ω` between `in` and `out`, `C=1 μF` from `out` to `0`: `Y=[[g,−g],[−g,g+sC]] S` for `g=1/R`. At `s=0`, Y remains valid while a current-driven open-port Z test is unavailable. |
+| `port-rc-cascade.json` | Two equal sections connect directly. With ideal input drive and open output, `Vout/Vs=1/(1+3sRC+(sRC)²)` from nodal equations, rather than the product of two isolated `1/(1+sRC)` gains. Finite `Rs` and `RL` cases are derived from the same connected KCL equations. |
+
+Additional regressions cover one-port series RC, nonreciprocal VCCS, port reversal and swapping, explicit independent-source suppression and drive exclusion, differential ports, exact punctuation-containing IDs, generated-ID collisions, invalid/dependent selections, and nonfinite or singular outcomes.

@@ -13,6 +13,7 @@ import { addPanel, createWorkspace, handlePanelFieldChange, movePanel, PanelCalc
   panelCsv, reconcilePanels, removePanel, suggestedLayout, type PanelConfig, type PanelResult,
   type PanelType, type WorkspaceView, type NumericPanelField } from './workspace.js';
 import type { Component, SourceValue, Waveform } from '../src/model.js';
+import type { PortAnalysisResult, PortFailure, PortLoadResult, PortOperatingPoint, PortRepresentation } from '../src/port-analysis.js';
 
 const byId = (id: string): HTMLElement => {
   const element = document.getElementById(id);
@@ -41,8 +42,8 @@ const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => valid
 const onePortUI = new OnePortUI(byId('one-port'), () => state);
 const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => state);
 const transformMethod: { method: 'dc' | 'resistor' } = { method: 'dc' };
-const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'port'];
-const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort' };
+const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'port', 'port-frequency'];
+const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort', 'port-frequency': 'panelPortFrequency' };
 const sourceUnit = (id: string): 'V' | 'A' => state.document.circuit.components.find(c => c.id === id)?.type === 'I' ? 'A' : 'V';
 const componentUnit = (c: Component): string => c.type === 'R' || c.type === 'CCVS' ? 'Ω' : c.type === 'C' ? 'F' : c.type === 'L' ? 'H' : c.type === 'VCCS' ? 'S' : '';
 const nativeJson = (): HTMLTextAreaElement => byId('json-editor') as HTMLTextAreaElement;
@@ -83,7 +84,7 @@ function renderView(): void {
 function renderCircuitChoice(): void {
   const select = byId('circuit-select') as HTMLSelectElement;
   const group = (label: TranslationKey, ids: string[]) => `<optgroup label="${translate(label)}">${presets.filter(p=>ids.includes(p.id)).map(p=>`<option value="${e(p.id)}"${state.presetId === p.id ? ' selected' : ''}>${translate(p.titleKey)}</option>`).join('')}</optgroup>`;
-  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}`;
+  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}${group('presetGroupPort',['port-t','port-rc-section','port-rc-cascade'])}`;
   const preset = presets.find(p => p.id === state.presetId);
   const modified = preset && JSON.stringify(state.document) !== JSON.stringify(preset.document);
   byId('circuit-status').textContent = state.presetId ? t(modified ? 'circuitModified' : 'circuitPreset') : t('circuitCustom');
@@ -177,13 +178,113 @@ function portContent(panel: PanelConfig, result: Extract<PanelResult,{type:'port
   if (port.status !== 'ok') return `<div class="warning" role="status">${translate(keys[port.status]!)}</div><button type="button" class="button quiet" data-panel-action="open-comparison" data-panel-id="${panel.id}">${t('openComparison')}</button>`;
   return `<div class="metric-grid"><div class="metric"><div class="metric-label">Vth</div><div class="metric-value">${fmt(port.vth)} V</div></div><div class="metric"><div class="metric-label">Rth</div><div class="metric-value">${fmt(port.rth)} Ω</div></div><div class="metric"><div class="metric-label">IN</div><div class="metric-value">${fmt(port.inorton)} A</div></div></div><p class="analysis-note">VL = ${fmt(port.original.voltage)} V · IL = ${fmt(port.original.current)} A</p><button type="button" class="button quiet" data-panel-action="open-comparison" data-panel-id="${panel.id}">${t('openComparison')}</button><details class="explanation"><summary>${t('panelExplanation')}</summary><p>${t('onePortConvention')}</p><p>${t('onePortSuppression',{sources:state.document.experiment.sources.map(s=>s.id).join(', ')||t('noSourcesShort'),controlled:state.document.circuit.components.filter(c=>['VCVS','VCCS','CCVS','CCCS'].includes(c.type)).map(c=>c.id).join(', ')||t('noSourcesShort')})}</p></details>`;
 }
+function complexText(value: { re: number; im: number } | null, unit = ''): string {
+  if (!value) return t('portUndefined');
+  return `${fmt(value.re)}${value.im < 0 ? '' : '+'}${fmt(value.im)}j${unit ? ` ${unit}` : ''}`;
+}
+function portFailureText(failure: PortFailure): string {
+  const keys: Record<PortFailure['status'], TranslationKey> = {
+    'invalid-selection': 'portInvalidSelection', 'unsupported-exclusion': 'portUnsupportedExclusion',
+    'incompatible-test': 'portIncompatible', nonunique: 'portNonunique',
+    'numerical-failure': 'portNumerical',
+  };
+  return translate(keys[failure.status]);
+}
+function portWarning(failure: PortFailure): string {
+  return `<div class="warning" role="status">${e(portFailureText(failure))}<details class="explanation"><summary>${t('technicalDetails')}</summary><p>${e(failure.message)}</p></details></div>`;
+}
+function portMatrixContent(name: 'Z' | 'Y', representation: PortRepresentation, panel: PanelConfig): string {
+  if (representation.status !== 'ok') return `<p class="warning" role="status">${e(t('portUnavailable',{matrix:name,reason:portFailureText(representation)}))}</p>`;
+  const ports = [{ p: panel.p, q: panel.q }, ...(panel.portMode === 2 ? [{ p: panel.p2, q: panel.q2 }] : [])];
+  const labels = ports.map((port, index) => `${index + 1}: ${JSON.stringify(port.p)} → ${JSON.stringify(port.q)}`);
+  return `<h3>${e(t('portMatrixTitle',{matrix:name,unit:representation.unit}))}</h3><div class="table-wrap"><table class="matrix-table"><thead><tr><th>${name === 'Z' ? 'V ↓ / I →' : 'I ↓ / V →'}</th>${labels.map(label=>`<th>${e(label)}</th>`).join('')}</tr></thead><tbody>${representation.values.map((row,index)=>`<tr><th>${e(labels[index]!)}</th>${row.map(value=>`<td>${e(complexText(value,representation.unit))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function pointCells(point: PortOperatingPoint): string {
+  return `<td>${e(complexText(point.v1))}</td><td>${e(complexText(point.v2))}</td><td>${e(complexText(point.i1))}</td><td>${e(complexText(point.i2))}</td><td>${e(complexText(point.sourceToOutputGain))}</td><td>${e(complexText(point.terminalVoltageGain))}</td><td>${e(complexText(point.inputImpedance))}</td>`;
+}
+function loadingContent(loading: PortLoadResult): string {
+  const items = [
+    { label: t('portDirect'), result: loading.direct },
+    { label: t('portFromZ'), result: loading.fromZ },
+    { label: t('portFromY'), result: loading.fromY },
+  ];
+  const rows = items.map(({label,result}) => {
+    if (result.status !== 'ok') return `<tr><th>${e(label)}</th><td colspan="8">${e(t('portLoadFailure',{reason:portFailureText(result)}))}</td></tr>`;
+    const agreement = 'comparison' in result ? result.comparison ? result.comparison.passed ? t('portAgrees') : t('portDiffers') : t('portNoComparison') : '—';
+    return `<tr><th>${e(label)}</th>${pointCells(result.point)}<td>${e(agreement)}</td></tr>`;
+  }).join('');
+  const limits = [loading.fromZ, loading.fromY].filter(result=>result.status==='ok').map(result=>{
+    if (result.status!=='ok'||!result.comparison) return '';
+    const comparison = result.comparison;
+    return `<p class="soft-note">|ΔV| = ${comparison.voltageDifference.map(value=>fmt(value)).join(', ')} V ≤ ${comparison.voltageLimit.map(value=>fmt(value)).join(', ')} V; |ΔI| = ${comparison.currentDifference.map(value=>fmt(value)).join(', ')} A ≤ ${comparison.currentLimit.map(value=>fmt(value)).join(', ')} A.</p>`;
+  }).join('');
+  return `<p class="analysis-note">${t('portLoadIntro')}</p><div class="table-wrap"><table class="result-table"><thead><tr><th>${t('onePortCircuit')}</th><th>${t('portV1')}</th><th>${t('portV2')}</th><th>${t('portI1')}</th><th>${t('portI2')}</th><th>${t('portSourceGain')}</th><th>${t('portTerminalGain')}</th><th>${t('portInputImpedance')}</th><th>${t('portAgreement')}</th></tr></thead><tbody>${rows}</tbody></table></div>${limits}`;
+}
+function portFrequencyContent(panel: PanelConfig, result: Extract<PanelResult,{type:'port-frequency'}>): string {
+  const analyzed: PortAnalysisResult = result.single;
+  if (analyzed.status !== 'ok') return portWarning(analyzed);
+  const chosen = panel.portMatrix === 'z' ? analyzed.z : analyzed.y;
+  const other = panel.portMatrix === 'z' ? analyzed.y : analyzed.z;
+  const chosenName = panel.portMatrix.toUpperCase() as 'Z' | 'Y';
+  const otherName = panel.portMatrix === 'z' ? 'Y' : 'Z';
+  const suppression = t('portSuppression',{excluded:analyzed.excludedDrive ?? t('portNoExcluded'),
+    suppressed:analyzed.suppressedSources.join(', ')||t('portNoExcluded'),
+    controlled:analyzed.retainedControlled.join(', ')||t('portNoExcluded')});
+  const teaching = panel.portFrequencyHz === 0 && analyzed.y.status === 'ok' && analyzed.z.status !== 'ok' &&
+    state.document.circuit.components.some(component=>component.type==='C') ? `<p class="soft-note">${t('portDcTeaching')}</p>` : '';
+  let view: string;
+  if (panel.portView === 'loading' && panel.portMode === 2 && analyzed.loading) view = loadingContent(analyzed.loading);
+  else if (panel.portView === 'sweep') {
+    const unit = panel.portMatrix === 'z' ? 'Ω' : 'S';
+    const magnitude = result.sweep.map(sample=>({x:sample.frequencyHz,y:sample.magnitude,status:sample.status==='zero-magnitude'?'ok':sample.status}));
+    const phase = result.sweep.map(sample=>({x:sample.frequencyHz,y:sample.phaseDegrees,status:sample.status}));
+    const failures = result.sweep.filter(sample=>sample.status!=='ok'&&sample.status!=='zero-magnitude');
+    const zeros = result.sweep.filter(sample=>sample.status==='zero-magnitude');
+    view = `<p class="analysis-note">${chosenName}[${panel.portRow+1},${panel.portColumn+1}] · ${unit}</p><div class="plot-grid">${plot(magnitude,{title:t('magnitude'),xLabel:t('frequencyAxis'),yLabel:t('magnitudeWithUnit',{unit}),xLog:true})}${plot(phase,{title:t('phase'),xLabel:t('frequencyAxis'),yLabel:t('phaseWithUnit'),xLog:true,color:'orange'})}</div>${failures.length?`<p class="warning">${t('portFailureCount',{count:failures.length})}</p>`:''}${zeros.length?`<p class="warning">${t('portZeroPhase',{count:zeros.length})}</p>`:''}`;
+  } else view = portMatrixContent(chosenName,chosen,panel);
+  const otherStatus = other.status !== 'ok' ? `<p class="warning">${e(t('portUnavailable',{matrix:otherName,reason:portFailureText(other)}))}</p>` : '';
+  const cascade = state.presetId==='port-rc-cascade' ? `<p class="soft-note">${t('portCascadeNote')}</p>` : '';
+  return `<p class="analysis-note">${t('portDefinition')}</p>${teaching}${view}${otherStatus}${cascade}<details class="explanation"><summary>${t('panelExplanation')}</summary><p>${e(suppression)}</p><p>${t('portEvidence')}</p></details>`;
+}
 function panelField(panel: PanelConfig, field: NumericPanelField, label: string, unit = ''): string {
   const shown = panel.pending[field] ?? String(panel[field]);
   return `<div class="field"><label for="${panel.id}-${field}">${e(label)}${unit ? ` <span class="unit-note">(${e(unit)})</span>` : ''}</label><input id="${panel.id}-${field}" data-panel-id="${panel.id}" data-panel-field="${field}" type="text" inputmode="decimal" value="${e(shown)}" aria-invalid="${!!panel.errors[field]}"><small class="field-error">${panel.errors[field] ? e(translate(panel.errors[field] as TranslationKey,{field:label})) : ''}</small></div>`;
 }
-function panelSelect(panel: PanelConfig, field: 'input'|'output'|'p'|'q', label: string, options: {value:string;label:string}[]): string {
+function panelSelect(panel: PanelConfig, field: 'input'|'output'|'p'|'q'|'p2'|'q2', label: string, options: {value:string;label:string}[]): string {
   const current = panel[field];
-  return `<div class="field"><label for="${panel.id}-${field}">${e(label)}</label><select id="${panel.id}-${field}" data-panel-id="${panel.id}" data-panel-field="${field}">${!options.some(o=>o.value===current) ? `<option value="" selected>${t('panelSelectionNeeded',{field:label})}</option>` : ''}${options.map(o=>`<option value="${e(o.value)}"${o.value===current?' selected':''}>${e(o.label)}</option>`).join('')}</select></div>`;
+  return `<div class="field"><label for="${panel.id}-${field}">${e(label)}</label><select id="${panel.id}-${field}" data-panel-id="${panel.id}" data-panel-field="${field}">${!options.some(o=>o.value===current) ? `<option value="${e(current)}" selected>${e(t('resMissingOption',{id:current}))}</option>` : ''}${options.map(o=>`<option value="${e(o.value)}"${o.value===current?' selected':''}>${e(o.label)}</option>`).join('')}</select></div>`;
+}
+function panelChoice(panel: PanelConfig, field: string, label: string,
+  current: string, options: { value: string; label: string }[]): string {
+  return `<div class="field"><label for="${panel.id}-${field}">${e(label)}</label><select id="${panel.id}-${field}" data-panel-id="${panel.id}" data-panel-field="${field}">${options.map(option=>`<option value="${e(option.value)}"${option.value===current?' selected':''}>${e(option.label)}</option>`).join('')}</select></div>`;
+}
+function portPanelSettings(panel: PanelConfig): string {
+  const nodes = state.document.circuit.nodes.map(node=>({value:node,label:JSON.stringify(node)}));
+  const driveOptions = state.document.circuit.components.filter(component=>component.type==='V' &&
+    ((component.p===panel.p&&component.n===panel.q)||(component.p===panel.q&&component.n===panel.p)))
+    .map(component=>({value:component.id,label:component.id}));
+  if (panel.externalDrive && !driveOptions.some(option=>option.value===panel.externalDrive))
+    driveOptions.unshift({value:panel.externalDrive,label:t('portMissingExternal',{id:panel.externalDrive})});
+  const mode = panelChoice(panel,'portMode',t('portMode'),String(panel.portMode),[
+    {value:'1',label:t('portOne')},{value:'2',label:t('portTwo')}]);
+  const terminals = `<div class="controls-grid">${panelSelect(panel,'p',t('portP1'),nodes)}${panelSelect(panel,'q',t('portQ1'),nodes)}${panel.portMode===2?`${panelSelect(panel,'p2',t('portP2'),nodes)}${panelSelect(panel,'q2',t('portQ2'),nodes)}`:''}</div>`;
+  const external = panelChoice(panel,'externalDrive',t('portExternal'),panel.externalDrive??'',[
+    {value:'',label:t('portNoExternal')},...driveOptions]);
+  const view = panelChoice(panel,'portView',t('portView'),panel.portView,[
+    {value:'single',label:t('portSingle')},{value:'sweep',label:t('portSweep')},
+    ...(panel.portMode===2?[{value:'loading',label:t('portLoading')}]:[])]);
+  const matrix = panelChoice(panel,'portMatrix',t('portMatrix'),panel.portMatrix,[
+    {value:'z',label:'Z (Ω)'},{value:'y',label:'Y (S)'}]);
+  const rows = panel.portMode===2 ? `<div class="controls-grid">${panelChoice(panel,'portRow',t('portRow'),String(panel.portRow),[
+    {value:'0',label:`1: ${JSON.stringify(panel.p)} → ${JSON.stringify(panel.q)}`},
+    {value:'1',label:`2: ${JSON.stringify(panel.p2)} → ${JSON.stringify(panel.q2)}`}])}${panelChoice(panel,'portColumn',t('portColumn'),String(panel.portColumn),[
+    {value:'0',label:`1: ${JSON.stringify(panel.p)} → ${JSON.stringify(panel.q)}`},
+    {value:'1',label:`2: ${JSON.stringify(panel.p2)} → ${JSON.stringify(panel.q2)}`}])}</div>` : '';
+  const single = panelField(panel,'portFrequencyHz',t('portFrequency'),'Hz');
+  const sweep = `<div class="controls-grid">${panelField(panel,'portMinHz',t('minimum'),'Hz')}${panelField(panel,'portMaxHz',t('maximum'),'Hz')}${panelField(panel,'portPoints',t('samples'))}</div>`;
+  const load = panel.portMode===2 ? `<div class="controls-grid">${panelField(panel,'portSourceResistance',t('portSourceResistance'),'Ω')}${panelChoice(panel,'portLoadOpen',t('portLoadKind'),panel.portLoadOpen?'open':'resistor',[
+    {value:'resistor',label:t('portResistiveLoad')},{value:'open',label:t('portOpenLoad')}])}${panel.portLoadOpen?'':panelField(panel,'portLoadResistance',t('portLoadResistance'),'Ω')}</div>` : '';
+  return `${mode}${terminals}${external}<div class="controls-grid">${view}${matrix}${single}</div>${panel.portView==='sweep'?`${rows}${sweep}`:''}${panel.portView==='loading'?load:''}`;
 }
 function panelSettings(panel: PanelConfig): string {
   const outputs = state.document.circuit.observations.map(o=>({value:o.id,label:o.id}));
@@ -192,6 +293,7 @@ function panelSettings(panel: PanelConfig): string {
   if (panel.type==='frequency') return `${panelSelect(panel,'input',t('independentInput'),inputs)}${panelSelect(panel,'output',t('measuredOutput'),outputs)}<div class="controls-grid">${panelField(panel,'minHz',t('minimum'),'Hz')}${panelField(panel,'maxHz',t('maximum'),'Hz')}${panelField(panel,'points',t('samples'))}${panelField(panel,'inspectHz',t('acInspectFrequency'),'Hz')}</div>`;
   if (panel.type==='transient') return `${panelSelect(panel,'output',t('measuredOutput'),outputs)}<div class="controls-grid">${panelField(panel,'duration',t('duration'),'s')}${panelField(panel,'step',t('timeStep'),'s')}</div>`;
   if (panel.type==='port') return `<div class="controls-grid">${panelSelect(panel,'p',t('onePortPositive'),nodes)}${panelSelect(panel,'q',t('onePortNegative'),nodes)}${panelField(panel,'load',t('onePortLoad'),'Ω')}</div>`;
+  if (panel.type==='port-frequency') return portPanelSettings(panel);
   if (panel.type==='equations') return panelSelect(panel,'output',t('measuredOutput'),outputs);
   return `<p class="muted small">${t('panelSummaryDc')}</p>`;
 }
@@ -199,6 +301,7 @@ function panelSummary(panel: PanelConfig): string {
   if(panel.type==='frequency') return t('panelSummaryFrequency',{input:panel.input,output:panel.output,min:fmt(panel.minHz),max:fmt(panel.maxHz),points:panel.points});
   if(panel.type==='transient') return t('panelSummaryTransient',{output:panel.output,duration:fmt(panel.duration),step:fmt(panel.step)});
   if(panel.type==='port') return t('panelSummaryPort',{p:panel.p,q:panel.q,load:fmt(panel.load)});
+  if(panel.type==='port-frequency') return t('portSummary',{count:panel.portMode,frequency:fmt(panel.portFrequencyHz),matrix:panel.portMatrix.toUpperCase()});
   if(panel.type==='equations') return t('panelSummaryEquations',{output:panel.output});
   return t('panelSummaryDc');
 }
@@ -206,15 +309,16 @@ function renderPanel(panel: PanelConfig, index: number): string {
   let content = '';
   if (!panel.collapsed) {
     const result = calculator.calculate(panel,state);
-    content = panel.selectionNeeded ? `<p class="warning" role="status">${t('panelSelectionNeeded',{field:t(panel.selectionNeeded==='input'?'independentInput':panel.selectionNeeded==='output'?'measuredOutput':'onePortPositive')})}</p>` : !result ? `<p class="warning">${t('resultNeedsValid')}</p>` :
+    content = panel.selectionNeeded ? `<p class="warning" role="status">${t('panelSelectionNeeded',{field:t(panel.selectionNeeded==='input'?'independentInput':panel.selectionNeeded==='output'?'measuredOutput':panel.selectionNeeded==='externalDrive'?'portExternal':'onePortPositive')})}</p>` : !result ? `<p class="warning">${t('resultNeedsValid')}</p>` :
       result.type==='dc' ? dcContent(result.assembly,result.dc) :
       result.type==='frequency' ? frequencyContent(panel,result) :
       result.type==='transient' ? transientContent(panel,result) :
-      result.type==='equations' ? equationContent(panel,result) : portContent(panel,result);
+      result.type==='equations' ? equationContent(panel,result) :
+      result.type==='port' ? portContent(panel,result) : portFrequencyContent(panel,result);
   }
   const error = Object.keys(panel.errors).length ? `<p class="warning" role="status">${t('panelLastValid')}</p>` : '';
   const controls = (action:string,key:TranslationKey,symbol:string,disabled=false) => `<button type="button" class="panel-icon" data-panel-action="${action}" data-panel-id="${panel.id}" aria-label="${translate(key)}" title="${translate(key)}" ${disabled?'disabled':''}>${symbol}</button>`;
-  return `<section class="panel analysis-panel ${panel.expanded?'expanded':''}" data-panel="${panel.id}" aria-label="${translate(panelKeys[panel.type])}"><div class="panel-head"><div class="panel-heading"><label for="${panel.id}-type">${t('panelType')}</label><select id="${panel.id}-type" data-panel-id="${panel.id}" data-panel-field="type">${panelTypes.map(type=>`<option value="${type}"${type===panel.type?' selected':''}>${translate(panelKeys[type])}</option>`).join('')}</select></div><div class="panel-tools">${controls('up','panelUp','↑',index===0)}${controls('down','panelDown','↓',index===workspace.panels.length-1)}${controls('wide',panel.expanded?'panelNormal':'panelFull','⤢')}${controls('collapse',panel.collapsed?'panelExpand':'panelCollapse',panel.collapsed?'▾':'▴')}${controls('remove','panelRemove','×')}</div></div><p class="panel-summary">${e(panelSummary(panel))}</p>${panel.collapsed ? '' : `<details class="panel-settings" data-panel-settings="${panel.id}" ${panel.settingsOpen||panel.selectionNeeded?'open':''}><summary>${t('panelSettings')}</summary>${panelSettings(panel)}</details>${error}<div class="panel-result">${content}</div>${['frequency','transient'].includes(panel.type)&&!panel.selectionNeeded ? `<button type="button" class="button quiet panel-export" data-panel-action="export" data-panel-id="${panel.id}">${t('exportCsv')}</button>` : ''}`}</section>`;
+  return `<section class="panel analysis-panel ${panel.expanded?'expanded':''}" data-panel="${panel.id}" aria-label="${translate(panelKeys[panel.type])}"><div class="panel-head"><div class="panel-heading"><label for="${panel.id}-type">${t('panelType')}</label><select id="${panel.id}-type" data-panel-id="${panel.id}" data-panel-field="type">${panelTypes.map(type=>`<option value="${type}"${type===panel.type?' selected':''}>${translate(panelKeys[type])}</option>`).join('')}</select></div><div class="panel-tools">${controls('up','panelUp','↑',index===0)}${controls('down','panelDown','↓',index===workspace.panels.length-1)}${controls('wide',panel.expanded?'panelNormal':'panelFull','⤢')}${controls('collapse',panel.collapsed?'panelExpand':'panelCollapse',panel.collapsed?'▾':'▴')}${controls('remove','panelRemove','×')}</div></div><p class="panel-summary">${e(panelSummary(panel))}</p>${panel.collapsed ? '' : `<details class="panel-settings" data-panel-settings="${panel.id}" ${panel.settingsOpen||panel.selectionNeeded?'open':''}><summary>${t('panelSettings')}</summary>${panelSettings(panel)}</details>${error}<div class="panel-result">${content}</div>${['frequency','transient','port-frequency'].includes(panel.type)&&!panel.selectionNeeded ? `<button type="button" class="button quiet panel-export" data-panel-action="export" data-panel-id="${panel.id}">${t('exportCsv')}</button>` : ''}`}</section>`;
 }
 function renderPanels(): void {
   const grid=byId('analysis-grid');
@@ -299,6 +403,15 @@ document.addEventListener('input',event=>{
   }
   if(target instanceof HTMLInputElement&&target.dataset.kind)inputDrafts.set(`${target.dataset.kind}:${target.dataset.id??''}`,target.value);
 });
+// Some assistive input paths emit input and blur without a change event. The
+// pending value is already recorded by `input`; commit it when focus leaves.
+document.addEventListener('focusout', event => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || !target.dataset.panelField) return;
+  const panel = workspace.panels.find(candidate => candidate.id === target.dataset.panelId);
+  if (!panel || panel.pending[target.dataset.panelField] === undefined) return;
+  if (handlePanelFieldChange(workspace, state, panel.id, target.dataset.panelField, target.value)) renderPanels();
+});
 document.addEventListener('toggle',event=>{
   const target=event.target;
   if(target instanceof HTMLDetailsElement&&target.id==='sources-details')sourceOpen=target.open;
@@ -342,7 +455,7 @@ document.addEventListener('click',event=>{
   if(panelButton){const panel=workspace.panels.find(p=>p.id===panelButton.dataset.panelId);if(!panel)return;
     const action=panelButton.dataset.panelAction;
     if(action==='open-comparison'){openPortComparison(transformMethod,panel,(p,q,load)=>onePortUI.useSelection(p,q,load),()=>openView('transform'));return;}
-    if(action==='export'){const result=calculator.calculate(panel,state);if(result&&(result.type==='frequency'||result.type==='transient'))download(`circuits-${panel.type}-${panel.id}.csv`,panelCsv(panel,result),'text/csv');return;}
+    if(action==='export'){const result=calculator.calculate(panel,state);if(result&&(result.type==='frequency'||result.type==='transient'||result.type==='port-frequency'))download(`circuits-${panel.type}-${panel.id}.csv`,panelCsv(panel,result),'text/csv');return;}
     if(action==='up')movePanel(workspace,panel.id,-1);
     else if(action==='down')movePanel(workspace,panel.id,1);
     else if(action==='remove')removePanel(workspace,panel.id);

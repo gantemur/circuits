@@ -50,6 +50,12 @@ The UX workspaces branch continues English (`en`) and Mongolian Cyrillic (`mn`) 
 | Last valid result | Сүүлчийн зөв үр дүн | Kept visible while invalid pending panel text is corrected |
 | Suggested layout | Санал болгосон байрлал | Preset's two-panel starting point, restored explicitly after customization |
 | DC port characteristics | DC туйлын үзүүлэлт | Compact Phase 2A result, not general impedance analysis |
+| Port analysis — frequency | Туйлын шинжилгээ — давтамж | Phase 2C one/two-port Z and Y experiments |
+| Impedance | Импеданс | Z matrix; port voltage divided by entering port current, Ω |
+| Admittance | Адмиттанс | Y matrix; entering port current divided by port voltage, S |
+| External voltage drive | Гадаад хүчдэлийн үүсгүүр | Explicitly excluded independent voltage branch across port 1 |
+| Loading comparison | Ачааллын харьцуулалт | Parameter prediction checked against a directly connected circuit |
+| Source resistance / load resistance | Үүсгүүрийн эсэргүүцэл / ачааллын эсэргүүцэл | Finite Rs and RL; open load is a separate choice |
 
 Component IDs, node IDs, user-provided labels, device codes, equations, and SI symbols remain unchanged in both languages. Native JSON uses the version-1 English field names and finite JSON numbers. Frequency and transient CSV headers, statuses, decimal points, and numerical values are likewise locale-neutral so exports round-trip and compare identically across languages. The interface translates labels and diagnostic summaries; expandable **Technical details (English)** retains original kernel messages where useful.
 

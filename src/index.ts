@@ -6,4 +6,5 @@ export * from './analysis.js';
 export * from './transient.js';
 export * from './kron.js';
 export * from './one-port.js';
+export * from './port-analysis.js';
 export * from './resistor-transform.js';

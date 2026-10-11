@@ -29,3 +29,4 @@
 .res-terminal-controls{margin:.65rem 0 1rem}.res-terminal-controls .analysis-note{margin:.25rem 0 .5rem}.res-terminal-row{display:flex;align-items:end;gap:.35rem;max-width:34rem;min-width:0}.res-terminal-row .field{flex:1;min-width:0}.res-terminal-actions{display:flex;gap:.18rem;margin-bottom:.65rem}.res-terminal-actions .button{min-width:1.8rem;padding:.48rem .3rem}.res-terminal-controls .file-actions{margin:.2rem 0 .8rem}
 .panel-icon{min-width:1.8rem;max-width:none;min-height:1.7rem;font-size:1rem;font-weight:700;line-height:1;text-align:center}.panel-tools{flex-wrap:nowrap}.panel-heading{min-width:0}.panel-heading select{width:100%}
 @media(max-width:650px){.analysis-panel .panel-head{flex-wrap:wrap}.analysis-panel .panel-tools{width:100%;justify-content:flex-start}}
+.analysis-panel .matrix-grid > div{min-width:0}

@@ -1,0 +1,13 @@
+{
+  "circuit": {
+    "schemaVersion": 1, "label": "Passive resistor T network",
+    "nodes": ["0", "in", "junction", "out"],
+    "components": [
+      {"id":"Ra","type":"R","p":"in","n":"junction","value":1000},
+      {"id":"Rb","type":"R","p":"junction","n":"out","value":2000},
+      {"id":"Rc","type":"R","p":"junction","n":"0","value":3000}
+    ],
+    "observations": [{"id":"out","type":"voltage","p":"out","n":"0"}]
+  },
+  "experiment": {"schemaVersion":1,"sources":[],"initial":{"kind":"equilibrium"}}
+}

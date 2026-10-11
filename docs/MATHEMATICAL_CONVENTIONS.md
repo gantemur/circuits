@@ -12,6 +12,8 @@ Ground is a reference, not a physical current sink omitted from balance. Diagnos
 
 Both multiport currents enter their positive-voltage terminals. For chain/ABCD matrices use the current leaving port 2:
 
+Phase 2C selects each frequency-domain port as an ordered exact node pair `(p,q)`: `V=V(p)−V(q)` and positive `I` enters the characterized network at `p`. For two ports, `V=ZI` and `I=YV`, with both currents entering. The current source that tests a Z column points `q→p`; the network current measured under an ideal voltage clamp is the *negative* of that clamp's p→q branch current. A physical resistor attached to port 2 draws `V2/RL` externally, so its network current is `I2=−V2/RL`; an open external load imposes `I2=0`. The 1 V RMS loading source satisfies `V1=Vs−Rs I1`. These choices allow shared returns or differential terminals and do not imply that either negative terminal is ground.
+
 $$
 \begin{pmatrix}V_1\\I_1\end{pmatrix}
 =\begin{pmatrix}A&B\\C&D\end{pmatrix}

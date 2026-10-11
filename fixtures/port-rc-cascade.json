@@ -1,0 +1,14 @@
+{
+  "circuit": {
+    "schemaVersion": 1, "label": "Two directly connected equal RC sections",
+    "nodes": ["0", "in", "mid", "out"],
+    "components": [
+      {"id":"R1","type":"R","p":"in","n":"mid","value":1000},
+      {"id":"C1","type":"C","p":"mid","n":"0","value":0.000001},
+      {"id":"R2","type":"R","p":"mid","n":"out","value":1000},
+      {"id":"C2","type":"C","p":"out","n":"0","value":0.000001}
+    ],
+    "observations": [{"id":"out","type":"voltage","p":"out","n":"0"}]
+  },
+  "experiment": {"schemaVersion":1,"sources":[],"initial":{"kind":"equilibrium"}}
+}
