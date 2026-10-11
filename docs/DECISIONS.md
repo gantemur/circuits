@@ -19,7 +19,7 @@ Initial entry: 10 October 2026.
 | D11 | Phase 0 was the first implementation milestone | Preserve its `MVP_SPECIFICATION.md` acceptance contract and passing kernel tests |
 | D20 | Phase 1A completed and released | Preserve `PHASE_1_SPECIFICATION.md` and its browser/kernel separation |
 | D21 | Phase 1B form builder completed and released | Preserve its bounded scope and release verification below |
-| D22 | Phase 2A is the active task-branch milestone | Follow `PHASE_2A_SPECIFICATION.md`; no merge or deployment in this task |
+| D22 | Phase 2A DC one-port equivalence completed and released | Keep its DC-only, finite-positive-resistance boundary and explicit solver limitations |
 
 Repository visibility is an owner-controlled setting. The documents are prepared for public release; they do not imply that visibility has been changed. If the repository already has a different license, reconcile it before committing this bundle rather than overwriting it automatically.
 
@@ -30,7 +30,7 @@ Repository visibility is an owner-controlled setting. The documents are prepared
 - Phase 0 acceptance tests: **31 tests passing**, covering MVP sections A–H plus validation, numerical diagnostics, waveform units, explicit unsupported cases, and Kron overflow regressions.
 - Reproducible headless demo and browser bundle: implemented and verified.
 - Browser UI: the eight-example Phase 1A lab, native JSON editor, and Phase 1B form builder are integrated into `main` and verified on the public Pages site. Historical release records remain below.
-- Release candidate: Phase 2A DC one-port teaching lab, specified in `PHASE_2A_SPECIFICATION.md`, prepared from `codex/phase-2a-one-port`. The public Phase 2A deployment is not yet verified; Phase 1B is the last verified public release.
+- Phase 2A DC one-port teaching lab: integrated into `main`, published at [https://gantemur.github.io/circuits/](https://gantemur.github.io/circuits/), and verified in a public browser. Its DC-only, finite-positive-resistance scope and full-state nonuniqueness limitation remain explicit.
 
 Implementation is on task branch `codex/phase-0-kernel`, based on documentation commit `460771c`. Validation below applies to the Phase 0 checkpoint containing this entry, committed with the subject `feat: implement Phase 0 linear circuit kernel`. The checkpoint preserves `main` and does not merge or deploy the implementation. No private book was available or needed; public conventions and fixture equations supplied the acceptance contract.
 
@@ -171,3 +171,11 @@ Local validation: `npm test` passed 66/66 (the previous 60 plus six independent 
 ## Phase 2A release preparation — 10 October 2026
 
 The reviewed implementation is `3646cafa` on `codex/phase-2a-one-port`. A fresh fetch found `origin/main` at the expected `d654e754`, an ancestor of that branch, and a clean task-branch working tree. The current-status wording describes the release candidate without asserting publication. The DC-only, finite strictly positive equivalent-resistance boundary and the full-state solver’s nonuniqueness limitation remain explicit. Integration requires clean-install validation and a fast-forward; public release status requires successful main-branch validation, Pages deployment, and direct live verification. Historical implementation and prior-release records above remain unchanged.
+
+## Phase 2A public release verification — 10 October 2026
+
+Release preparation commit `4243793` was fast-forwarded from `codex/phase-2a-one-port` into `main` and pushed without rewriting history. `npm ci`, `npm test` (66/66), `npm run typecheck`, `npm run build`, `npm run build:site`, and `git diff --check` passed before integration. The [main validation run](https://github.com/gantemur/circuits/actions/runs/38106999862) and [Pages deployment](https://github.com/gantemur/circuits/actions/runs/38106999948) succeeded. Public HTML under `/circuits/` referenced `app.js?v=3b808af501cb` and `style.css?v=3bbc649dab29`; the fetched HTML, JS, and CSS each matched the local `publish/` file byte for byte.
+
+The live browser opened with the divider and showed Vth = 8 V, Rth = 666.6667 Ω (2000/3 Ω), and IN = 0.012 A. At RL = 2000 Ω, original, Thévenin, and Norton circuits each gave 6 V and 0.003 A; changing RL to 1000 Ω gave 4.8 V and 0.0048 A in all three. The imported differential bridge gave Vth = 2 V and Rth = 2166.667 Ω; reversing the selected port changed Vth, IN, loaded voltage, and current signs while keeping Rth positive. The controlled-source fixture retained its VCCS during the resistance test and gave 1 V, 500 Ω, and 0.002 A. A capacitor example reported unsupported storage; an ideal-voltage-source port reported zero resistance without inventing a finite Norton current; an ideal-current-source open circuit reported a nonunique or contradictory full-state solve.
+
+Unapplied builder and JSON drafts survived port and load changes, language switching, and a validated source edit; the edited builder showed its conflict status afterward. English and Mongolian at 390 px had no horizontal page overflow, and the browser console had no errors. The release pass imported valid native fixtures through the browser file picker; it did not repeat malformed-file import or JSON export, which were covered by earlier release checks recorded above. The full-state solver can still reject a terminal-unique network when internal currents are undetermined. The final status-only documentation commit changes no application assets; its workflow outcome is reported in the release handoff.
