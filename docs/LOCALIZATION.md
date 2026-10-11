@@ -1,6 +1,6 @@
 # Interface terminology and data conventions
 
-Phase 2A continues English (`en`) and Mongolian Cyrillic (`mn`). New user-facing features should add both translations to the typed catalog in `web/i18n.ts`, keep interpolation placeholders aligned, and use stable diagnostic codes rather than parsing English messages. Technical wording here is a reviewable working glossary.
+The UX workspaces branch continues English (`en`) and Mongolian Cyrillic (`mn`) from Phase 2A. New user-facing features should add both translations to the typed catalog in `web/i18n.ts`, keep interpolation placeholders aligned, and use stable diagnostic codes rather than parsing English messages. Technical wording here is a reviewable working glossary.
 
 | English | Монгол | Use |
 | --- | --- | --- |
@@ -36,6 +36,13 @@ Phase 2A continues English (`en`) and Mongolian Cyrillic (`mn`). New user-facing
 | Test source | Туршилтын үүсгүүр | Inject current `q→p` after zeroing independent DC coordinates |
 | Load current | Ачааллын гүйдэл | External resistor current `p→q`, opposite injected port current |
 | Agreement criterion | Нийцлийн нөхцөл | Separate voltage/current absolute floors and relative terms |
+| Analyze workspace | Шинжлэх ажлын талбар | Circuit view and independently configurable result panels |
+| Transform workspace | Хувиргах ажлын талбар | Currently the DC Thévenin/Norton comparison only |
+| Circuit editor | Хэлхээ засварлагч | Dedicated Form and JSON views with separate unapplied drafts |
+| Panel settings | Самбарын тохиргоо | Per-instance controls; no shared global sweep settings |
+| Last valid result | Сүүлчийн зөв үр дүн | Kept visible while invalid pending panel text is corrected |
+| Suggested layout | Санал болгосон байрлал | Preset's two-panel starting point, restored explicitly after customization |
+| DC port characteristics | DC туйлын үзүүлэлт | Compact Phase 2A result, not general impedance analysis |
 
 Component IDs, node IDs, user-provided labels, device codes, equations, and SI symbols remain unchanged in both languages. Native JSON uses the version-1 English field names and finite JSON numbers. Frequency and transient CSV headers, statuses, decimal points, and numerical values are likewise locale-neutral so exports round-trip and compare identically across languages. The interface translates labels and diagnostic summaries; expandable **Technical details (English)** retains original kernel messages where useful.
 

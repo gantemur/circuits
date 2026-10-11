@@ -1,6 +1,6 @@
 # Circuits Unfolded: project vision
 
-Version 0.2, 10 October 2026. This public lab document supersedes the August 2026 founding specification for implementation planning. The active coding scope is defined separately in `PHASE_1_SPECIFICATION.md`; Phase 0 remains specified in `MVP_SPECIFICATION.md`.
+Version 0.3, 11 October 2026. This public lab document supersedes the August 2026 founding specification for implementation planning. The active UX scope is defined separately in `UX_SPECIFICATION.md`; earlier milestones retain their own specifications.
 
 ## 1. Purpose
 
@@ -109,11 +109,13 @@ Each successful construction must show extraction steps, remaining function, gen
 
 ## 9. Interface and persistence
 
-The browser workspace should combine an SVG schematic, parameter/model inspector, analysis controls, and an equation/plot/step panel. Clicking a component should highlight its contribution to the equations; selecting an equation term should identify the responsible element.
+The browser has one shared circuit and experiment context, a dedicated circuit editor, configurable Analyze panels, and a Transform workspace for implemented equivalence methods. A component inspector connects the SVG schematic or honest topology table to parameters, terminal laws, and equation contributions. Form and JSON are separate editable views of the same native circuit, with explicit validation and Apply. Synthesize is a future workspace and should appear only when a working method exists. New theorem/reduction interfaces should use the shared editor and Transform workspace rather than creating a second independent circuit-design interface.
+
+Panel layout and temporary UI drafts are browser state, not scientific circuit data. A native v1 document continues to hold circuit topology, sources, observations, and initialization. A chosen port or analysis configuration specifies an experiment; it does not reclassify the circuit permanently. Future two-port and retained-terminal tools should build on that common model, with implemented support distinguished from mathematical validity.
 
 Editor essentials include placement, rotation, wires with unambiguous junctions, probes, named nodes, undo/redo, and dimensional parameter entry. European rectangular resistor symbols are the default. Plots need readable labels, units, cursors, logarithmic axes where appropriate, and data/SVG export.
 
-Circuit semantics must be independent of drawing geometry. A versioned JSON document stores topology, models, parameters, sources, observations, initial conditions, analysis settings, and later geometry and transformation history. Native files, local saving, and modest URL sharing should work without accounts.
+Circuit semantics must be independent of drawing geometry. The current versioned JSON document stores topology, models, parameters, sources, observations, and initial conditions. Analysis-panel layout stays outside native v1; a future version may add appropriate scientific experiment definitions, geometry, and transformation history after their contracts are specified. Native files, local saving, and modest URL sharing should work without accounts.
 
 Lessons use the same circuit format and kernel as ordinary user circuits. Accessibility includes keyboard editing, high contrast, labels beyond color, readable plots, and reduced-motion transformations.
 

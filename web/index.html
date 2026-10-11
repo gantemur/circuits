@@ -10,39 +10,32 @@
   <script type="module" src="./app.js"></script>
 </head>
 <body>
-  <a class="skip" href="#results" data-i18n="skipResults"></a>
+  <a class="skip" href="#workspace-main" data-i18n="skipResults"></a>
   <header class="topbar">
     <div class="brand"><span class="brandmark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M4 20h8l4-8 6 16 4-8h6"/></svg></span><span>Circuits <em>Unfolded</em></span></div>
-    <div class="header-actions"><span class="phase" data-i18n="phaseBadge"></span><span class="phase-dot" aria-hidden="true"></span><div class="language-switch" role="group" data-i18n-aria="languageLabel"><button type="button" data-language="en" aria-pressed="false">English</button><button type="button" data-language="mn" aria-pressed="false">Монгол</button></div></div>
+    <div class="header-actions"><button id="about-button" type="button" class="header-link" data-i18n="workspaceHelp"></button><div class="language-switch" role="group" data-i18n-aria="languageLabel"><button type="button" data-language="en" aria-pressed="false">English</button><button type="button" data-language="mn" aria-pressed="false">Монгол</button></div></div>
   </header>
   <div class="page">
-    <section class="intro" aria-labelledby="page-title">
-      <div class="eyebrow" data-i18n="introEyebrow"></div>
-      <h1 id="page-title" data-i18n="introTitle"></h1>
-      <p data-i18n="introText"></p>
-    </section>
+    <div id="about" class="about-box" hidden><h1 id="page-title" data-i18n="introTitle"></h1><p data-i18n="introText"></p><p data-i18n="pageDescription"></p></div>
     <div id="global-status" role="status" aria-live="polite"></div>
-    <div class="lab-grid">
-      <aside class="sidebar" data-i18n-aria="circuitControls">
-        <section class="panel" aria-labelledby="examples-title"><div class="panel-head"><div><span class="kicker" data-i18n="startKicker"></span><h2 id="examples-title" data-i18n="examples"></h2></div><button id="reset-example" type="button" class="button quiet"></button></div><div id="example-list"></div></section>
-        <section class="panel" aria-labelledby="component-title"><div class="panel-head"><div><span class="kicker" data-i18n="adjustKicker"></span><h2 id="component-title" data-i18n="components"></h2></div></div><div id="component-list"></div><div id="component-editor"></div></section>
-        <section class="panel" aria-labelledby="source-title"><div class="panel-head"><div><span class="kicker" data-i18n="exciteKicker"></span><h2 id="source-title" data-i18n="sourceStart"></h2></div></div><div id="source-editor"></div></section>
-        <section class="panel" aria-labelledby="builder-title"><div class="panel-head"><div><h2 id="builder-title" data-i18n="builderTitle"></h2></div></div><div id="builder-editor"></div></section>
-        <section class="panel" aria-labelledby="files-title"><div class="panel-head"><div><span class="kicker" data-i18n="keepKicker"></span><h2 id="files-title" data-i18n="nativeFiles"></h2></div></div><p class="muted small" data-i18n="nativeHint"></p><div class="file-actions"><label class="button outline" for="import-file" data-i18n="importJson"></label><input id="import-file" type="file" accept="application/json,.json" class="visually-hidden"><button id="export-json" type="button" class="button outline" data-i18n="exportJson"></button></div><div id="import-error" class="field-error" role="alert"></div></section>
-        <section class="panel" aria-labelledby="json-title"><div class="panel-head"><div><h2 id="json-title" data-i18n="editCircuitJson"></h2></div></div><p id="json-hint" class="muted small" data-i18n="jsonEditorHint"></p><div class="field"><label for="json-editor" data-i18n="jsonEditorLabel"></label><textarea id="json-editor" rows="14" spellcheck="false" aria-describedby="json-hint json-error"></textarea></div><div class="file-actions"><button id="apply-json" type="button" class="button" data-i18n="applyJson"></button><button id="restore-json" type="button" class="button outline" data-i18n="restoreJson"></button></div><div id="json-error" class="field-error" role="alert"></div></section>
-      </aside>
-      <main class="main">
-        <section class="panel schematic-panel" aria-labelledby="schematic-title"><div class="panel-head"><div><span class="kicker" data-i18n="circuitView"></span><h2 id="schematic-title" data-i18n="selectedNetwork"></h2></div><span id="schematic-badge" class="badge"></span></div><div id="schematic"></div><p id="schematic-note" class="muted small"></p></section>
-        <section class="panel one-port-panel" aria-labelledby="one-port-title"><div class="panel-head"><div><span class="kicker" data-i18n="onePortKicker"></span><h2 id="one-port-title" data-i18n="onePortTitle"></h2></div><span class="badge">DC</span></div><div id="one-port"></div></section>
-        <section class="panel controls-panel" aria-labelledby="analysis-title"><div class="panel-head"><div><span class="kicker" data-i18n="defineExperiment"></span><h2 id="analysis-title" data-i18n="analysisSettings"></h2></div><span class="badge" data-i18n="siUnits"></span></div><div id="analysis-controls"></div></section>
-        <div id="results">
-          <section class="panel result-panel" aria-labelledby="dc-title"><div class="panel-head"><div><span class="kicker" data-i18n="steadyState"></span><h2 id="dc-title" data-i18n="dcSolution"></h2></div><span class="badge">Kx = Bu</span></div><div id="dc-results"></div></section>
-          <section class="panel result-panel" aria-labelledby="frequency-title"><div class="panel-head"><div><span class="kicker" data-i18n="zeroState"></span><h2 id="frequency-title" data-i18n="transferResponse"></h2></div><button id="export-frequency" class="button quiet" type="button" data-i18n="exportCsv"></button></div><div id="frequency-results"></div></section>
-          <section class="panel result-panel" aria-labelledby="time-title"><div class="panel-head"><div><span class="kicker" data-i18n="timeDomain"></span><h2 id="time-title" data-i18n="transientResponse"></h2></div><button id="export-transient" class="button quiet" type="button" data-i18n="exportCsv"></button></div><div id="transient-results"></div></section>
-          <section class="panel result-panel" aria-labelledby="equations-title"><div class="panel-head"><div><span class="kicker" data-i18n="insideKernel"></span><h2 id="equations-title" data-i18n="equationsProvenance"></h2></div><span class="badge">E·ẋ + K·x = B·u</span></div><div id="equations-results"></div></section>
+    <section class="circuit-bar panel" data-i18n-aria="circuitControls">
+      <div class="circuit-select"><label for="circuit-select" data-i18n="circuitChoice"></label><select id="circuit-select"></select><span id="circuit-status" class="circuit-status"></span><p id="circuit-description" class="muted small"></p></div>
+      <div class="circuit-actions"><button id="edit-circuit" type="button" class="button" data-i18n="editCircuit"></button><button id="new-circuit" type="button" class="button outline" data-i18n="newCircuit"></button><button id="reset-example" type="button" class="button quiet" data-i18n="resetExample"></button><label class="button outline" for="import-file" data-i18n="importJson"></label><input id="import-file" type="file" accept="application/json,.json" class="visually-hidden"><button id="export-json" type="button" class="button outline" data-i18n="exportJson"></button></div>
+      <div id="import-error" class="field-error" role="alert"></div>
+    </section>
+    <nav id="workspace-nav" class="workspace-nav" data-i18n-aria="workspaceNavLabel"><button type="button" data-view="analyze" data-i18n="workspaceAnalyze"></button><button type="button" data-view="transform" data-i18n="workspaceTransform"></button></nav>
+    <main id="workspace-main">
+      <section id="analyze-view" class="workspace-view" data-i18n-aria="workspaceAnalyze">
+        <div class="circuit-overview">
+          <section class="panel schematic-panel" aria-labelledby="schematic-title"><div class="panel-head"><h2 id="schematic-title" data-i18n="selectedNetwork"></h2><span id="schematic-badge" class="badge"></span></div><div id="schematic" tabindex="0" role="group" aria-labelledby="schematic-title"></div><p id="schematic-note" class="muted small"></p></section>
+          <section class="panel inspector-panel" aria-labelledby="component-title"><div class="panel-head"><h2 id="component-title" data-i18n="inspectComponent"></h2></div><div id="component-list"></div><div id="component-editor"></div><details id="sources-details"><summary data-i18n="sourceControls"></summary><p class="muted small" data-i18n="sourceControlsHint"></p><div id="source-editor"></div></details></section>
         </div>
-      </main>
-    </div>
+        <div class="analysis-toolbar"><h2 data-i18n="workspaceAnalyze"></h2><div class="file-actions"><button id="restore-layout" type="button" class="button quiet" data-i18n="restoreLayout"></button><button id="add-analysis" type="button" class="button" data-i18n="addAnalysis"></button></div></div>
+        <div id="analysis-grid" class="analysis-grid"></div><p id="analysis-limit" class="muted small" aria-live="polite"></p>
+      </section>
+      <section id="transform-view" class="workspace-view" data-i18n-aria="workspaceTransform" hidden><div class="panel transform-panel"><div class="panel-head"><h2 data-i18n="workspaceTransform"></h2><span class="badge">DC</span></div><label for="transform-method" data-i18n="transformMethod"></label><select id="transform-method"><option value="dc" data-i18n="transformDcMethod"></option></select><p class="soft-note" data-i18n="transformScope"></p><div id="one-port"></div></div></section>
+      <section id="editor-view" class="workspace-view" data-i18n-aria="workspaceEditor" hidden><div class="editor-heading"><h2 data-i18n="workspaceEditor"></h2><button id="return-workspace" type="button" class="button outline" data-i18n="returnWorkspace"></button></div><p class="muted small" data-i18n="editorIntro"></p><div class="editor-tabs" role="group" data-i18n-aria="editorViewsLabel"><button type="button" data-editor-view="form" data-i18n="editorForm"></button><button type="button" data-editor-view="json" data-i18n="editorJson"></button></div><section id="form-editor-view" class="panel"><h3 data-i18n="builderTitle"></h3><div id="builder-editor"></div></section><section id="json-editor-view" class="panel" hidden><h3 data-i18n="editCircuitJson"></h3><p id="json-hint" class="muted small" data-i18n="jsonEditorHint"></p><div class="field"><label for="json-editor" data-i18n="jsonEditorLabel"></label><textarea id="json-editor" rows="18" spellcheck="false" aria-describedby="json-hint json-error"></textarea></div><div class="file-actions"><button id="apply-json" type="button" class="button" data-i18n="applyJson"></button><button id="restore-json" type="button" class="button outline" data-i18n="restoreJson"></button></div><div id="json-error" class="field-error" role="alert"></div></section></section>
+    </main>
     <footer><span data-i18n="footerLeft"></span><span data-i18n="footerRight"></span></footer>
   </div>
 </body>

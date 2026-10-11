@@ -25,14 +25,14 @@ export function plot(points:PlotPoint[],options:{title:string;xLabel:string;yLab
   }
   const grid=Array.from({length:5},(_,i)=>{
     const y=top+i*(height-top-bottom)/4,v=ymax-i*(ymax-ymin)/4;
-    return `<path class="plot-gridline" d="M${left} ${y}H${width-right}"/><text class="plot-text" x="${left-8}" y="${y+4}" text-anchor="end">${fmt(v)}</text>`;
+    return `<path class="plot-gridline" fill="none" d="M${left} ${y}H${width-right}"/><text class="plot-text" x="${left-8}" y="${y+4}" text-anchor="end">${fmt(v)}</text>`;
   }).join('');
   const xTicks=[0,.5,1].map(f=>{const x=left+f*(width-left-right),v=options.xLog?10**(lo+f*(hi-lo)):xmin+f*(xmax-xmin);
-    return `<path class="plot-gridline" d="M${x} ${top}V${height-bottom}"/><text class="plot-text" x="${x}" y="${height-bottom+19}" text-anchor="middle">${fmt(v)}</text>`;}).join('');
+    return `<path class="plot-gridline" fill="none" d="M${x} ${top}V${height-bottom}"/><text class="plot-text" x="${x}" y="${height-bottom+19}" text-anchor="middle">${fmt(v)}</text>`;}).join('');
   const failures=points.filter(p=>p.status!=='ok'&&p.status!=='zero-magnitude').map(p=>{
-    const x=px(p.x),y=top+8;return `<path class="plot-break" d="M${x-3} ${y-3}l6 6m0-6l-6 6"/>`;}).join('');
+    const x=px(p.x),y=top+8;return `<path class="plot-break" fill="none" d="M${x-3} ${y-3}l6 6m0-6l-6 6"/>`;}).join('');
   const zero=points.filter(p=>p.status==='zero-magnitude').map(p=>{
     const x=px(p.x);return `<text class="plot-text schematic-output" x="${x}" y="${top+12}" text-anchor="middle">${t('zeroMarker')}</text>`;}).join('');
-  const svg=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(t('plotAria',{title:options.title,x:options.xLabel,y:options.yLabel}))}"><rect width="${width}" height="${height}" fill="#fbfcfa"/>${grid}${xTicks}<path class="plot-axis" d="M${left} ${top}V${height-bottom}H${width-right}"/><path class="plot-line ${options.color==='orange'?'orange':''}" d="${path.trim()}"/>${failures}${zero}<text class="plot-text" x="${(left+width-right)/2}" y="${height-7}" text-anchor="middle">${escapeHtml(options.xLabel)}</text><text class="plot-text" transform="translate(15 ${(top+height-bottom)/2}) rotate(-90)" text-anchor="middle">${escapeHtml(options.yLabel)}</text></svg>`;
+  const svg=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(t('plotAria',{title:options.title,x:options.xLabel,y:options.yLabel}))}"><rect width="${width}" height="${height}" fill="#fbfcfa"/>${grid}${xTicks}<path class="plot-axis" fill="none" d="M${left} ${top}V${height-bottom}H${width-right}"/><path class="plot-line ${options.color==='orange'?'orange':''}" d="${path.trim()}"/>${failures}${zero}<text class="plot-text" x="${(left+width-right)/2}" y="${height-7}" text-anchor="middle">${escapeHtml(options.xLabel)}</text><text class="plot-text" transform="translate(15 ${(top+height-bottom)/2}) rotate(-90)" text-anchor="middle">${escapeHtml(options.yLabel)}</text></svg>`;
   return `<div class="plot-card"><div class="plot-title">${escapeHtml(options.title)}</div>${svg}</div>`;
 }

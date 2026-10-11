@@ -15,6 +15,10 @@ await build({ entryPoints: ['web/schematic.ts'], bundle: true, platform: 'neutra
   target: 'es2022', outfile: 'dist/schematic-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/builder.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/builder-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/workspace.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/workspace-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/plot.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/plot-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['test/support/builder-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/builder-ui-test.js', logLevel: 'silent' });
 const [html, app, style] = await Promise.all([

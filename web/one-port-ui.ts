@@ -48,7 +48,22 @@ export class OnePortUI {
   private loadText = '2000';
   private document: LabState['document'] | null = null;
   private topology = '';
+  private representation: 'thevenin' | 'norton' = 'thevenin';
+  private showOriginal = true;
+  private resultDocument: LabState['document'] | null = null;
+  private resultKey = '';
+  private result: OnePortResult | null = null;
   constructor(private readonly root: HTMLElement, private readonly getState: () => LabState) {
+    root.addEventListener('click', event => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const representation = target.closest<HTMLElement>('[data-one-port-representation]')?.dataset.onePortRepresentation;
+      const view = target.closest<HTMLElement>('[data-one-port-view]')?.dataset.onePortView;
+      if (representation === 'thevenin' || representation === 'norton') this.representation = representation;
+      else if (view === 'original' || view === 'equivalent') this.showOriginal = view === 'original';
+      else return;
+      this.render();
+    });
     root.addEventListener('change', event => {
       const target = event.target;
       if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
@@ -62,6 +77,9 @@ export class OnePortUI {
       const target = event.target;
       if (target instanceof HTMLInputElement && target.id === 'one-port-load') this.loadText = target.value;
     });
+  }
+  useSelection(p: string, q: string, load: number): void {
+    this.p = p; this.q = q; this.loadText = String(load); this.render();
   }
   render(): void {
     const state = this.getState(), nodes = state.document.circuit.nodes;
@@ -78,7 +96,12 @@ export class OnePortUI {
     }
     const options = (selected: string) => nodes.map(n => `<option value="${e(n)}"${n === selected ? ' selected' : ''}>${e(n)}</option>`).join('');
     const load = Number(this.loadText), validLoad = this.loadText.trim() !== '' && Number.isFinite(load) && load > 0;
-    const result = dcOnePort(state.document, this.p, this.q, validLoad ? load : NaN);
+    const key = JSON.stringify([this.p,this.q,this.loadText]);
+    if (this.resultDocument !== state.document || this.resultKey !== key || !this.result) {
+      this.result = dcOnePort(state.document, this.p, this.q, validLoad ? load : NaN);
+      this.resultDocument = state.document; this.resultKey = key;
+    }
+    const result = this.result;
     const original = schematic(state);
     let outcome = `<div class="warning" role="status">${e(statusText(result))}</div>`;
     if (result.status === 'ok') {
@@ -91,12 +114,13 @@ export class OnePortUI {
       ] as const;
       outcome = `<div class="metric-grid one-port-metrics"><div class="metric"><div class="metric-label">Vth</div><div class="metric-value">${fmt(result.vth)} V</div></div><div class="metric"><div class="metric-label">Rth</div><div class="metric-value">${fmt(result.rth)} Ω</div></div><div class="metric"><div class="metric-label">IN</div><div class="metric-value">${fmt(result.inorton)} A</div></div></div>
         <p class="analysis-note">${t('onePortTestResult',{current:fmt(result.testCurrent),voltage:fmt(result.rth*result.testCurrent)})} ${t('onePortShortCheck',{short:fmt(result.shortCurrent),difference:fmt(result.shortDifference),limit:fmt(result.shortLimit),status:result.shortPassed?t('onePortAgree'):t('onePortDisagree')})}</p>
-        <div class="one-port-diagrams">${circuitDiagram('original',this.p,this.q)}${circuitDiagram('thevenin',this.p,this.q)}${circuitDiagram('norton',this.p,this.q)}</div>
+        <div class="one-port-representation" role="group" aria-label="${e(t('equivalentView'))}"><button type="button" class="button ${this.representation === 'thevenin' ? '' : 'quiet'}" data-one-port-representation="thevenin" aria-pressed="${this.representation === 'thevenin'}">${t('onePortThevenin')}</button><button type="button" class="button ${this.representation === 'norton' ? '' : 'quiet'}" data-one-port-representation="norton" aria-pressed="${this.representation === 'norton'}">${t('onePortNorton')}</button></div>
+        <div class="one-port-equivalent">${circuitDiagram(this.representation,this.p,this.q)}</div>
         <div class="table-wrap"><table class="result-table"><caption>${t('onePortComparison')}</caption><thead><tr><th>${t('onePortCircuit')}</th><th>VL (V)</th><th>IL (A)</th><th>|ΔV| (V)</th><th>|ΔI| (A)</th><th>${t('onePortAgreement')}</th></tr></thead><tbody>${rows.map(row => `<tr><th>${e(row[0])}</th><td>${fmt(row[1])}</td><td>${fmt(row[2])}</td><td>${typeof row[3]==='number'?fmt(row[3]):'—'}</td><td>${typeof row[4]==='number'?fmt(row[4]):'—'}</td><td>${row[5]}</td></tr>`).join('')}</tbody></table></div>
         <p class="analysis-note">${t('onePortLoadFormula')}</p>`;
     } else if (result.vth !== undefined || result.rth !== undefined) {
       outcome += `<p class="analysis-note">${result.vth === undefined ? '' : `Vth = ${fmt(result.vth)} V · `}${result.rth === undefined ? '' : `Rth = ${fmt(result.rth)} Ω`}</p>`;
     }
-    this.root.innerHTML = `<p class="analysis-note">${t('onePortIntro')}</p><div class="controls-grid one-port-controls"><div class="field"><label for="one-port-p">${t('onePortPositive')}</label><select id="one-port-p">${options(this.p)}</select></div><div class="field"><label for="one-port-q">${t('onePortNegative')}</label><select id="one-port-q">${options(this.q)}</select></div><div class="field"><label for="one-port-load">${t('onePortLoad')}</label><input id="one-port-load" type="number" step="any" value="${e(this.loadText)}" aria-invalid="${!validLoad}" aria-describedby="one-port-load-help"><small id="one-port-load-help" class="field-error">${validLoad?'':t('onePortInvalidLoad')}</small></div></div><p class="soft-note">${t('onePortConvention')}</p><p class="analysis-note">${t('onePortSuppression',{sources:state.document.experiment.sources.map(s=>s.id).join(', ')||t('noSourcesShort'),controlled:state.document.circuit.components.filter(c=>['VCVS','VCCS','CCVS','CCCS'].includes(c.type)).map(c=>c.id).join(', ')||t('noSourcesShort')})}</p><div class="one-port-original"><h3>${t('onePortNetworkView')}</h3><div class="one-port-network">${original.html}</div><p class="muted small">${e(original.note)}</p></div>${outcome}${diagnostics(result.solves)}`;
+    this.root.innerHTML = `<p class="analysis-note">${t('onePortIntro')}</p><div class="controls-grid one-port-controls"><div class="field"><label for="one-port-p">${t('onePortPositive')}</label><select id="one-port-p">${options(this.p)}</select></div><div class="field"><label for="one-port-q">${t('onePortNegative')}</label><select id="one-port-q">${options(this.q)}</select></div><div class="field"><label for="one-port-load">${t('onePortLoad')}</label><input id="one-port-load" type="number" step="any" value="${e(this.loadText)}" aria-invalid="${!validLoad}" aria-describedby="one-port-load-help"><small id="one-port-load-help" class="field-error">${validLoad?'':t('onePortInvalidLoad')}</small></div></div><p class="soft-note">${t('onePortConvention')}</p><p class="analysis-note">${t('onePortSuppression',{sources:state.document.experiment.sources.map(s=>s.id).join(', ')||t('noSourcesShort'),controlled:state.document.circuit.components.filter(c=>['VCVS','VCCS','CCVS','CCCS'].includes(c.type)).map(c=>c.id).join(', ')||t('noSourcesShort')})}</p><div class="one-port-view-switch" role="group"><button type="button" class="button quiet" data-one-port-view="original" aria-pressed="${this.showOriginal}">${t('originalView')}</button><button type="button" class="button quiet" data-one-port-view="equivalent" aria-pressed="${!this.showOriginal}">${t('equivalentOnly')}</button></div><div class="one-port-layout"><div class="one-port-original ${this.showOriginal ? 'mobile-selected' : ''}"><h3>${t('onePortNetworkView')}</h3><div class="one-port-network">${original.html}</div><p class="muted small">${e(original.note)}</p></div><div class="one-port-result ${this.showOriginal ? '' : 'mobile-selected'}">${outcome}</div></div>${diagnostics(result.solves)}`;
   }
 }
