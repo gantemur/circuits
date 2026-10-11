@@ -16,6 +16,7 @@ export interface Assembly {
   nodeIndex: Map<string, number>; branchIndex: Map<string, number>;
 }
 const byId = <T extends { id: string }>(a: T, b: T): number => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+/** Incidence column a: +1 at p, -1 at n; ground has no unknown coordinate. */
 export function incidence(a: Assembly, p: string, n: string): number[] {
   const v = Array<number>(a.unknowns.length).fill(0);
   const pi = a.nodeIndex.get(p), ni = a.nodeIndex.get(n);
@@ -23,7 +24,16 @@ export function incidence(a: Assembly, p: string, n: string): number[] {
   if (ni !== undefined) v[ni] = v[ni]! - 1;
   return v;
 }
-/** Sorted node voltages, then inductor currents, then V/VCVS/CCVS currents. */
+/**
+ * Stamp validated linear terminal laws into E xdot + K x = B u.
+ * E and K are N×N, B is N×M; N is the number of unknowns and M the number of
+ * independent source coordinates. The first rows are non-ground KCL in A,
+ * followed by branch constraints in V. Unknowns are sorted node voltages in V,
+ * then inductor and voltage-source-type currents in A. Every device current
+ * is positive p→n, so a KCL contribution has incidence a at its terminals.
+ * The contribution ledger records each scalar stamp with row/column units.
+ * Source values belong to experiments, not to this circuit assembly.
+ */
 export function assemble(raw: Circuit): Assembly {
   // Own a validated snapshot so subsequent editor mutations cannot stale the matrices.
   const circuit = JSON.parse(JSON.stringify(validateCircuit(raw))) as Circuit;
@@ -55,24 +65,45 @@ export function assemble(raw: Circuit): Assembly {
   for (const d of devices) {
     const v = incidence(a, d.p, d.n), k = a.branchIndex.get(d.id);
     const input = inputs.findIndex(i => i.id === d.id);
+    // An explicitly represented branch current is an unknown. Its incidence
+    // enters KCL even when its own constitutive law appears in another row.
     if (k !== undefined) v.forEach((w, i) => stamp(d, 'K', i, k, w, 'KCL: branch current enters p and leaves n'));
     switch (d.type) {
-      case 'R': case 'C':
-        v.forEach((r, i) => v.forEach((c, j) => stamp(d, d.type === 'R' ? 'K' : 'E', i, j,
-          r * c * (d.type === 'R' ? 1 / d.value : d.value), d.type === 'R' ? 'i=(Vp-Vn)/R' : 'i=C d(Vp-Vn)/dt')));
+      case 'R': case 'C': {
+        // v=aᵀx. Resistor i=(aᵀx)/R stamps aaᵀ/R in K;
+        // capacitor i=C aᵀxdot stamps C aaᵀ in E.
+        const matrix = d.type === 'R' ? 'K' : 'E';
+        const coefficient = d.type === 'R' ? 1 / d.value : d.value;
+        const law = d.type === 'R' ? 'i=(Vp-Vn)/R' : 'i=C d(Vp-Vn)/dt';
+        v.forEach((rowIncidence, i) => {
+          v.forEach((columnIncidence, j) => {
+            stamp(d, matrix, i, j, rowIncidence * columnIncidence * coefficient, law);
+          });
+        });
         if (d.type === 'C') a.storage.push({ id: d.id, unit: 'V', S: v, F: v.map(w => w * d.value) });
         break;
+      }
       case 'L': {
+        // Inductor law is L dI/dt - (Vp-Vn) = 0. Its own current is the
+        // branch unknown k; S selects it and F contributes L to E=F*S.
         v.forEach((w, j) => stamp(d, 'K', k!, j, -w, 'L di/dt-(Vp-Vn)=0'));
         stamp(d, 'E', k!, k!, d.value, 'v=L di/dt');
         const S = Array<number>(n).fill(0), F = Array<number>(n).fill(0); S[k!] = 1; F[k!] = d.value;
         a.storage.push({ id: d.id, unit: 'A', S, F }); break;
       }
       case 'V':
+        // Voltage law aᵀx=u. Keeping its branch current preserves KCL and
+        // allows current-controlled sources to refer to that exact branch.
         v.forEach((w, j) => stamp(d, 'K', k!, j, w, 'Vp-Vn=u'));
         stamp(d, 'B', k!, input, 1, 'Independent voltage excitation'); break;
-      case 'I': v.forEach((w, i) => stamp(d, 'B', i, input, -w, 'KCL: prescribed p->n current moves to RHS')); break;
+      case 'I':
+        // A prescribed p→n current is +a*i on the KCL left side, hence -a*u
+        // on the right side in the canonical residual convention.
+        v.forEach((w, i) => stamp(d, 'B', i, input, -w, 'KCL: prescribed p->n current moves to RHS'));
+        break;
       case 'VCVS': case 'VCCS': {
+        // A voltage-controlled current source contributes gain*a_out*a_ctlᵀ
+        // to KCL; a voltage source instead adds an explicit voltage-law row.
         const vc = incidence(a, d.cp, d.cn);
         if (d.type === 'VCCS') v.forEach((r, i) => vc.forEach((c, j) => stamp(d, 'K', i, j, d.gain * r * c, 'io=g(Vcp-Vcn)')));
         else {
@@ -82,6 +113,8 @@ export function assemble(raw: Circuit): Assembly {
         break;
       }
       case 'CCVS': case 'CCCS': {
+        // The control index names a retained voltage-source-type current;
+        // there is no inferred current through an arbitrary ideal element.
         const control = a.branchIndex.get(d.control)!;
         if (d.type === 'CCCS') v.forEach((w, i) => stamp(d, 'K', i, control, d.gain * w, 'io=beta ic'));
         else {
@@ -99,6 +132,7 @@ export function assemble(raw: Circuit): Assembly {
   });
   return a;
 }
+/** Read a p→n device current from x,u, or from a capacitor's storage rate. */
 export function currentRow(a: Assembly, d: Component): Omit<Extract<OutputRow, { kind: 'fixed' }>, 'id'> | Omit<Extract<OutputRow, { kind: 'derivative' }>, 'id'> {
   const C = Array<number>(a.unknowns.length).fill(0), D = Array<number>(a.inputs.length).fill(0);
   const v = incidence(a, d.p, d.n), k = a.branchIndex.get(d.id);

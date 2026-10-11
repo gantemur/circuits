@@ -2,7 +2,15 @@ import { solveReal, zeros, type Matrix, type LinearFailure, type Tolerances } fr
 
 export interface ResistorEdge { id: string; p: string; n: string; resistance: number }
 export interface ResistorNetwork { nodes: string[]; edges: ResistorEdge[] }
-/** Full, ungrounded resistor Laplacian. Node '0', if present, is an ordinary boundary terminal. */
+/**
+ * Assemble the full N×N resistor Laplacian L in siemens. Every edge has
+ * ordered terminals p,n and positive finite R; its branch current is
+ * (V(p)-V(n))/R from p to n. The outer product g*aaᵀ gives +g on both
+ * endpoint diagonals and -g on their off-diagonals. Node '0' is an ordinary
+ * row here, since reduction concerns terminal currents rather than an MNA
+ * ground constraint. Invalid IDs, conductance overflow, and accumulated
+ * nonfinite entries fail before any Schur-complement solve.
+ */
 export function resistorLaplacian(network: ResistorNetwork): Matrix {
   const { nodes, edges } = network;
   if (new Set(nodes).size !== nodes.length || nodes.some(n => typeof n !== 'string' || !n.length)
@@ -15,18 +23,30 @@ export function resistorLaplacian(network: ResistorNetwork): Matrix {
       throw new RangeError('Invalid resistor edge');
     const g = 1 / edge.resistance;
     if (!Number.isFinite(g)) throw new RangeError(`Edge ${edge.id}: conductance exceeds numeric range`);
-    matrix[p]![p] = matrix[p]![p]! + g; matrix[n]![n] = matrix[n]![n]! + g;
-    matrix[p]![n] = matrix[p]![n]! - g; matrix[n]![p] = matrix[n]![p]! - g;
+    matrix[p]![p] = matrix[p]![p]! + g;
+    matrix[n]![n] = matrix[n]![n]! + g;
+    matrix[p]![n] = matrix[p]![n]! - g;
+    matrix[n]![p] = matrix[n]![p]! - g;
   }
   if (matrix.some(row => row.some(value => !Number.isFinite(value))))
     throw new RangeError('Nonfinite assembled resistor Laplacian (conductance accumulation exceeded numeric range)');
   return matrix;
 }
+/**
+ * Eliminate hidden nodes I while retaining the caller's ordered boundary B.
+ * Partition L into BB, BI, IB, II blocks and form the terminal response
+ * Λ=L_BB-L_BI solve(L_II,L_IB), in siemens. Each column solve uses the same
+ * hidden block, never an explicit inverse. A disconnected hidden component
+ * gives a nonunique solve; overflow in the Schur complement is reported.
+ * Internal node voltages and branch currents are not preserved outputs.
+ */
 export function kronReduce(network: ResistorNetwork, retained: string[], options: Partial<Tolerances> = {}):
   { status: 'ok'; retained: string[]; eliminated: string[]; full: Matrix; reduced: Matrix; units: 'S' } | LinearFailure {
   const full = resistorLaplacian(network);
   if (!retained.length || new Set(retained).size !== retained.length || retained.some(n => !network.nodes.includes(n)))
     throw new RangeError('Retained terminals must be distinct network nodes');
+  // These are indices in the original full Laplacian. Boundary order follows
+  // retained exactly; hidden order follows network.nodes.
   const boundary = retained.map(n => network.nodes.indexOf(n));
   const hidden = network.nodes.map((_, i) => i).filter(i => !boundary.includes(i));
   const ii = hidden.map(i => hidden.map(j => full[i]![j]!));
@@ -34,7 +54,10 @@ export function kronReduce(network: ResistorNetwork, retained: string[], options
   for (let j = 0; j < boundary.length; j++) {
     const solved = solveReal(ii, hidden.map(i => full[i]![boundary[j]!]!), options);
     if (solved.status !== 'ok') return solved;
-    boundary.forEach((i, k) => { reduced[k]![j] = reduced[k]![j]! - hidden.reduce((s, h, l) => s + full[i]![h]! * solved.x[l]!.re, 0); });
+    boundary.forEach((i, k) => {
+      // Subtract row k of L_BI times column j of the solved hidden response.
+      reduced[k]![j] = reduced[k]![j]! - hidden.reduce((s, h, l) => s + full[i]![h]! * solved.x[l]!.re, 0);
+    });
   }
   if (reduced.some(row => row.some(value => !Number.isFinite(value))))
     return { status: 'ill-conditioned', message: 'Nonfinite resistor Schur complement (numeric range exceeded)', rank: hidden.length, size: hidden.length };

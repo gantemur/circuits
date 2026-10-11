@@ -57,9 +57,13 @@ function solveFailure(result: AnalysisResult, stage: OnePortStage, solves: OnePo
 }
 function loadResult(document: NativeDocument, p: string, q: string, loadResistance: number,
   stage: OnePortStage, solves: OnePortSolve[]): OnePortLoadResult | OnePortFailure {
-  const work = copy(document), id = unused(work, '__port_load');
+  // A real external load is stamped across p,q, not inferred from an
+  // unloaded formula. Its measured current is positive p→q.
+  const work = copy(document);
+  const id = unused(work, '__port_load');
   work.circuit.components.push({ id, type: 'R', p, n: q, value: loadResistance });
-  const voltageId = observation(work, p, q), currentId = unused(work, '__port_load_current');
+  const voltageId = observation(work, p, q);
+  const currentId = unused(work, '__port_load_current');
   work.circuit.observations.push({ id: currentId, type: 'current', component: id });
   const result = solve(work, stage, solves);
   if (result.status !== 'ok') return solveFailure(result, stage, solves);
@@ -78,6 +82,8 @@ function compare(reference: OnePortLoadResult, equivalent: OnePortLoadResult): O
     passed: voltageDifference <= voltageLimit && currentDifference <= currentLimit };
 }
 function equivalent(kind: 'thevenin' | 'norton', vth: number, rth: number, inorton: number): NativeDocument {
+  // Use a local reference at q. For the Norton realization, a current from
+  // local ground toward the positive port yields open voltage +IN*Rth.
   const components: Component[] = kind === 'thevenin'
     ? [{ id: 'Vth', type: 'V', p: 'drive', n: '0' }, { id: 'Rth', type: 'R', p: 'drive', n: 'port', value: rth }]
     : [{ id: 'IN', type: 'I', p: '0', n: 'port' }, { id: 'Rth', type: 'R', p: 'port', n: '0', value: rth }];
@@ -87,9 +93,22 @@ function equivalent(kind: 'thevenin' | 'norton', vth: number, rth: number, inort
     ? { id: 'Vth', dc: vth } : { id: 'IN', dc: inorton }], initial: { kind: 'equilibrium' } } };
 }
 
-/** DC terminal experiment. Positive injected current enters the network at p; load current leaves p. */
+/**
+ * Compare a DC one-port at ordered terminals p,q with an external positive
+ * load RL (ohms). v=V(p)-V(q); positive injected test current enters at p,
+ * while load current leaves p. First solve open voltage Vth, then suppress
+ * only independent DC source *values* and inject q→p test current J, giving
+ * Rth=Vtest/J. Controlled devices and source branches remain. A separate
+ * short solve checks IN=Vth/Rth; three further loaded circuits independently
+ * check V and I rather than evaluating an explanatory formula as a result.
+ * The original port may be differential: equivalent circuits use local q as
+ * reference, so they do not accidentally float the original network.
+ * Storage, bad ports/loads, nonpositive Rth, solve failures, and nonfinite
+ * values are explicit outcomes. See test/one-port.test.mjs.
+ */
 export function dcOnePort(raw: NativeDocument, p: string, q: string, loadResistance: number, testCurrent = 1): OnePortResult {
-  const document = validateDocument(raw), solves: OnePortSolve[] = [];
+  const document = validateDocument(raw);
+  const solves: OnePortSolve[] = [];
   if (p === q || !document.circuit.nodes.includes(p) || !document.circuit.nodes.includes(q))
     return failure('invalid-port', 'Choose two distinct existing nodes', solves);
   if (document.circuit.components.some(c => c.type === 'C' || c.type === 'L'))
@@ -99,7 +118,8 @@ export function dcOnePort(raw: NativeDocument, p: string, q: string, loadResista
   if (!Number.isFinite(testCurrent) || testCurrent === 0)
     return failure('nonfinite', 'Test current must be finite and nonzero', solves);
 
-  const openDoc = copy(document), openVoltage = observation(openDoc, p, q);
+  const openDoc = copy(document);
+  const openVoltage = observation(openDoc, p, q);
   const open = solve(openDoc, 'open', solves);
   if (open.status !== 'ok') return solveFailure(open, 'open', solves);
   const vth = open.observations[openVoltage]!.value.re;
@@ -107,6 +127,8 @@ export function dcOnePort(raw: NativeDocument, p: string, q: string, loadResista
 
   const testDoc = copy(document);
   const suppressed = testDoc.experiment.sources.map(source => source.id);
+  // Zeroing coordinates leaves all independent source branches in KCL and
+  // all controlled-source controls active during the resistance experiment.
   for (const source of testDoc.experiment.sources) source.dc = 0;
   const retainedControlled = document.circuit.components.filter(c => ['VCVS', 'VCCS', 'CCVS', 'CCCS'].includes(c.type)).map(c => c.id);
   const testId = unused(testDoc, '__port_test');
@@ -122,7 +144,8 @@ export function dcOnePort(raw: NativeDocument, p: string, q: string, loadResista
   const inorton = vth / rth;
   if (!finite(inorton)) return failure('nonfinite', 'Norton current exceeds numeric range', solves, 'test', vth, rth);
 
-  const shortDoc = copy(document), shortId = unused(shortDoc, '__port_short');
+  const shortDoc = copy(document);
+  const shortId = unused(shortDoc, '__port_short');
   shortDoc.circuit.components.push({ id: shortId, type: 'V', p, n: q });
   shortDoc.experiment.sources.push({ id: shortId, dc: 0 });
   const shortObs = unused(shortDoc, '__port_short_current');
@@ -140,7 +163,8 @@ export function dcOnePort(raw: NativeDocument, p: string, q: string, loadResista
   if ('status' in norton) return { ...norton, vth, rth };
   const shortDifference = Math.abs(shortCurrent - inorton);
   const shortLimit = 1e-12 + 1e-8 * Math.max(Math.abs(shortCurrent), Math.abs(inorton));
-  const theveninComparison = compare(original, thevenin), nortonComparison = compare(original, norton);
+  const theveninComparison = compare(original, thevenin);
+  const nortonComparison = compare(original, norton);
   if (!finite(shortDifference, shortLimit,
     theveninComparison.voltageDifference, theveninComparison.currentDifference,
     theveninComparison.voltageLimit, theveninComparison.currentLimit,

@@ -36,6 +36,17 @@ Prefer a few clear modules and tested numerical algorithms. Avoid plugin framewo
 
 Do not introduce Python into the production kernel. Python or a mature simulator may be used as a documented development reference when justified. The production target remains browser-compatible TypeScript.
 
+## Pedagogical readability
+
+Readability is preferred throughout maintained source and **required** for substantive mathematical, physical, and numerical core methods. Students must be able to understand, validate, fork, and modify these implementations. Generated browser bundles may remain optimized.
+
+- Prefer explicit stages, meaningful names, ordinary control flow, and modest abstractions. Conventional symbols such as `E`, `K`, `B`, and `L` are appropriate when defined.
+- Document each substantive core method's purpose, model assumptions, inputs and outputs, dimensions, units, terminal and current conventions, governing equations, algorithmic steps, and important failure cases. Use `docs/CODE_GUIDE.md` for longer reading paths and concise source comments where the calculation occurs.
+- Explain why nonobvious operations and safeguards are necessary. Connect equations to implementation and explain numerical choices; do not merely restate syntax.
+- Avoid compressed multi-statement lines, deeply nested expressions, clever indexing tricks, and optimizations that obscure a method without a justified benefit.
+- Black-box numerical routines and optimized fragments are allowed only with a clear mathematical contract, conventions, assumptions, diagnostic guarantees and limitations, dependency or source provenance, and independent checks of their results.
+- Preserve numerical correctness and stability while improving presentation. Readability never justifies removing safeguards, changing tolerances casually, or simplifying away physical constraints.
+
 ## Validation
 
 Implement the milestone's analytic acceptance cases before declaring it complete. Expected values must come from independent equations or supplied reference fixtures, not from the code under test.

@@ -14,6 +14,8 @@ The primary users are students, teachers, mathematicians, physicists, and engine
 
 The lab accompanies the author's circuit-theory book. The book can supply examples and conventions, but its publication and required computations must not depend on completion of a public application.
 
+The implementation is part of the teaching material. Readability is preferred across the project and required in substantive mathematical, physical, and numerical core methods, so students can trace assumptions and equations, validate results, fork the code, and modify it. Explicit stages and documented numerical safeguards matter as much as a readable interface; generated browser bundles may remain optimized. The binding source policy is in [AGENTS.md](../AGENTS.md), with a reading map in [CODE_GUIDE.md](CODE_GUIDE.md).
+
 ## 2. What the user can do
 
 | Activity | Intended behavior |

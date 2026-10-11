@@ -4,6 +4,8 @@
 
 Circuits Unfolded is a browser laboratory for learning and working with small electrical circuits. It aims to make ordinary calculations convenient while showing the element laws, assembled equations, modeling assumptions, and transformations that produce the answer.
 
+The maintained mathematical core is teaching material too: substantive methods favor explicit stages, documented equations and numerical choices, and independently checked results so students can understand, validate, fork, and modify them. See the binding [readability policy](AGENTS.md) and [code guide](docs/CODE_GUIDE.md). Generated browser bundles may remain optimized.
+
 The repository is named `circuits`. **Circuits Unfolded** is the working application name.
 
 ## Status
@@ -109,6 +111,7 @@ The defining feature is the connection between three views: schematic and physic
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Settled choices and current milestone |
 | [docs/CODEX_START.md](docs/CODEX_START.md) | Ready-to-use first Codex prompts |
 | [docs/KERNEL_API.md](docs/KERNEL_API.md) | Implemented APIs, native schema, diagnostics, and limitations |
+| [docs/CODE_GUIDE.md](docs/CODE_GUIDE.md) | Reading paths from device laws through solutions and transformations |
 | [fixtures/README.md](fixtures/README.md) | Acceptance fixtures and independent expected equations |
 
 ## Companion book
