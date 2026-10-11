@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLab, exportNative, importNative, updateDocument } from '../dist/lab-test.js';
 import { schematic } from '../dist/schematic-test.js';
+import { networkPositions, resistorNetworkSvg } from '../dist/network-diagram-test.js';
 import { guideFor, lessons, referenceResponses, referenceStatus } from '../dist/study-guide-test.js';
 import { guideNavigation } from '../dist/guide-navigation-test.js';
 import { createWorkspace } from '../dist/workspace-test.js';
@@ -177,4 +178,86 @@ test('guide transition focuses an existing panel, adds within limit, and replace
   assert.deepEqual(workspace.panels.map(p=>p.type),['dc','port','transient']);
   assert.equal(workspace.panels[1].load,375);
   assert.equal(exportNative(state),native);
+});
+
+test('parallel branches lead all the way to both real node centers',()=>{
+  const network={nodes:['a','0'],edges:[
+    {id:'R1',p:'a',n:'0',resistance:1000},{id:'R2',p:'a',n:'0',resistance:2000}]};
+  const positions=networkPositions(network,['a','0']);
+  const svg=resistorNetworkSvg(network,{positions,label:'parallel'});
+  assert.ok(svg);
+  const branchPaths=[...svg.matchAll(/<g class="network-edge[^>]*><title>[^<]*<\/title><path class="network-wire" d="([^"]+)"/g)].map(m=>m[1]);
+  assert.equal(branchPaths.length,2);
+  for(const path of branchPaths){
+    assert.match(path,/^M95 160L95 (147\.5|172\.5)/);
+    assert.match(path,/L585 160$/);
+    assert.equal((path.match(/M/g)??[]).length,4);
+  }
+});
+
+test('layout rejects a branch through an unrelated node or an unmarked crossing',()=>{
+  const through={nodes:['a','b','c'],edges:[{id:'R',p:'a',n:'b',resistance:1000}]};
+  assert.equal(resistorNetworkSvg(through,{positions:{a:{x:95,y:160},b:{x:585,y:160},c:{x:340,y:160}},label:'through'}),null);
+  assert.equal(resistorNetworkSvg(through,{positions:{a:{x:95,y:160},b:{x:585,y:160},c:{x:340,y:168}},label:'symbol overlap'}),null);
+  const crossing={nodes:['a','b','c','d'],edges:[
+    {id:'R1',p:'a',n:'b',resistance:1},{id:'R2',p:'c',n:'d',resistance:1}]};
+  assert.equal(resistorNetworkSvg(crossing,{positions:{a:{x:95,y:70},b:{x:585,y:250},c:{x:95,y:250},d:{x:585,y:70}},label:'crossing'}),null);
+  const port=createLab('port-t').document.circuit;
+  const network={nodes:port.nodes,edges:port.components.map(c=>({id:c.id,p:c.p,n:c.n,resistance:c.value}))};
+  const positions=networkPositions(network,['out','0']);
+  assert.ok(resistorNetworkSvg(network,{positions,label:'T preview'}));
+  assert.notEqual(positions.in.y,160);
+  assert.notEqual(positions.junction.y,160);
+  const selection=resistorCandidates(network,['out','0']).find(c=>c.selection.operation==='kron').selection;
+  const result=transformResistors(createLab('port-t').document,['out','0'],selection);
+  assert.equal(result.status,'ok');
+  const combined=Object.assign(Object.create(null),positions,networkPositions(result.transformed,['out','0']));
+  const transformed=resistorNetworkSvg(result.transformed,{positions:combined,label:'reduced T'});
+  assert.ok(transformed);assert.doesNotMatch(transformed,/NaN|Infinity/);
+});
+
+test('strict native markup, punctuation, and prototype IDs render literally with finite geometry',()=>{
+  const state=createLab('res-series');
+  const document={circuit:{schemaVersion:1,nodes:['0','a<em>b</em>','__proto__'],components:[
+    {id:'R,1',type:'R',p:'a<em>b</em>',n:'__proto__',value:1000},
+    {id:'R:2',type:'R',p:'__proto__',n:'0',value:2000}],
+    observations:[{id:'Vout',type:'voltage',p:'a<em>b</em>',n:'0'}]},
+    experiment:{schemaVersion:1,sources:[],initial:{kind:'equilibrium'}}};
+  assert.equal(importNative(state,JSON.stringify(document)).ok,true);
+  const network={nodes:state.document.circuit.nodes,edges:state.document.circuit.components.map(c=>({id:c.id,p:c.p,n:c.n,resistance:c.value}))};
+  const positions=networkPositions(network,['a<em>b</em>','0']);
+  assert.ok(Object.hasOwn(positions,'__proto__'));
+  const drawing=resistorNetworkSvg(network,{positions,retained:['a<em>b</em>','0'],label:'IDs'});
+  assert.ok(drawing);
+  assert.match(drawing,/a&lt;em&gt;b&lt;\/em&gt;/);
+  assert.doesNotMatch(drawing,/<em>/);
+  assert.match(drawing,/__proto__/);
+  assert.match(drawing,/R,1/);
+  assert.match(drawing,/R:2/);
+  assert.equal((drawing.match(/class="network-edge /g)??[]).length,2);
+  assert.doesNotMatch(drawing,/NaN|Infinity/);
+  const view=uiFor(state);view.change('res-operation','series');view.change('res-choice',candidate(state,'series').key);view.click('#res-preview');
+  assert.match(view.root.innerHTML,/a&lt;em&gt;b&lt;\/em&gt;&quot;=1 V/);
+  assert.doesNotMatch(view.root.innerHTML,/<em>/);
+  assert.doesNotMatch(view.root.innerHTML,/NaN|Infinity/);
+  const punctuated={nodes:['0','a,b'],edges:[{id:'R"x',p:'a,b',n:'0',resistance:5}]};
+  const exact=resistorNetworkSvg(punctuated,{retained:['a,b','0'],label:'punctuation'});
+  assert.ok(exact);assert.match(exact,/a,b/);assert.ok(exact.includes('R\\&quot;x'));
+});
+
+test('tiny valid series currents remain finite in amperes when mA conversion overflows',()=>{
+  const state=createLab('res-series');
+  updateDocument(state,d=>{for(const component of d.circuit.components)component.value=1e-306;});
+  const view=uiFor(state);view.change('res-operation','series');view.change('res-choice',candidate(state,'series').key);view.click('#res-preview');
+  assert.match(view.root.innerHTML,/5\.000000e\+305 A/);
+  assert.doesNotMatch(view.root.innerHTML,/Infinity mA/);
+  assert.doesNotMatch(view.root.innerHTML,/Infinity/);
+});
+
+test('RC capacitor and circular voltage source leads meet their symbol boundaries',()=>{
+  const html=schematic(createLab('rc')).html;
+  assert.match(html,/M467 120L467 183/);
+  assert.match(html,/M467 195L467 256/);
+  assert.match(html,/M88 120L88 159/);
+  assert.match(html,/M88 209L88 256/);
 });

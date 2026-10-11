@@ -13,6 +13,8 @@ await build({ entryPoints: ['web/i18n.ts'], bundle: true, platform: 'neutral', f
   target: 'es2022', outfile: 'dist/i18n-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/schematic.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/schematic-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/network-diagram.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/network-diagram-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/builder.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/builder-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/workspace.ts'], bundle: true, platform: 'neutral', format: 'esm',

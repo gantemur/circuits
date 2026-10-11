@@ -29,7 +29,7 @@ function branchResistor(state:LabState,id:string,x:number):string {
   return wire(x,120,x,165)+group(state,id,`<rect class="symbol" x="${x-11}" y="165" width="22" height="48" rx="2"/>`,x,158)+wire(x,213,x,256)+ground(x);
 }
 function capacitor(state:LabState,id:string,x:number):string {
-  return wire(x,120,x,173)+group(state,id,`<path class="symbol" d="M${x-22} 183h44M${x-22} 195h44"/>`,x,160)+wire(x,195,x,256)+ground(x);
+  return wire(x,120,x,183)+group(state,id,`<path class="symbol" d="M${x-22} 183h44M${x-22} 195h44"/>`,x,160)+wire(x,195,x,256)+ground(x);
 }
 function capacitorHorizontal(state:LabState,id:string,x1:number,x2:number):string {
   const x=(x1+x2)/2;
@@ -45,7 +45,8 @@ function inductorHorizontal(state:LabState,id:string,x1:number,x2:number):string
 function source(state:LabState,id:string,x:number,kind:'V'|'VCVS'):string {
   const shape=kind==='V'?`<circle class="symbol" cx="${x}" cy="184" r="25"/><path class="wire" d="M${x-8} 176h16m-8-8v16M${x-8} 194h16"/>`:
     `<path class="symbol" d="M${x} 151l27 33l-27 33l-27-33Z"/><text x="${x}" y="189" text-anchor="middle" class="schematic-label">μ</text>`;
-  return wire(x,120,x,151)+group(state,id,shape,x+58,175)+wire(x,217,x,256)+ground(x);
+  const upper=kind==='V'?159:151,lower=kind==='V'?209:217;
+  return wire(x,120,x,upper)+group(state,id,shape,x+58,175)+wire(x,lower,x,256)+ground(x);
 }
 function wrap(state:LabState,body:string,note:string):{html:string;note:string;schematic:boolean} {
   const selected=state.document.circuit.observations.find(o=>o.id===state.output);
@@ -124,6 +125,7 @@ export function schematic(state:LabState):{html:string;note:string;schematic:boo
     const network={nodes:circuit.nodes,edges:circuit.components.filter(c=>c.type==='R').map(c=>({id:c.id,p:c.p,n:c.n,resistance:'value' in c ? c.value : NaN}))};
     const svg=resistorNetworkSvg(network,{positions:layouts[preset],retained:circuit.nodes.filter(id=>id!=='0'),
       selectedComponent:state.selectedComponent,label:t('diagramLabel'),selectable:true});
+    if (!svg) return {schematic:false,note:t('unknownTopologyHint'),html:`<div class="unknown-layout"><h3>${t('unknownTopologyTitle')}</h3>${topology}</div>`};
     const observation=selected?.type==='voltage'?`V(${selected.p}) − V(${selected.n})`:selected?.type==='current'?`I(${selected.component})`:t('noOutputSelected');
     return {schematic:true,note:t('schematicNetworkNote'),html:`${svg}<p class="schematic-observation">${escapeHtml(observation)}</p>${preset==='port-t'?`<p class="soft-note">${t('guidePortMark')}</p>`:''}<details class="schematic-topology"><summary>${t('topologyTable')}</summary>${topology}</details>`};
   }
