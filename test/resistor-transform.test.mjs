@@ -36,6 +36,39 @@ test('three-terminal star, delta inverse, and strict native preview',()=>{
   matrixNear(delta.transformedResponse,expected);
 });
 
+test('uniformly scaled star and inverse retain gauge-invariant currents in either terminal order',()=>{
+  const expected=[[5/6,-1/3,-1/2],[-1/3,4/3,-1],[-1/2,-1,3/2]];
+  for(const scale of [1e-6,1e-4,1e-2,1,1e2,1e4]){
+    const star=fixture('res-star');
+    for(const edge of star.circuit.components)edge.value*=scale;
+    for(const retained of [['a','b','0'],['0','b','a']]){
+      const first=success(transformResistors(star,retained,{operation:'star-delta',center:'x'}));
+      const order=retained.map(id=>['a','b','0'].indexOf(id));
+      for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+        const target=expected[order[i]][order[j]]/scale;
+        assert.ok(Math.abs(first.originalResponse[i][j]-target)<=1e-8*Math.abs(target),`${scale}: original ${i},${j}`);
+        assert.ok(Math.abs(first.transformedResponse[i][j]-target)<=1e-8*Math.abs(target),`${scale}: transformed ${i},${j}`);
+      }
+      const back=success(transformResistors(first.document,retained,{operation:'delta-star',edges:first.generated.map(e=>e.id)}));
+      assert.ok(back.check.maxCurrentDifference<=back.check.currentLimit+1e-8/scale);
+    }
+  }
+});
+
+test('candidate keys distinguish exact colon-containing resistor IDs',()=>{
+  const d=document(['a','0'],[['a:b','a','0',1000],['c','a','0',2000],['a','a','0',3000],['b:c','a','0',4000]]);
+  const network={nodes:d.circuit.nodes,edges:d.circuit.components.map(c=>({id:c.id,p:c.p,n:c.n,resistance:c.value}))};
+  const choices=resistorCandidates(network,['a','0']).filter(c=>c.selection.operation==='parallel');
+  assert.equal(new Set(choices.map(c=>c.key)).size,6);
+  const first=choices.find(c=>JSON.stringify(c.selection.edges)===JSON.stringify(['a:b','c']));
+  const second=choices.find(c=>JSON.stringify(c.selection.edges)===JSON.stringify(['a','b:c']));
+  assert.notEqual(first.key,second.key);
+  const result=success(transformResistors(d,['a','0'],second.selection));
+  assert.deepEqual(result.removed,['a','b:c']);
+  assert.deepEqual(result.transformed.edges.filter(e=>!result.generated.some(g=>g.id===e.id)).map(e=>e.id),['a:b','c']);
+  near(result.generated[0].resistance,12000/7);
+});
+
 test('four-terminal star fills every pair, preserving existing parallel connection',()=>{
   const d=document(['0','a','b','c','x'],[['Ra','a','x',1],['Rb','b','x',2],['Rc','c','x',3],['R0','0','x',4],['Rab','a','b',7]]);
   const result=success(transformResistors(d,['a','b','c','0'],{operation:'star-mesh',center:'x'}));

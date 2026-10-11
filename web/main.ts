@@ -8,6 +8,7 @@ import { language, persistLanguage, readLanguage, setLanguage, t, translate, typ
 import { BuilderUI } from './builder-ui.js';
 import { OnePortUI } from './one-port-ui.js';
 import { ResistorTransformUI } from './resistor-transform-ui.js';
+import { openPortComparison } from './transform-navigation.js';
 import { addPanel, createWorkspace, handlePanelFieldChange, movePanel, PanelCalculator,
   panelCsv, reconcilePanels, removePanel, suggestedLayout, type PanelConfig, type PanelResult,
   type PanelType, type WorkspaceView, type NumericPanelField } from './workspace.js';
@@ -39,7 +40,7 @@ const inputIssues = new Map<string, TranslationKey>();
 const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => validatedChange());
 const onePortUI = new OnePortUI(byId('one-port'), () => state);
 const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => state);
-let transformMethod: 'dc' | 'resistor' = 'dc';
+const transformMethod: { method: 'dc' | 'resistor' } = { method: 'dc' };
 const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'port'];
 const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort' };
 const sourceUnit = (id: string): 'V' | 'A' => state.document.circuit.components.find(c => c.id === id)?.type === 'I' ? 'A' : 'V';
@@ -73,11 +74,11 @@ function renderView(): void {
   byId('json-editor-view').hidden = workspace.editorView !== 'json';
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-editor-view]'))) button.setAttribute('aria-pressed', String(button.dataset.editorView === workspace.editorView));
   if (workspace.view === 'editor') { builderUI.render(); renderJson(); }
-  byId('one-port').hidden = transformMethod !== 'dc';
-  byId('resistor-transform').hidden = transformMethod !== 'resistor';
-  byId('transform-scope').textContent = t(transformMethod === 'dc' ? 'transformScope' : 'resScope');
-  (byId('transform-method') as HTMLSelectElement).value = transformMethod;
-  if (workspace.view === 'transform') { if (transformMethod === 'dc') onePortUI.render(); else resistorUI.render(); }
+  byId('one-port').hidden = transformMethod.method !== 'dc';
+  byId('resistor-transform').hidden = transformMethod.method !== 'resistor';
+  byId('transform-scope').textContent = t(transformMethod.method === 'dc' ? 'transformScope' : 'resScope');
+  (byId('transform-method') as HTMLSelectElement).value = transformMethod.method;
+  if (workspace.view === 'transform') { if (transformMethod.method === 'dc') onePortUI.render(); else resistorUI.render(); }
 }
 function renderCircuitChoice(): void {
   const select = byId('circuit-select') as HTMLSelectElement;
@@ -308,7 +309,7 @@ document.addEventListener('toggle',event=>{
 document.addEventListener('change',async event=>{
   const target=event.target;
   if(target instanceof HTMLSelectElement&&target.id==='transform-method'){
-    transformMethod=target.value==='resistor'?'resistor':'dc';renderView();return;
+    transformMethod.method=target.value==='resistor'?'resistor':'dc';renderView();return;
   }
   if(target instanceof HTMLInputElement&&target.id==='import-file'){
     const file=target.files?.[0];if(!file)return;
@@ -340,7 +341,7 @@ document.addEventListener('click',event=>{
   const panelButton=target.closest<HTMLButtonElement>('[data-panel-action]');
   if(panelButton){const panel=workspace.panels.find(p=>p.id===panelButton.dataset.panelId);if(!panel)return;
     const action=panelButton.dataset.panelAction;
-    if(action==='open-comparison'){onePortUI.useSelection(panel.p,panel.q,panel.load);openView('transform');return;}
+    if(action==='open-comparison'){openPortComparison(transformMethod,panel,(p,q,load)=>onePortUI.useSelection(p,q,load),()=>openView('transform'));return;}
     if(action==='export'){const result=calculator.calculate(panel,state);if(result&&(result.type==='frequency'||result.type==='transient'))download(`circuits-${panel.type}-${panel.id}.csv`,panelCsv(panel,result),'text/csv');return;}
     if(action==='up')movePanel(workspace,panel.id,-1);
     else if(action==='down')movePanel(workspace,panel.id,1);

@@ -5,6 +5,8 @@ import { parseDocument, serializeDocument, type NativeDocument } from './model.j
 export type ResistorOperation = 'parallel' | 'series' | 'star-delta' | 'delta-star' | 'star-mesh' | 'kron';
 export interface ResistorSelection { operation: ResistorOperation; edges?: string[]; center?: string }
 export interface ResistorCandidate { key: string; label: string; selection: ResistorSelection }
+/** JSON tuples keep arbitrary native IDs (including colons) distinct. */
+export const resistorCandidateKey = (s: ResistorSelection): string => JSON.stringify([s.operation, s.edges ?? [], s.center ?? null]);
 export interface ResistorCheck { maxMatrixDifference: number; maxCurrentDifference: number; maxPowerDifference: number;
   matrixLimit: number; currentLimit: number; powerLimit: number; vectors: number }
 export type ResistorTransformResult = { status: 'ok'; retained: string[]; original: ResistorNetwork;
@@ -39,26 +41,26 @@ const copyNetwork = (n: ResistorNetwork): ResistorNetwork => ({ nodes: [...n.nod
 
 /** Conservative, topology-only choices; the kernel still validates every requested selection. */
 export function resistorCandidates(network: ResistorNetwork, retained: string[]): ResistorCandidate[] {
-  const choices: ResistorCandidate[] = [{ key: 'kron', label: 'Kron · all internal nodes', selection: { operation: 'kron' } }];
+  const choices: ResistorCandidate[] = [{ key: resistorCandidateKey({ operation: 'kron' }), label: 'Kron · all internal nodes', selection: { operation: 'kron' } }];
   const edges = network.edges, retainedSet = new Set(retained);
   for (let i = 0; i < edges.length; i++) for (let j = i + 1; j < edges.length; j++) {
     const a = edges[i]!, b = edges[j]!;
-    if (sameEnds(a, b)) choices.push({ key: `parallel:${a.id}:${b.id}`, label: `Parallel · ${a.id}, ${b.id}`, selection: { operation: 'parallel', edges: [a.id, b.id] } });
+    if (sameEnds(a, b)) choices.push({ key: resistorCandidateKey({operation:'parallel',edges:[a.id,b.id]}), label: `Parallel · ${a.id}, ${b.id}`, selection: { operation: 'parallel', edges: [a.id, b.id] } });
   }
   for (const center of network.nodes.filter(n => n !== '0' && !retainedSet.has(n))) {
     const incident = edges.filter(e => e.p === center || e.n === center);
     const neighbors = new Set(incident.map(e => other(e, center)));
     if (incident.length === 2 && neighbors.size === 2)
-      choices.push({ key: `series:${center}`, label: `Series · ${incident.map(e => e.id).join(', ')} via ${center}`, selection: { operation: 'series', edges: incident.map(e => e.id) } });
-    if (neighbors.size >= 2) choices.push({ key: `mesh:${center}`, label: `Star–mesh · ${center}`, selection: { operation: 'star-mesh', center } });
+      choices.push({ key: resistorCandidateKey({operation:'series',edges:incident.map(e=>e.id)}), label: `Series · ${incident.map(e => e.id).join(', ')} via ${center}`, selection: { operation: 'series', edges: incident.map(e => e.id) } });
+    if (neighbors.size >= 2) choices.push({ key: resistorCandidateKey({operation:'star-mesh',center}), label: `Star–mesh · ${center}`, selection: { operation: 'star-mesh', center } });
     if (incident.length === 3 && neighbors.size === 3)
-      choices.push({ key: `star:${center}`, label: `Star→delta · ${center}`, selection: { operation: 'star-delta', center } });
+      choices.push({ key: resistorCandidateKey({operation:'star-delta',center}), label: `Star→delta · ${center}`, selection: { operation: 'star-delta', center } });
   }
   for (let i = 0; i < edges.length; i++) for (let j = i + 1; j < edges.length; j++) for (let k = j + 1; k < edges.length; k++) {
     const triangle = [edges[i]!,edges[j]!,edges[k]!];
     const nodes = new Set(triangle.flatMap(e => [e.p,e.n]));
     if (nodes.size === 3 && [...nodes].every(n => triangle.filter(e => e.p === n || e.n === n).length === 2))
-      choices.push({ key: `delta:${triangle.map(e => e.id).join(':')}`, label: `Delta→star · ${triangle.map(e => e.id).join(', ')}`, selection: { operation: 'delta-star', edges: triangle.map(e => e.id) } });
+      choices.push({ key: resistorCandidateKey({operation:'delta-star',edges:triangle.map(e=>e.id)}), label: `Delta→star · ${triangle.map(e => e.id).join(', ')}`, selection: { operation: 'delta-star', edges: triangle.map(e => e.id) } });
   }
   return choices;
 }
@@ -118,19 +120,32 @@ function checkResponse(a: ResistorNetwork, b: ResistorNetwork, retained: string[
   const vectors = [Array(n).fill(0), ...Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:0)),
     Array.from({length:n},(_,i)=>i+1), Array.from({length:n},(_,i)=>i%2?-.5:1.25), Array(n).fill(3.25)];
   for (const u of vectors) {
+    // Fix the voltage gauge before solving. Branch differences and their KCL
+    // sums are physical currents; Laplacian * absolute voltage can instead
+    // subtract large common-mode terms and manufacture tiny currents.
+    const relative=u.map(v=>v-u[0]!);
     const currents: number[][]=[];
     for (const network of [a,b]) {
       const l = resistorLaplacian(network), boundary=retained.map(id=>network.nodes.indexOf(id));
       const hidden=network.nodes.map((_,i)=>i).filter(i=>!boundary.includes(i));
       const ii=hidden.map(i=>hidden.map(j=>l[i]![j]!));
-      const rhs=hidden.map(i=>-boundary.reduce((s,j,k)=>s+l[i]![j]!*u[k]!,0));
+      const rhs=hidden.map(i=>-boundary.reduce((s,j,k)=>s+l[i]![j]!*relative[k]!,0));
       const solved=solveReal(ii,rhs);
       if (solved.status!=='ok') return fail('numeric-failure','internal-solve',solved.message);
-      const x=network.nodes.map((_,i)=>{const k=boundary.indexOf(i);return k>=0?u[k]!:solved.x[hidden.indexOf(i)]!.re;});
-      const internalResidual=hidden.map(i=>({value:l[i]!.reduce((s,v,j)=>s+v*x[j]!,0),scale:l[i]!.reduce((s,v,j)=>s+Math.abs(v*x[j]!),0)}));
-      if (internalResidual.some(r=>!finite(r.value)||!finite(r.scale)||Math.abs(r.value)>currentLimit+1e-8*r.scale))
+      const x=network.nodes.map((_,i)=>{const k=boundary.indexOf(i);return k>=0?relative[k]!:solved.x[hidden.indexOf(i)]!.re;});
+      const kcl=network.nodes.map(()=>0), incident=network.nodes.map(()=>0);
+      for(const edge of network.edges){
+        const p=network.nodes.indexOf(edge.p),q=network.nodes.indexOf(edge.n);
+        const branchCurrent=(x[p]!-x[q]!)/edge.resistance;
+        if(!finite(branchCurrent))return fail('numeric-failure','nonfinite','Branch current exceeds numeric range.');
+        kcl[p]!+=branchCurrent;kcl[q]!-=branchCurrent;
+        incident[p]!+=Math.abs(branchCurrent);incident[q]!+=Math.abs(branchCurrent);
+      }
+      // Absolute floor is in amperes; the relative term is scaled by actual
+      // incident branch currents, not by cancelling Laplacian products.
+      if (hidden.some(i=>!finite(kcl[i]!)||!finite(incident[i]!)||Math.abs(kcl[i]!)>currentLimit+1e-8*incident[i]!))
         return fail('numeric-failure','internal-kcl','Internal KCL residual exceeds current limit.');
-      currents.push(boundary.map(i=>l[i]!.reduce((s,v,j)=>s+v*x[j]!,0)));
+      currents.push(boundary.map(i=>kcl[i]!));
     }
     for (let i=0;i<n;i++) {
       const c0=currents[0]![i]!, c1=currents[1]![i]!, diff=Math.abs(c0-c1);
@@ -140,7 +155,7 @@ function checkResponse(a: ResistorNetwork, b: ResistorNetwork, retained: string[
     }
     if(u.every(v=>v===u[0])&&currents.some(c=>c.some(v=>Math.abs(v)>currentLimit)))
       return fail('numeric-failure','common-shift','A common boundary-voltage shift produced nonzero current.');
-    const powers=currents.map(c=>c.reduce((s,v,i)=>s+u[i]!*v,0));
+    const powers=currents.map(c=>c.reduce((s,v,i)=>s+relative[i]!*v,0));
     const difference=Math.abs(powers[0]!-powers[1]!);
     if (!finite(difference)) return fail('numeric-failure','nonfinite','Power exceeds numeric range.');
     maxPowerDifference=Math.max(maxPowerDifference,difference);

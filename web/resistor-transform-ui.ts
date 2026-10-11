@@ -1,4 +1,4 @@
-import { resistorCandidates, transformResistors, type ResistorCandidate, type ResistorOperation, type ResistorTransformResult } from '../src/resistor-transform.js';
+import { resistorCandidateKey, resistorCandidates, transformResistors, type ResistorCandidate, type ResistorOperation, type ResistorTransformResult } from '../src/resistor-transform.js';
 import type { ResistorNetwork } from '../src/kron.js';
 import type { LabState } from './lab.js';
 import { escapeHtml } from './schematic.js';
@@ -16,20 +16,15 @@ function candidateLabel(c:ResistorCandidate):string {
   return `${translate(methods[s.operation])}${s.center?` · ${e(s.center)}`:''}${s.edges?.length?` · ${s.edges.map(e).join(', ')}`:''}`;
 }
 export class ResistorTransformUI {
-  private retainedText='';
+  private retained:string[]=[];
   private initialized=false;
   private operation:ResistorOperation='kron';
-  private choiceKey='kron';
+  private choiceKey=resistorCandidateKey({operation:'kron'});
   private showOriginal=true;
   private latestJson:string|null=null;
   constructor(private readonly root:HTMLElement,private readonly getState:()=>LabState) {
-    root.addEventListener('input',event=>{const target=event.target;if(target instanceof HTMLInputElement&&target.id==='res-retained'){
-      this.retainedText=target.value;this.latestJson=null;
-      const result=root.querySelector<HTMLElement>('.res-result');
-      if(result)result.innerHTML=`<p class="warning" role="status">${t('resPending')}</p>`;
-    }});
     root.addEventListener('change',event=>{const target=event.target;if(!(target instanceof HTMLInputElement||target instanceof HTMLSelectElement))return;
-      if(target.id==='res-retained')this.retainedText=target.value;
+      if(target instanceof HTMLSelectElement&&target.dataset.resTerminal!==undefined){this.retained[Number(target.dataset.resTerminal)]=target.value;this.latestJson=null;}
       else if(target.id==='res-operation') {this.operation=target.value as ResistorOperation;this.choiceKey='';}
       else if(target.id==='res-choice')this.choiceKey=target.value;
       else return;this.render();
@@ -37,27 +32,34 @@ export class ResistorTransformUI {
     root.addEventListener('click',event=>{const target=event.target;if(!(target instanceof Element))return;
       const view=target.closest<HTMLElement>('[data-res-view]')?.dataset.resView;
       if(view==='original'||view==='equivalent'){this.showOriginal=view==='original';this.render();return;}
-      if(target.closest('#res-reset-terminals')){this.retainedText=this.defaultTerminals();this.render();return;}
+      const action=target.closest<HTMLElement>('[data-res-terminal-action]');
+      if(action){const index=Number(action.dataset.resTerminalIndex);switch(action.dataset.resTerminalAction){
+        case 'add':this.retained.push('');break;
+        case 'remove':this.retained.splice(index,1);break;
+        case 'up':if(index>0)[this.retained[index-1],this.retained[index]]=[this.retained[index]!,this.retained[index-1]!];break;
+        case 'down':if(index<this.retained.length-1)[this.retained[index],this.retained[index+1]]=[this.retained[index+1]!,this.retained[index]!];break;
+      }this.latestJson=null;this.render();return;}
+      if(target.closest('#res-reset-terminals')){this.retained=this.defaultTerminals();this.latestJson=null;this.render();return;}
       if(target.closest('#res-export')&&this.latestJson){this.render();if(!this.latestJson)return;
         const url=URL.createObjectURL(new Blob([this.latestJson],{type:'application/json'}));
         const a=document.createElement('a');a.href=url;a.download='circuits-resistor-transform.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
     });
   }
-  private defaultTerminals():string {
+  private defaultTerminals():string[] {
     const circuit=this.getState().document.circuit;
     const observations=circuit.observations.filter(o=>o.type==='voltage').flatMap(o=>o.type==='voltage'?[o.p,o.n]:[]);
-    return [...new Set([...observations,'0'])].join(', ');
+    return [...new Set([...observations,'0'])];
   }
   render():void {
     const state=this.getState(), circuit=state.document.circuit;
-    if(!this.initialized){this.retainedText=this.defaultTerminals();this.initialized=true;}
-    const retained=this.retainedText.split(',').map(s=>s.trim()).filter(Boolean);
+    if(!this.initialized){this.retained=this.defaultTerminals();this.initialized=true;}
+    const retained=[...this.retained];
     const network:ResistorNetwork={nodes:circuit.nodes,edges:circuit.components.filter(c=>c.type==='R').map(c=>({id:c.id,p:c.p,n:c.n,resistance:'value'in c?c.value:NaN}))};
     const choices=resistorCandidates(network,retained).filter(c=>c.selection.operation===this.operation);
-    if(!this.choiceKey&&this.operation==='kron')this.choiceKey='kron';
+    if(!this.choiceKey&&this.operation==='kron')this.choiceKey=resistorCandidateKey({operation:'kron'});
     const choice=choices.find(c=>c.key===this.choiceKey);
-    const duplicate=new Set(retained).size!==retained.length,missing=retained.filter(n=>!circuit.nodes.includes(n));
-    const valid=!!retained.length&&!duplicate&&!missing.length&&retained.includes('0');
+    const duplicate=new Set(retained.filter(Boolean)).size!==retained.filter(Boolean).length,missing=retained.filter(n=>n!==''&&!circuit.nodes.includes(n));
+    const valid=!!retained.length&&retained.every(Boolean)&&!duplicate&&!missing.length&&retained.includes('0');
     const unsupported=circuit.components.some(c=>c.type!=='R')||state.document.experiment.sources.length>0;
     let result:ResistorTransformResult|null=null;
     if(unsupported)result=transformResistors(state.document,retained,{operation:'kron'});
@@ -65,9 +67,10 @@ export class ResistorTransformUI {
     this.latestJson=result?.status==='ok'?result.json:null;
     const methodOptions=(Object.keys(methods) as ResistorOperation[]).map(k=>`<option value="${k}"${k===this.operation?' selected':''}>${translate(methods[k])}</option>`).join('');
     const choiceOptions=choices.map(c=>`<option value="${e(c.key)}"${c.key===this.choiceKey?' selected':''}>${candidateLabel(c)}</option>`).join('');
+    const terminalRows=retained.map((id,i)=>`<div class="res-terminal-row"><div class="field"><label for="res-terminal-${i}">${t('resTerminal',{number:i+1})}</label><select id="res-terminal-${i}" data-res-terminal="${i}" aria-invalid="${id===''||!circuit.nodes.includes(id)||retained.indexOf(id)!==i}"><option value=""${id===''?' selected':''}>${t('resChooseTerminal')}</option>${!circuit.nodes.includes(id)&&id!==''?`<option value="${e(id)}" selected>${e(t('resMissingOption',{id:JSON.stringify(id)}))}</option>`:''}${circuit.nodes.map(node=>`<option value="${e(node)}"${id===node?' selected':''}>${e(JSON.stringify(node))}</option>`).join('')}</select></div><div class="res-terminal-actions"><button type="button" class="button quiet" data-res-terminal-action="up" data-res-terminal-index="${i}" aria-label="${t('resMoveUp',{number:i+1})}"${i===0?' disabled':''}>↑</button><button type="button" class="button quiet" data-res-terminal-action="down" data-res-terminal-index="${i}" aria-label="${t('resMoveDown',{number:i+1})}"${i===retained.length-1?' disabled':''}>↓</button><button type="button" class="button quiet" data-res-terminal-action="remove" data-res-terminal-index="${i}" aria-label="${t('resRemoveTerminal',{number:i+1})}">×</button></div></div>`).join('');
     let content='';
     if(unsupported)content=`<p class="warning" role="status">${t('resUnsupported')}</p>`;
-    else if(!valid)content=`<p class="warning" role="status">${t(missing.length?'resMissingTerminal':!retained.includes('0')?'resGroundRequired':'resInvalidTerminals')}${missing.length?` ${missing.map(e).join(', ')}`:''}</p>`;
+    else if(!valid)content=`<p class="warning" role="status">${t(missing.length?'resMissingTerminal':!retained.includes('0')?'resGroundRequired':'resInvalidTerminals')}${missing.length?` ${missing.map(n=>e(JSON.stringify(n))).join(', ')}`:''}</p>`;
     else if(!choice)content=`<p class="warning" role="status">${t('resNoChoice')}</p>`;
     else if(result?.status!=='ok')content=`<p class="warning" role="status">${translate(issueKeys[result?.code??'']??'resNumerical')}${result?.status==='numeric-failure'?` <details><summary>${t('resTechnical')}</summary>${e(result.detail)}</details>`:''}</p>`;
     else {
@@ -79,6 +82,6 @@ export class ResistorTransformUI {
         <p class="soft-note">${t('resEvidence')}</p><button type="button" id="res-export" class="button">${t('resExport')}</button>
         <details><summary>${t('resJsonPreview')}</summary><textarea class="res-json" readonly aria-label="${t('resJsonPreview')}">${e(result.json)}</textarea></details>`;
     }
-    this.root.innerHTML=`<p class="analysis-note">${t('resIntro')}</p><div class="controls-grid"><div class="field"><label for="res-retained">${t('resRetained')}</label><input id="res-retained" type="text" value="${e(this.retainedText)}" aria-invalid="${!valid}"><small>${t('resOrderHint')}</small></div><div class="field"><label for="res-operation">${t('resOperation')}</label><select id="res-operation">${methodOptions}</select></div><div class="field"><label for="res-choice">${t('resOperand')}</label><select id="res-choice"><option value="">${t('resChoose')}</option>${choiceOptions}</select></div></div><button type="button" id="res-reset-terminals" class="button quiet">${t('resResetTerminals')}</button><div class="res-result">${content}</div>`;
+    this.root.innerHTML=`<p class="analysis-note">${t('resIntro')}</p><div class="res-terminal-controls"><div class="field-label">${t('resRetained')}</div><p class="analysis-note">${t('resOrderHint')}</p>${terminalRows}<div class="file-actions"><button type="button" class="button quiet" data-res-terminal-action="add">${t('resAddTerminal')}</button><button type="button" id="res-reset-terminals" class="button quiet">${t('resResetTerminals')}</button></div></div><div class="controls-grid"><div class="field"><label for="res-operation">${t('resOperation')}</label><select id="res-operation">${methodOptions}</select></div><div class="field"><label for="res-choice">${t('resOperand')}</label><select id="res-choice"><option value="">${t('resChoose')}</option>${choiceOptions}</select></div></div><div class="res-result">${content}</div>`;
   }
 }
