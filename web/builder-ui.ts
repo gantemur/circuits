@@ -28,8 +28,8 @@ export class BuilderUI {
   private notice = '';
   private selectedType: Component['type'] = 'R';
   private selectedObservation: Observation['type'] = 'voltage';
-  private nodePending = new Map<number, string>();
-  private nodeErrors = new Map<number, Exclude<RenameNodeResult, { ok: true }>['code']>();
+  private nodePending = new Map<string, string>();
+  private nodeErrors = new Map<string, Exclude<RenameNodeResult, { ok: true }>['code']>();
   constructor(private readonly root: HTMLElement, private readonly state: Getter, private readonly applied: () => void) {
     this.builder = createBuilder(state());
     root.addEventListener('input', event => this.edit(event.target));
@@ -69,7 +69,7 @@ export class BuilderUI {
       ${err ? `<div class="error-card" role="alert">${e(err.code === 'builderConflict' ? t('builderConflict') : err.code === 'builderFinite' ? t('builderFinite', { field: this.fieldName(String(err.params.field ?? '')) }) : validationSummary(err.code, err.params))}</div>` : ''}
       <div class="file-actions">${button('builderNew', 'new')}${button('builderCopy', 'copy')}</div>
       <div class="subheading">${t('builderNodes')}</div>
-      ${d.circuit.nodes.map((n, i) => `<div class="builder-row"><div class="field"><label for="builder-node-${i}">${t('builderNode')} ${i + 1}</label><input id="builder-node-${i}" data-builder-field="node:${i}:id" value="${e(this.nodePending.get(i) ?? n)}" ${n === '0' ? 'readonly' : ''} ${this.nodeErrors.has(i) ? 'aria-invalid="true"' : ''}>${this.nodeErrors.has(i) ? `<span class="field-error" role="alert">${e(translate(this.nodeErrors.get(i)!))}</span>` : ''}</div>${n === '0' ? '' : button('builderRemove', 'remove-node', String(i))}</div>`).join('')}
+      ${d.circuit.nodes.map((n, i) => `<div class="builder-row"><div class="field"><label for="builder-node-${i}">${t('builderNode')} ${i + 1}</label><input id="builder-node-${i}" data-builder-field="node:${i}:id" value="${e(this.nodePending.get(n) ?? n)}" ${n === '0' ? 'readonly' : ''} ${this.nodeErrors.has(n) ? 'aria-invalid="true"' : ''}>${this.nodeErrors.has(n) ? `<span class="field-error" role="alert">${e(translate(this.nodeErrors.get(n)!))}</span>` : ''}</div>${n === '0' ? '' : button('builderRemove', 'remove-node', String(i))}</div>`).join('')}
       ${button('builderAddNode', 'add-node')}
       <div class="subheading">${t('builderComponents')}</div>
       ${d.circuit.components.map((c, i) => `<div class="builder-card" data-builder-row="component:${i}">${rowTitle(c.id, c.type)}
@@ -115,12 +115,12 @@ export class BuilderUI {
     if (err?.field) this.root.querySelector<HTMLInputElement>(`#builder-${err.field.replaceAll(':', '-')}`)?.setAttribute('aria-invalid', 'true');
   }
   private clearNodeEdits(): void { this.nodePending.clear(); this.nodeErrors.clear(); }
-  private commitNode(index: number): boolean {
-    const pending = this.nodePending.get(index);
+  private commitNode(id: string): boolean {
+    const pending = this.nodePending.get(id);
     if (pending === undefined) return true;
-    const result = renameNode(this.builder, index, pending);
-    if (!result.ok) { this.nodeErrors.set(index, result.code); return false; }
-    this.nodePending.delete(index); this.nodeErrors.delete(index);
+    const result = renameNode(this.builder, this.builder.draft.circuit.nodes.indexOf(id), pending);
+    if (!result.ok) { this.nodeErrors.set(id, result.code); return false; }
+    this.nodePending.delete(id); this.nodeErrors.delete(id);
     return true;
   }
   private edit(target: EventTarget | null, changed = false): void {
@@ -134,11 +134,12 @@ export class BuilderUI {
     }
     if (section === 'node') {
       const index = Number(indexText);
-      if (this.builder.draft.circuit.nodes[index] === '0') return;
-      this.nodePending.set(index, target.value);
-      this.nodeErrors.delete(index);
+      const id = this.builder.draft.circuit.nodes[index];
+      if (id === undefined || id === '0') return;
+      this.nodePending.set(id, target.value);
+      this.nodeErrors.delete(id);
       touchBuilder(this.builder);
-      if (changed) { this.commitNode(index); this.render(); }
+      if (changed) { this.commitNode(id); this.render(); }
       else this.root.querySelector<HTMLElement>('.builder-status')!.textContent = t('builderUnapplied');
       return;
     }
@@ -185,13 +186,16 @@ export class BuilderUI {
     this.notice = '';
     if (action === 'new') { this.clearNodeEdits(); newBuilder(this.builder, this.state()); }
     else if (action === 'copy' || action === 'discard') { this.clearNodeEdits(); reloadBuilder(this.builder, this.state()); }
-    else if (action === 'add-node') { this.clearNodeEdits(); addNode(this.builder); }
+    else if (action === 'add-node') addNode(this.builder);
     else if (action === 'remove-node') {
       const id = this.builder.draft.circuit.nodes[index];
       const refs = id === undefined ? [] : nodeReferences(this.builder, id);
       if (id === '0') this.notice = t('builderGroundProtected');
       else if (refs.length) this.notice = t('builderNodeReferenced', { id: id ?? '', refs: refs.join(', ') });
-      else if (id !== undefined) { this.clearNodeEdits(); removeNode(this.builder, id); }
+      else if (id !== undefined) {
+        removeNode(this.builder, id);
+        this.nodePending.delete(id); this.nodeErrors.delete(id);
+      }
     } else if (action === 'add-component') addComponent(this.builder, this.selectedType);
     else if (action === 'remove-component') {
       const id = this.builder.draft.circuit.components[index]?.id;
@@ -202,7 +206,7 @@ export class BuilderUI {
     else if (action === 'remove-observation') {
       this.builder.draft.circuit.observations.splice(index, 1); touchBuilder(this.builder);
     } else if (action === 'apply') {
-      if (![...this.nodePending.keys()].every(i => this.commitNode(i))) { this.render(); return; }
+      if (![...this.nodePending.keys()].every(id => this.commitNode(id))) { this.render(); return; }
       const result = applyBuilder(this.builder, this.state());
       if (result.ok) { this.clearNodeEdits(); this.applied(); }
     }

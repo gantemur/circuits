@@ -140,3 +140,9 @@ An untouched form now reloads whenever the validated document changes through a 
 Regression tests cover preset switching, native imports, component edits, obsolete clean Apply, and a ground-in-the-middle document with terminal, control, and voltage-observation references. Browser verification exercised clean synchronization, edited-draft conflict, blocked Apply, rejected ground/duplicate/empty names, correction, and both languages. This fix remains on `codex/phase-1b-circuit-builder`; it is not merged or deployed.
 
 Final local checks: `node --test test/builder.test.mjs` passed 10/10, `npm test` passed 58/58, and `npm run typecheck`, `npm run build:site`, and `git diff --check` passed. The site build includes the kernel and application builds.
+
+## Phase 1B pending node-name preservation — 10 October 2026
+
+The UI now keys pending node names and validation errors by the original node ID instead of the displayed row index. Adding a node leaves all pending names untouched; removing an unused node discards only that node's pending edit, and other edits follow their nodes when row numbers shift. Apply still rejects any remaining invalid name. Explicit Discard and clean synchronization clear pending edits as before.
+
+Two UI event-level regressions first failed against `65f2130` and now pass. They cover Add, shifted removal, English/Mongolian errors, blocked Apply, correction, Discard, and clean synchronization. The actual local browser preserved a rejected `0` and its error after Add, then preserved the Mongolian error when another unused node was removed; Apply remained blocked until correction. `npm test` passed 60/60, and `npm run typecheck`, `npm run build:site`, and `git diff --check` passed. This follow-up remains on the task branch, without merge or deployment.
