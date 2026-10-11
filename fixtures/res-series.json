@@ -1,0 +1,6 @@
+{
+  "circuit": {"schemaVersion":1,"label":"Resistor series path","nodes":["0","x","out"],
+    "components":[{"id":"R1","type":"R","p":"0","n":"x","value":1000},{"id":"R2","type":"R","p":"x","n":"out","value":2000}],
+    "observations":[{"id":"out","type":"voltage","p":"out","n":"0"}]},
+  "experiment":{"schemaVersion":1,"sources":[],"initial":{"kind":"equilibrium"}}
+}

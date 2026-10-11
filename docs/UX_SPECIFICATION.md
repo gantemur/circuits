@@ -18,6 +18,8 @@ The initial divider layout is DC plus DC port. RC/RL/RLC examples suggest freque
 
 ## Transform and mathematical boundary
 
+This section describes the released UX baseline. The subsequent task-branch [Phase 2B specification](PHASE_2B_SPECIFICATION.md) extends Transform with passive resistor methods beside the DC comparison.
+
 Transform currently offers only **Thévenin/Norton — DC**. It retains the Phase 2A terminal orientation, source suppression, controlled-source retention, solved original/Thévenin/Norton load comparison, short-circuit cross-check, diagnostics, and explicit unsupported/degenerate outcomes. The original network is shown once, beside one selected equivalent representation on desktop. On mobile, Original/Equivalent controls switch the drawing; comparison values remain accessible. Source-suppressed and loaded constructions are temporary experiments, not edits to the original. The tool preserves the chosen DC port relation and positive-resistance load comparison, not internal states or frequency/transient behavior. There is no Save equivalent action because conversion to a native document is not implemented here.
 
 An explicit Analyze → Transform handoff carries ordered p/q terminals and load even before Transform has opened. Valid Transform choices survive circuit and workspace changes; if a selected node disappears, that terminal is marked for reselection instead of silently choosing a different node. Unapplied load text survives ordinary navigation. The mobile drawing switch does not hide numerical metrics, comparison tables, diagnostics, or unsupported/failure outcomes. Tables scroll within the result container.

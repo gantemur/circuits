@@ -4,7 +4,7 @@
 
 At the start of a task, read this file, `docs/DECISIONS.md`, and the specification for the active milestone. Read `docs/MATHEMATICAL_CONVENTIONS.md` before changing circuit equations, device laws, or analyses. Use `docs/VISION.md` for context; it is not an instruction to implement all planned capabilities at once.
 
-The active milestone is the **UX workspaces redesign**, specified in `docs/UX_SPECIFICATION.md`. It reorganizes the released Phase 2A lab without adding reductions or changing native v1 circuit semantics. Phase 2A remains documented in `docs/PHASE_2A_SPECIFICATION.md`, Phase 1B in `docs/PHASE_1B_SPECIFICATION.md`, Phase 1A in `docs/PHASE_1_SPECIFICATION.md`, and Phase 0 in `docs/MVP_SPECIFICATION.md`. Inspect the actual repository before assuming code or build commands exist.
+The active milestone is **Phase 2B passive resistor transformations**, specified in `docs/PHASE_2B_SPECIFICATION.md`. The released workspace behavior is documented in `docs/UX_SPECIFICATION.md`; Phase 2A remains in `docs/PHASE_2A_SPECIFICATION.md`, Phase 1B in `docs/PHASE_1B_SPECIFICATION.md`, Phase 1A in `docs/PHASE_1_SPECIFICATION.md`, and Phase 0 in `docs/MVP_SPECIFICATION.md`. Inspect the actual repository before assuming code or build commands exist.
 
 ## Authority and scope
 

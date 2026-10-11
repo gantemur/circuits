@@ -27,7 +27,7 @@ export type PanelResult =
   | { type: 'equations'; assembly: Assembly; dc: AnalysisResult }
   | { type: 'port'; port: OnePortResult };
 
-const defaultType = (preset: string | null): PanelType[] => preset === 'divider' ? ['dc', 'port'] :
+const defaultType = (preset: string | null): PanelType[] => preset?.startsWith('res-') ? ['dc', 'equations'] : preset === 'divider' ? ['dc', 'port'] :
   preset === 'vcvs' ? ['dc', 'frequency'] : ['frequency', 'transient'];
 const defaultPort = (state: LabState): [string, string] => {
   const nodes = state.document.circuit.nodes;

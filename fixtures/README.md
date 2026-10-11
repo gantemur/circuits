@@ -46,3 +46,15 @@ These standalone native documents are public acceptance inputs for `dcOnePort`. 
 | `one-port-current-source.json` | A 1 A ideal source injects at out with no return path. The open-circuit DC solve is inconsistent; no finite `Vth` is invented. |
 
 Additional mutations test zero original excitation, retained current-control sensing branches, collision-safe temporary IDs, a zero-resistance ideal-voltage-source port, negative resistance from a controlled source, storage rejection, invalid ports, and invalid loads. The test-current default is 1 A; extreme scales can exceed the numeric range or solver diagnostics and then fail explicitly.
+
+## Phase 2B source-free resistor cases
+
+These native documents have no independent source, use equilibrium initialization, and allow the Phase 2B Transform preview to export valid native JSON. Terminal response always uses the full ungrounded Laplacian, with currents entering retained nodes. Native node `0` remains a retained terminal for export.
+
+| Fixture | Independent expectation |
+| --- | --- |
+| `res-series.json` | The path `0 — 1000 Ω — x — 2000 Ω — out` has `R(out,0)=3000 Ω` after degree-two `x` is eliminated. |
+| `res-star.json` | Center `x` has conductances `1,2,3 S` to `(a,b,0)`. Its ordered response is `[[5/6,-1/3,-1/2],[-1/3,4/3,-1],[-1/2,-1,3/2]] S`; delta sides `(ab,a0,b0)` are `(3,2,1) Ω`. |
+| `res-bridge.json` | Five-resistor unbalanced bridge between `(a,0)` has no initial series or parallel pair. Internal KCL in `(x,y)` independently gives the terminal conductance tested in `test/resistor-transform.test.mjs`; bulk Kron removes both nodes. Its degree-three nodes **do** allow star–delta, so “no elementary move of any kind” would be false. |
+
+Tests also cover reversed parallel orientation, delta→star legs, four-terminal fill-in, sequential elimination orders, retained-node ordering, disconnected internal components, ID collisions, extreme values, immutability, and strict export round-trip.

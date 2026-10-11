@@ -1,0 +1,6 @@
+{
+  "circuit": {"schemaVersion":1,"label":"Three-terminal resistor star","nodes":["0","a","b","x"],
+    "components":[{"id":"Ra","type":"R","p":"a","n":"x","value":1},{"id":"Rb","type":"R","p":"b","n":"x","value":0.5},{"id":"Rc","type":"R","p":"0","n":"x","value":0.3333333333333333}],
+    "observations":[{"id":"Va","type":"voltage","p":"a","n":"0"},{"id":"Vb","type":"voltage","p":"b","n":"0"}]},
+  "experiment":{"schemaVersion":1,"sources":[],"initial":{"kind":"equilibrium"}}
+}

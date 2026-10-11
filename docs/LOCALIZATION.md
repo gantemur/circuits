@@ -37,7 +37,14 @@ The UX workspaces branch continues English (`en`) and Mongolian Cyrillic (`mn`) 
 | Load current | Ачааллын гүйдэл | External resistor current `p→q`, opposite injected port current |
 | Agreement criterion | Нийцлийн нөхцөл | Separate voltage/current absolute floors and relative terms |
 | Analyze workspace | Шинжлэх ажлын талбар | Circuit view and independently configurable result panels |
-| Transform workspace | Хувиргах ажлын талбар | Currently the DC Thévenin/Norton comparison only |
+| Transform workspace | Хувиргах ажлын талбар | DC Thévenin/Norton comparison and task-branch passive resistor methods |
+| Retained terminals | Хадгалах туйлууд | Ordered boundary set `B` in a resistor response matrix |
+| Internal node | Дотоод зангилаа | Eliminated set `I`; a native preview keeps node `0` |
+| Conductance | Дамжуулалт | Siemens; reciprocal of resistance |
+| Terminal response matrix | Туйлын хариу матриц | `i_B=Λu_B`, currents entering the network |
+| Star–delta / delta–star | Од–гурвалжин / гурвалжин–од | Three-neighbor passive resistor identities |
+| Star–mesh | Од–тор | Eliminating one center and adding pair couplings |
+| Kron reduction | Кроны бууруулалт | Schur complement computed by linear solves |
 | Circuit editor | Хэлхээ засварлагч | Dedicated Form and JSON views with separate unapplied drafts |
 | Panel settings | Самбарын тохиргоо | Per-instance controls; no shared global sweep settings |
 | Last valid result | Сүүлчийн зөв үр дүн | Kept visible while invalid pending panel text is corrected |

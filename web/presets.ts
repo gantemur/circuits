@@ -7,6 +7,9 @@ import cascade from '../fixtures/rc-cascade.json';
 import rl from '../fixtures/rl.json';
 import rlc from '../fixtures/rlc.json';
 import vcvs from '../fixtures/vcvs.json';
+import resSeries from '../fixtures/res-series.json';
+import resStar from '../fixtures/res-star.json';
+import resBridge from '../fixtures/res-bridge.json';
 import type { TranslationKey } from './i18n.js';
 
 export interface Preset { id: string; titleKey: TranslationKey; subtitleKey: TranslationKey; document: NativeDocument; defaultOutput: string; }
@@ -19,6 +22,9 @@ export const presets: Preset[] = [
   { id: 'rl', titleKey: 'presetRlTitle', subtitleKey: 'presetRlSubtitle', document: rl as NativeDocument, defaultOutput: 'inductor' },
   { id: 'rlc', titleKey: 'presetRlcTitle', subtitleKey: 'presetRlcSubtitle', document: rlc as NativeDocument, defaultOutput: 'out' },
   { id: 'vcvs', titleKey: 'presetVcvsTitle', subtitleKey: 'presetVcvsSubtitle', document: vcvs as NativeDocument, defaultOutput: 'out' },
+  { id: 'res-series', titleKey: 'presetResSeriesTitle', subtitleKey: 'presetResSeriesSubtitle', document: resSeries as NativeDocument, defaultOutput: 'out' },
+  { id: 'res-star', titleKey: 'presetResStarTitle', subtitleKey: 'presetResStarSubtitle', document: resStar as NativeDocument, defaultOutput: 'Va' },
+  { id: 'res-bridge', titleKey: 'presetResBridgeTitle', subtitleKey: 'presetResBridgeSubtitle', document: resBridge as NativeDocument, defaultOutput: 'Va' },
 ];
 
 export const copyDocument = (d: NativeDocument): NativeDocument => JSON.parse(JSON.stringify(d)) as NativeDocument;

@@ -1,0 +1,6 @@
+{
+  "circuit": {"schemaVersion":1,"label":"Unbalanced five-resistor bridge","nodes":["0","a","x","y"],
+    "components":[{"id":"Rax","type":"R","p":"a","n":"x","value":1000},{"id":"Rx0","type":"R","p":"x","n":"0","value":2000},{"id":"Ray","type":"R","p":"a","n":"y","value":3000},{"id":"Ry0","type":"R","p":"y","n":"0","value":4000},{"id":"Rxy","type":"R","p":"x","n":"y","value":5000}],
+    "observations":[{"id":"Va","type":"voltage","p":"a","n":"0"}]},
+  "experiment":{"schemaVersion":1,"sources":[],"initial":{"kind":"equilibrium"}}
+}

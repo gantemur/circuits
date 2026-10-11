@@ -7,6 +7,7 @@ import { algebraicSummary, documentIssueText, statusSummary, type DocumentIssue 
 import { language, persistLanguage, readLanguage, setLanguage, t, translate, type Language, type TranslationKey } from './i18n.js';
 import { BuilderUI } from './builder-ui.js';
 import { OnePortUI } from './one-port-ui.js';
+import { ResistorTransformUI } from './resistor-transform-ui.js';
 import { addPanel, createWorkspace, handlePanelFieldChange, movePanel, PanelCalculator,
   panelCsv, reconcilePanels, removePanel, suggestedLayout, type PanelConfig, type PanelResult,
   type PanelType, type WorkspaceView, type NumericPanelField } from './workspace.js';
@@ -37,6 +38,8 @@ const inputDrafts = new Map<string, string>();
 const inputIssues = new Map<string, TranslationKey>();
 const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => validatedChange());
 const onePortUI = new OnePortUI(byId('one-port'), () => state);
+const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => state);
+let transformMethod: 'dc' | 'resistor' = 'dc';
 const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'port'];
 const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort' };
 const sourceUnit = (id: string): 'V' | 'A' => state.document.circuit.components.find(c => c.id === id)?.type === 'I' ? 'A' : 'V';
@@ -70,12 +73,16 @@ function renderView(): void {
   byId('json-editor-view').hidden = workspace.editorView !== 'json';
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-editor-view]'))) button.setAttribute('aria-pressed', String(button.dataset.editorView === workspace.editorView));
   if (workspace.view === 'editor') { builderUI.render(); renderJson(); }
-  if (workspace.view === 'transform') onePortUI.render();
+  byId('one-port').hidden = transformMethod !== 'dc';
+  byId('resistor-transform').hidden = transformMethod !== 'resistor';
+  byId('transform-scope').textContent = t(transformMethod === 'dc' ? 'transformScope' : 'resScope');
+  (byId('transform-method') as HTMLSelectElement).value = transformMethod;
+  if (workspace.view === 'transform') { if (transformMethod === 'dc') onePortUI.render(); else resistorUI.render(); }
 }
 function renderCircuitChoice(): void {
   const select = byId('circuit-select') as HTMLSelectElement;
   const group = (label: TranslationKey, ids: string[]) => `<optgroup label="${translate(label)}">${presets.filter(p=>ids.includes(p.id)).map(p=>`<option value="${e(p.id)}"${state.presetId === p.id ? ' selected' : ''}>${translate(p.titleKey)}</option>`).join('')}</optgroup>`;
-  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}`;
+  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}`;
   const preset = presets.find(p => p.id === state.presetId);
   const modified = preset && JSON.stringify(state.document) !== JSON.stringify(preset.document);
   byId('circuit-status').textContent = state.presetId ? t(modified ? 'circuitModified' : 'circuitPreset') : t('circuitCustom');
@@ -300,6 +307,9 @@ document.addEventListener('toggle',event=>{
 },true);
 document.addEventListener('change',async event=>{
   const target=event.target;
+  if(target instanceof HTMLSelectElement&&target.id==='transform-method'){
+    transformMethod=target.value==='resistor'?'resistor':'dc';renderView();return;
+  }
   if(target instanceof HTMLInputElement&&target.id==='import-file'){
     const file=target.files?.[0];if(!file)return;
     try{const result=importNative(state,await file.text());if(!result.ok){importIssue={kind:'validation',code:result.errorCode??'invalid-document',params:result.errorParams??{}};renderAll();return;}importIssue=null;validatedChange();}
