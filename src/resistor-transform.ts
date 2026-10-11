@@ -96,6 +96,11 @@ function isFailure(v: Matrix | Failure): v is Failure { return !Array.isArray(v)
 
 function checkResponse(a: ResistorNetwork, b: ResistorNetwork, retained: string[], original: Matrix, changed: Matrix): ResistorCheck | Failure {
   const n = retained.length, matrixLimit = 1e-12, currentLimit = 1e-12, powerLimit = 1e-12;
+  // First-order floating-point allowance: subtraction and division for each
+  // incident branch, then accumulation. Four more operations leave room for
+  // coefficient construction and the fixed-gauge evaluation;
+  // this is a diagnostic budget in amperes, not a certified error enclosure.
+  const gamma=(degree:number):number=>{const bound=(3*degree+4)*Number.EPSILON;return bound<1?bound/(1-bound):Infinity;};
   let maxMatrixDifference = 0, maxCurrentDifference = 0, maxPowerDifference = 0;
   for (const m of [original, changed]) for (let i = 0; i < n; i++) {
     const row = m[i]!;
@@ -124,7 +129,7 @@ function checkResponse(a: ResistorNetwork, b: ResistorNetwork, retained: string[
     // sums are physical currents; Laplacian * absolute voltage can instead
     // subtract large common-mode terms and manufacture tiny currents.
     const relative=u.map(v=>v-u[0]!);
-    const currents: number[][]=[];
+    const currents:{values:number[];evaluation:number[];solve:number}[]=[];
     for (const network of [a,b]) {
       const l = resistorLaplacian(network), boundary=retained.map(id=>network.nodes.indexOf(id));
       const hidden=network.nodes.map((_,i)=>i).filter(i=>!boundary.includes(i));
@@ -133,29 +138,39 @@ function checkResponse(a: ResistorNetwork, b: ResistorNetwork, retained: string[
       const solved=solveReal(ii,rhs);
       if (solved.status!=='ok') return fail('numeric-failure','internal-solve',solved.message);
       const x=network.nodes.map((_,i)=>{const k=boundary.indexOf(i);return k>=0?relative[k]!:solved.x[hidden.indexOf(i)]!.re;});
-      const kcl=network.nodes.map(()=>0), incident=network.nodes.map(()=>0);
+      const kcl=network.nodes.map(()=>0), incident=network.nodes.map(()=>0), degree=network.nodes.map(()=>0);
       for(const edge of network.edges){
         const p=network.nodes.indexOf(edge.p),q=network.nodes.indexOf(edge.n);
         const branchCurrent=(x[p]!-x[q]!)/edge.resistance;
         if(!finite(branchCurrent))return fail('numeric-failure','nonfinite','Branch current exceeds numeric range.');
         kcl[p]!+=branchCurrent;kcl[q]!-=branchCurrent;
         incident[p]!+=Math.abs(branchCurrent);incident[q]!+=Math.abs(branchCurrent);
+        degree[p]!++;degree[q]!++;
       }
       // Absolute floor is in amperes; the relative term is scaled by actual
       // incident branch currents, not by cancelling Laplacian products.
       if (hidden.some(i=>!finite(kcl[i]!)||!finite(incident[i]!)||Math.abs(kcl[i]!)>currentLimit+1e-8*incident[i]!))
         return fail('numeric-failure','internal-kcl','Internal KCL residual exceeds current limit.');
-      currents.push(boundary.map(i=>kcl[i]!));
+      const evaluation=degree.map((count,i)=>gamma(count)*incident[i]!);
+      // For a passive resistor network, correcting an internal KCL residual
+      // redistributes no more than its absolute injected current to any one
+      // boundary terminal. Include evaluation error in that residual too.
+      const solve=hidden.reduce((sum,i)=>sum+Math.abs(kcl[i]!)+evaluation[i]!,0);
+      if(!finite(solve)||evaluation.some(v=>!finite(v)))return fail('numeric-failure','nonfinite','Current error allowance exceeds numeric range.');
+      currents.push({values:boundary.map(i=>kcl[i]!),evaluation:boundary.map(i=>evaluation[i]!),solve});
     }
     for (let i=0;i<n;i++) {
-      const c0=currents[0]![i]!, c1=currents[1]![i]!, diff=Math.abs(c0-c1);
+      const c0=currents[0]!.values[i]!, c1=currents[1]!.values[i]!, diff=Math.abs(c0-c1);
       if (!finite(c0)||!finite(c1)||!finite(diff)) return fail('numeric-failure','nonfinite','Boundary current exceeds numeric range.');
       maxCurrentDifference=Math.max(maxCurrentDifference,diff);
-      if (diff>currentLimit+1e-8*Math.max(Math.abs(c0),Math.abs(c1))) return fail('not-equivalent','current','Boundary currents disagree.');
+      const allowance=currentLimit+1e-8*Math.max(Math.abs(c0),Math.abs(c1))+
+        currents[0]!.evaluation[i]!+currents[1]!.evaluation[i]!+currents[0]!.solve+currents[1]!.solve;
+      if(!finite(allowance))return fail('numeric-failure','nonfinite','Current error allowance exceeds numeric range.');
+      if (diff>allowance) return fail('not-equivalent','current','Boundary currents disagree.');
     }
-    if(u.every(v=>v===u[0])&&currents.some(c=>c.some(v=>Math.abs(v)>currentLimit)))
+    if(u.every(v=>v===u[0])&&currents.some(c=>c.values.some(v=>Math.abs(v)>currentLimit)))
       return fail('numeric-failure','common-shift','A common boundary-voltage shift produced nonzero current.');
-    const powers=currents.map(c=>c.reduce((s,v,i)=>s+relative[i]!*v,0));
+    const powers=currents.map(c=>c.values.reduce((s,v,i)=>s+relative[i]!*v,0));
     const difference=Math.abs(powers[0]!-powers[1]!);
     if (!finite(difference)) return fail('numeric-failure','nonfinite','Power exceeds numeric range.');
     maxPowerDifference=Math.max(maxPowerDifference,difference);

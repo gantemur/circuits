@@ -8,6 +8,11 @@ const document=(nodes,edges)=>({circuit:{schemaVersion:1,nodes,components:edges.
 const near=(actual,expected,relative=1e-9)=>assert.ok(Math.abs(actual-expected)<=relative*Math.max(1,Math.abs(expected)),`${actual} ≠ ${expected}`);
 const matrixNear=(actual,expected)=>actual.forEach((row,i)=>row.forEach((value,j)=>near(value,expected[i][j])));
 const success=result=>{assert.equal(result.status,'ok',result.detail);return result;};
+const weightedStar=(names,weights,s)=>parseDocument(JSON.stringify(document([...names,'x'],weights.map((weight,i)=>[`R${i}`,names[i],'x',s/weight]))));
+const analyticStar=(names,weights,s,retained)=>retained.map(p=>retained.map(q=>{
+  const i=names.indexOf(p),j=names.indexOf(q),total=weights.reduce((sum,w)=>sum+w,0);
+  return ((i===j?weights[i]:0)-weights[i]*weights[j]/total)/s;
+}));
 
 test('series and reversed parallel preserve ordered full terminal response',()=>{
   const series=success(transformResistors(fixture('res-series'),['out','0'],{operation:'series',edges:['R1','R2']}));
@@ -76,6 +81,48 @@ test('four-terminal star fills every pair, preserving existing parallel connecti
   assert.ok(result.transformed.edges.some(e=>e.id==='Rab'));
   assert.equal(result.transformed.edges.length,7);
   assert.deepEqual(result.eliminated,['x']);
+});
+
+test('four-terminal weighted star-mesh agrees with independent response at several scales and orders',()=>{
+  const names=['a','b','c','0'],weights=[5,7,3,1];
+  for(const s of [1e-4,1e-6,1,1e3])for(const retained of [names,['0','c','b','a'],['b','a','0','c']]){
+    const d=weightedStar(names,weights,s),expected=analyticStar(names,weights,s,retained);
+    const result=transformResistors(d,retained,{operation:'star-mesh',center:'x'});
+    assert.equal(result.status,'ok',`${s} ${retained}: ${result.code} ${result.detail}`);
+    for(const response of [result.originalResponse,result.transformedResponse])for(let i=0;i<4;i++)for(let j=0;j<4;j++)
+      assert.ok(Math.abs(response[i][j]-expected[i][j])<=2e-11*Math.max(...expected.flat().map(Math.abs)),`${s} ${retained}: ${i},${j}`);
+    assert.deepEqual(parseDocument(result.json),result.document);
+    const voltages=new Map([['a',1],['b',2],['c',3],['0',4]]);
+    const expectedCurrent=new Map([['a',-5/s],['b',0],['c',3/s],['0',2/s]]);
+    const actual=new Map(names.map(id=>[id,0]));
+    let incidentAtB=0;
+    for(const edge of result.transformed.edges){const current=(voltages.get(edge.p)-voltages.get(edge.n))/edge.resistance;
+      actual.set(edge.p,actual.get(edge.p)+current);actual.set(edge.n,actual.get(edge.n)-current);
+      if(edge.p==='b'||edge.n==='b')incidentAtB+=Math.abs(current);}
+    for(const id of names)assert.ok(Math.abs(actual.get(id)-expectedCurrent.get(id))<=1e-10/s,`${s} ${retained}: I(${id})=${actual.get(id)}`);
+    if(s===1e-4&&retained===names){
+      assert.ok(Math.abs(incidentAtB-43750)<1e-7,`noncancelled current sum ${incidentAtB} A`);
+      assert.ok(Math.abs(actual.get('b'))<1e-9,`cancelling net current ${actual.get('b')} A`);
+    }
+  }
+});
+
+test('weighted three-terminal star and delta inverse keep a cancelling terminal current',()=>{
+  const names=['a','b','0'],weights=[3,7,3];
+  for(const s of [1e-6,1e-4,1])for(const retained of [names,['0','b','a']]){
+    const d=weightedStar(names,weights,s),expected=analyticStar(names,weights,s,retained);
+    const first=transformResistors(d,retained,{operation:'star-delta',center:'x'});
+    assert.equal(first.status,'ok',`${s} ${retained}: ${first.code} ${first.detail}`);
+    const inverse=transformResistors(first.document,retained,{operation:'delta-star',edges:first.generated.map(edge=>edge.id)});
+    assert.equal(inverse.status,'ok',`${s} ${retained}: inverse ${inverse.code} ${inverse.detail}`);
+    for(const response of [first.originalResponse,first.transformedResponse,inverse.transformedResponse])for(let i=0;i<3;i++)for(let j=0;j<3;j++)
+      assert.ok(Math.abs(response[i][j]-expected[i][j])<=2e-11*Math.max(...expected.flat().map(Math.abs)),`${s} ${retained}: ${i},${j}`);
+    const voltages=new Map([['a',1],['b',2],['0',3]]),currents=new Map(names.map(id=>[id,0]));
+    for(const edge of first.transformed.edges){const current=(voltages.get(edge.p)-voltages.get(edge.n))/edge.resistance;
+      currents.set(edge.p,currents.get(edge.p)+current);currents.set(edge.n,currents.get(edge.n)-current);}
+    for(const [id,target] of [['a',-3/s],['b',0],['0',3/s]])
+      assert.ok(Math.abs(currents.get(id)-target)<=1e-10/s,`${s} ${retained}: I(${id})=${currents.get(id)}`);
+  }
 });
 
 test('unbalanced bridge has no initial series/parallel move but bulk Kron matches independent KCL',()=>{
