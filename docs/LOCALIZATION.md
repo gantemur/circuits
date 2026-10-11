@@ -1,6 +1,6 @@
 # Interface terminology and data conventions
 
-Phase 1A supports English (`en`) and Mongolian Cyrillic (`mn`). New user-facing features should add both translations to the typed catalog in `web/i18n.ts`, keep interpolation placeholders aligned, and use stable diagnostic codes rather than parsing English messages. Technical wording here is a reviewable working glossary.
+Phase 1B continues English (`en`) and Mongolian Cyrillic (`mn`). New user-facing features should add both translations to the typed catalog in `web/i18n.ts`, keep interpolation placeholders aligned, and use stable diagnostic codes rather than parsing English messages. Technical wording here is a reviewable working glossary.
 
 | English | Монгол | Use |
 | --- | --- | --- |
@@ -24,6 +24,10 @@ Phase 1A supports English (`en`) and Mongolian Cyrillic (`mn`). New user-facing 
 | Pivot ratio | Гол элементүүдийн харьцаа (pivot ratio) | Smallest/largest accepted Gaussian-elimination pivots; not a circuit pole or condition number |
 | Ground / reference node | Газардалт / лавлах зангилаа | Native node ID `0` |
 | Component contribution | Элементийн хувь нэмэр | Kernel-recorded matrix provenance |
+| Circuit builder | Хэлхээ бүтээгч | Form-based entry, without a wiring canvas |
+| Unapplied draft | Хэрэглэгдээгүй ноорог | Editable form or JSON text that is not the analyzed circuit |
+| Controlling branch | Удирдах салаа | Retained voltage-type branch for CCVS/CCCS control |
+| Ordered terminals | Эрэмбэлсэн туйлууд | `V(p)−V(n)` and positive current `p→n` |
 
 Component IDs, node IDs, user-provided labels, device codes, equations, and SI symbols remain unchanged in both languages. Native JSON uses the version-1 English field names and finite JSON numbers. Frequency and transient CSV headers, statuses, decimal points, and numerical values are likewise locale-neutral so exports round-trip and compare identically across languages. The interface translates labels and diagnostic summaries; expandable **Technical details (English)** retains original kernel messages where useful.
 

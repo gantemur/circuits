@@ -13,6 +13,8 @@ await build({ entryPoints: ['web/i18n.ts'], bundle: true, platform: 'neutral', f
   target: 'es2022', outfile: 'dist/i18n-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/schematic.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/schematic-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/builder.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/builder-test.js', logLevel: 'silent' });
 const [html, app, style] = await Promise.all([
   readFile('web/index.html', 'utf8'), readFile('dist/app.js'), readFile('web/style.css'),
 ]);

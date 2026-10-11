@@ -10,6 +10,8 @@ The repository is named `circuits`. **Circuits Unfolded** is the working applica
 
 **Phase 1A is implemented:** the browser lab on `main` has eight editable examples, including the default voltage divider and an RC high-pass, plus an editable native JSON panel. It uses the Phase 0 TypeScript kernel for numerical results and shows SVG schematics, DC and frequency responses, backward Euler transients where storage is present, matrix provenance, and JSON/CSV exports.
 
+**Phase 1B is implemented on `codex/phase-1b-circuit-builder` for review:** a form-based **Build / edit circuit** panel constructs supported linear circuits without writing JSON. This branch has not been merged or deployed. The published site remains the Phase 1A release described below.
+
 **Release status:** the eight-example lab and native JSON editor are published at [https://gantemur.github.io/circuits/](https://gantemur.github.io/circuits/) from `7fd6c11` ([validation](https://github.com/gantemur/circuits/actions/runs/38096759070), [Pages deployment](https://github.com/gantemur/circuits/actions/runs/38096759088)). A fresh public browser session verified the default divider, editable results, RC high-pass responses, custom JSON validation, English and Mongolian at 390 px, and file import. The browser download event for JSON export could not be captured in this release check; an earlier browser pass verified JSON export and round-trip import.
 
 The interface supports English and Mongolian Cyrillic. Use the **English / Монгол** buttons in the header to switch immediately; the selected language persists in browser storage when available. The language choice changes presentation only: native JSON field names and values, CSV headers and decimal format, SI symbols, circuit IDs, and computed results stay the same. See the [terminology glossary and export convention](docs/LOCALIZATION.md).
@@ -33,6 +35,8 @@ The release target is [https://gantemur.github.io/circuits/](https://gantemur.gi
 The [validation workflow](.github/workflows/validate.yml) runs on pushes and pull requests with Node 24, `npm ci`, tests, typecheck, and the application build. The [Pages workflow](.github/workflows/pages.yml) runs on `main` after its validation job succeeds, packages the static bundle, and deploys it using GitHub Pages actions. A manual run selected on any branch other than `main` skips deployment. Repository **Settings → Pages** uses **GitHub Actions** as the build and deployment source. To redeploy, use **Actions → Publish browser lab → Run workflow**, selecting `main`. No custom domain is configured. Confirm the deployment job succeeds and check the public URL in a browser before treating a release as live.
 
 Start with the **voltage divider**: change R1, R2, or Vin and inspect the kernel-computed DC value and constant transfer. Choose **RC high-pass** to see zero DC gain and the output jump at a source step. Use **Edit circuit JSON** to enter a supported native document, **Apply JSON** to validate and load it, or **Restore current circuit** to discard the editor draft. Invalid JSON leaves the current circuit intact. For the original low-pass demonstration, select **RC low-pass**, select **R**, and change 1000 Ω to 2000 Ω. The AC result at the inspect frequency changes from `0.5−0.5j` to `0.2−0.4j`, and the transfer and transient plots recompute. Select R again to see its terminal law and highlighted `K` matrix contributions. Source DC, RMS AC phasors, time waveform, and initial storage state have separate controls. Exported JSON is the strict kernel document, without drawing metadata.
+
+On the Phase 1B task branch, **Build / edit circuit** can start an empty circuit or copy the current one. Add nodes, components, sources, and named outputs; choose terminals and control branches; then **Apply circuit** to validate and analyze. **Discard draft** reloads the current validated circuit. An incomplete draft does not change results. If another workflow changes the current circuit while either the form or JSON has unapplied edits, that draft is retained and Apply is blocked until the user explicitly reloads it. Only the validated circuit is exported. The form supports all existing kernel devices and source waveforms; it does not draw custom wiring.
 
 ## Run the kernel
 
@@ -63,9 +67,9 @@ See [the API and native format](docs/KERNEL_API.md), [fixture formulas](fixtures
 
 The solver uses dense floating-point systems for small linear circuits. It reports numerical rank/consistency and physical residuals, not certified conditioning or device accuracy. Initializers reject unsupported impulsive/high-index cases. Algebraic transfer extraction is limited to one storage element with a single dynamic diagonal and an invertible algebraic block; other supported circuits still have numerical frequency evaluation. Fixed-step backward Euler is first order and has no adaptive error control.
 
-The lab supports eight preset drawings; a valid custom or imported topology outside them gets a named node/component table. The lab handles strict native v1 documents through file import/export and the text editor, but does not offer a graphical wiring editor. Its numerical sweep is capped at 241 points and transient work at 3000 intervals. Zero magnitude has undefined logarithmic magnitude and phase; failed samples are gaps with statuses. Browser plots are numerical, and algebraic extraction remains restricted to the kernel's one-storage-element cases. The app does not infer internal stability from an input-output denominator.
+The lab supports eight preset drawings; a valid custom or imported topology outside them gets a named node/component table. On the Phase 1B branch, the form builder and JSON editor both create strict native v1 documents, alongside file import/export. There is no draggable wiring canvas or automatic custom schematic layout. Its numerical sweep is capped at 241 points and transient work at 3000 intervals. Zero magnitude has undefined logarithmic magnitude and phase; failed samples are gaps with statuses. Browser plots are numerical, and algebraic extraction remains restricted to the kernel's one-storage-element cases. The app does not infer internal stability from an input-output denominator.
 
-The next unresolved milestone is an explicitly specified Phase 1B or later scope for broader circuit editing and analysis. Nonlinear models, unrestricted symbolic algebra, theorem/reduction UI, synthesis, and graphical wiring are not part of Phase 1A.
+The next unresolved milestone after this branch is an explicitly specified Phase 1C or later scope. Nonlinear models, unrestricted symbolic algebra, theorem/reduction UI, synthesis, and graphical wiring are not part of Phase 1B.
 
 ## Intended laboratory
 
@@ -89,6 +93,7 @@ The defining feature is the connection between three views: schematic and physic
 | [docs/VISION.md](docs/VISION.md) | Full product direction and staged development |
 | [docs/MVP_SPECIFICATION.md](docs/MVP_SPECIFICATION.md) | Exact scope and acceptance criteria for Phase 0 |
 | [docs/PHASE_1_SPECIFICATION.md](docs/PHASE_1_SPECIFICATION.md) | Scope and acceptance criteria for the Phase 1A browser lab |
+| [docs/PHASE_1B_SPECIFICATION.md](docs/PHASE_1B_SPECIFICATION.md) | Scope and acceptance criteria for the Phase 1B form builder |
 | [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | English/Mongolian terminology and language-neutral export convention |
 | [docs/MATHEMATICAL_CONVENTIONS.md](docs/MATHEMATICAL_CONVENTIONS.md) | Terminal signs, matrix signs, phasors, units, and evidence conventions |
 | [docs/REFERENCE_WORKFLOW.md](docs/REFERENCE_WORKFLOW.md) | How the companion book is supplied and used without publishing it |
@@ -105,7 +110,7 @@ The book manuscript and its source tree are not distributed in this repository. 
 
 ## Technical direction
 
-The Phase 1A application runs entirely in the browser and produces static assets for GitHub Pages hosting. The mathematical kernel is independent of the interface and also runs under Node for tests and reproducible calculations. It uses TypeScript, modified nodal analysis, small real and complex linear solves, and a descriptor-system formulation.
+The Phase 1B application runs entirely in the browser and produces static assets for GitHub Pages hosting after release integration. The mathematical kernel is independent of the interface and also runs under Node for tests and reproducible calculations. It uses TypeScript, modified nodal analysis, small real and complex linear solves, and a descriptor-system formulation.
 
 No account, runtime server, or external AI API is required to use the built app. During development, coding assistants can help implement and check the software.
 

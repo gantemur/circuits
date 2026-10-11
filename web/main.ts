@@ -6,6 +6,7 @@ import { plot } from './plot.js';
 import { algebraicSummary, statusSummary, validationSummary } from './diagnostics.js';
 import { language, persistLanguage, readLanguage, setLanguage, t, translate,
   type Language, type TranslationKey } from './i18n.js';
+import { BuilderUI } from './builder-ui.js';
 import type { Component, SourceValue, Waveform } from '../src/model.js';
 
 let storage: Storage | undefined;
@@ -18,6 +19,7 @@ let validationIssue: (Issue & { id: string }) | null = null;
 let importIssue: (Issue & { kind: 'document' }) | null = null;
 let importReadFailed = false;
 let jsonDirty = false;
+let jsonBase = exportNative(state);
 let jsonIssue: (Issue & { kind: 'document' }) | null = null;
 let notice: Issue | null = null;
 const byId = (id: string): HTMLElement => {
@@ -25,6 +27,7 @@ const byId = (id: string): HTMLElement => {
   if (!value) throw new Error(`Missing interface element ${id}`);
   return value;
 };
+const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => recompute());
 const fmt = (value: number, digits = 5): string => {
   if (!Number.isFinite(value)) return String(value);
   if (value === 0) return '0';
@@ -61,12 +64,13 @@ function renderImportIssue(): void {
 function jsonEditor(): HTMLTextAreaElement { return byId('json-editor') as HTMLTextAreaElement; }
 function renderJsonIssue(): void {
   const editor=jsonEditor();
-  editor.setAttribute('aria-invalid',String(!!jsonIssue));
-  byId('json-error').innerHTML=jsonIssue
+  const conflict=jsonDirty && jsonBase!==exportNative(state);
+  editor.setAttribute('aria-invalid',String(!!jsonIssue||conflict));
+  byId('json-error').innerHTML=conflict ? escapeHtml(t('jsonConflict')) : jsonIssue
     ? `${escapeHtml(t('jsonRejected',{reason:issueText(jsonIssue)}))}${technical(jsonIssue.raw)}` : '';
 }
 function syncJsonEditor(force=false): void {
-  if(force || !jsonDirty) { jsonEditor().value=exportNative(state); jsonDirty=false; }
+  if(force || !jsonDirty) { jsonEditor().value=exportNative(state); jsonBase=exportNative(state); jsonDirty=false; }
   renderJsonIssue();
 }
 function switchLanguage(next: Language): void {
@@ -190,8 +194,8 @@ function matrix(name:'E'|'K'|'B',a:LabAnalysis):string {
 }
 function renderEquations(a:LabAnalysis):void {
   const output=a.assembly.outputs.find(o=>o.id===state.output)!;
-  const relation=output.kind==='fixed'?`${state.output} = Cₒ·x + Dₒ·u; Cₒ=[${output.C.map(fmt).join(', ')}], Dₒ=[${output.D.map(fmt).join(', ')}]`:
-    `${state.output} = Q·ẋ; Q=[${output.Q.map(fmt).join(', ')}] (${t('derivativeObservation')})`;
+  const relation=output.kind==='fixed'?`${state.output} = Cₒ·x + Dₒ·u; Cₒ=[${output.C.map(v=>fmt(v)).join(', ')}], Dₒ=[${output.D.map(v=>fmt(v)).join(', ')}]`:
+    `${state.output} = Q·ẋ; Q=[${output.Q.map(v=>fmt(v)).join(', ')}] (${t('derivativeObservation')})`;
   const c=a.assembly.contributions.filter(p=>p.component===state.selectedComponent);
   const provenance=c.length?`<div class="table-wrap"><table class="result-table provenance-table"><thead><tr><th>${t('matrix')}</th><th>${t('row')}</th><th>${t('column')}</th><th>${t('selectedValue')}</th><th>${t('units')}</th><th>${t('terminalLaw')}</th></tr></thead><tbody>${c.map(p=>`<tr><td>${p.matrix}</td><td>${escapeHtml(p.row)}</td><td>${escapeHtml(p.column)}</td><td>${fmt(p.value)}</td><td>${escapeHtml(p.units)}</td><td>${escapeHtml(p.law)}</td></tr>`).join('')}</tbody></table></div>`:`<p class="muted small">${t('provenanceHint')}</p>`;
   const dc=a.dc;
@@ -208,7 +212,7 @@ function renderResults():void {
 function renderStatus():void {
   byId('global-status').innerHTML=notice?`<div class="error-card">${escapeHtml(issueText(notice))}${technical(notice.raw)}</div>`:'';
 }
-function renderAll():void { renderExamples();renderComponents();renderSources();renderControls();renderSchematic();renderStatus();renderResults();syncJsonEditor(); }
+function renderAll():void { renderExamples();renderComponents();renderSources();renderControls();renderSchematic();renderStatus();renderResults();syncJsonEditor();builderUI.render(); }
 function recompute():void {
   validationIssue=null;
   try { analysis=analyze(state);notice=null; }
@@ -311,12 +315,13 @@ document.addEventListener('click',event=>{
   const target=event.target as Element;
   const languageButton=target.closest<HTMLButtonElement>('[data-language]');
   if(languageButton){switchLanguage(languageButton.dataset.language as Language);return;}
-  const example=target.closest<HTMLElement>('[data-example]');if(example){state=createLab(example.dataset.example);jsonIssue=null;jsonDirty=false;recompute();return;}
+  const example=target.closest<HTMLElement>('[data-example]');if(example){state=createLab(example.dataset.example);recompute();return;}
   const comp=target.closest<HTMLElement>('[data-component], [data-schematic-component]');
   if(comp){state.selectedComponent=comp.dataset.component??comp.dataset.schematicComponent??null;if(analysis)renderAll();else recompute();return;}
   const button=target.closest<HTMLButtonElement>('button');
-  if(button?.id==='reset-example'){state=resetExample(state);jsonIssue=null;jsonDirty=false;recompute();}
+  if(button?.id==='reset-example'){state=resetExample(state);recompute();}
   if(button?.id==='apply-json'){
+    if(jsonDirty&&jsonBase!==exportNative(state)){renderJsonIssue();return;}
     const result=importNative(state,jsonEditor().value);
     if(!result.ok){jsonDirty=true;jsonIssue={kind:'document',code:result.errorCode??'invalid-document',params:result.errorParams??{},raw:result.error};renderJsonIssue();return;}
     jsonIssue=null;jsonDirty=false;recompute();return;
@@ -339,7 +344,7 @@ document.addEventListener('change',async event=>{
     try{
       const result=importNative(state,await file.text());
       if(!result.ok){importReadFailed=false;importIssue={kind:'document',code:result.errorCode??'invalid-document',params:result.errorParams??{},raw:result.error};renderImportIssue();return;}
-      importIssue=null;renderImportIssue();jsonIssue=null;jsonDirty=false;recompute();
+      importIssue=null;renderImportIssue();recompute();
     }catch(error){importReadFailed=true;importIssue={kind:'document',code:'invalid-document',params:{},raw:error instanceof Error?error.message:String(error)};renderImportIssue();}
     finally { target.value=''; }
     return;

@@ -45,13 +45,15 @@ export function updateDocument(state: LabState, mutate: (d: NativeDocument) => v
     return { ok: true };
   } catch (error) { return editError(error); }
 }
-export function importNative(state: LabState, json: string): EditResult {
+export function importNative(state: LabState, json: string, preserveSelection = false): EditResult {
   try {
     const next = parseDocument(json);
     const p = matchingPreset(next.circuit);
     state.document = next; state.presetId = p?.id ?? null;
-    state.input = next.experiment.sources[0]?.id ?? '';
-    state.output = next.circuit.observations.find(o => o.type === 'voltage')?.id ?? next.circuit.observations[0]?.id ?? '';
+    state.input = preserveSelection && next.experiment.sources.some(s => s.id === state.input)
+      ? state.input : next.experiment.sources[0]?.id ?? '';
+    state.output = preserveSelection && next.circuit.observations.some(o => o.id === state.output)
+      ? state.output : next.circuit.observations.find(o => o.type === 'voltage')?.id ?? next.circuit.observations[0]?.id ?? '';
     state.selectedComponent = null; state.revision++;
     return { ok: true };
   } catch (error) { return editError(error); }

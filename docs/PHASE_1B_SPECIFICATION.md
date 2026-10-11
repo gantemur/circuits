@@ -1,0 +1,26 @@
+# Phase 1B: form-based linear circuit builder
+
+Version 0.1, 10 October 2026. Active scope for `codex/phase-1b-circuit-builder`, based on released `main` at `812b5d5`.
+
+## Outcome and boundary
+
+Add a bounded form workflow to construct and edit strict native version-1 linear circuit documents without typing JSON. Keep the Phase 0 kernel, device laws, numerical methods, native schema, and public API unchanged. The current eight presets, JSON editor, file import/export, analyses, and verified drawings remain available. The builder is a form, not a draggable schematic or automatic layout engine. No new device physics, theorem UI, or synthesis is included.
+
+## Builder contract
+
+- The builder has a distinct draft and an explicit Apply action. New begins with ground `0`, no components, no observations, no sources, and equilibrium initialization. Copy current and Discard reload the latest validated document. Incomplete or invalid draft fields never replace the analyzed circuit or its results.
+- Ground `0` remains present. Users can add, rename, and remove other nodes; renaming updates references within the draft. A node still used by a terminal, control, or voltage observation cannot be removed. A component referenced by a current observation or current-controlled source cannot be removed until those references change. Deleting a source removes its own experiment source entry; deleting storage removes its own specified initial value. Nothing else is silently cascade-deleted.
+- Support R, C, L, V, I, VCVS, VCCS, CCVS, and CCCS. The form shows ordered `p,n` terminals, the `cp,cn` control pair where relevant, and retained voltage-type branch choices for current control. Positive current is `p→n` and terminal voltage is `V(p)−V(n)`. New component IDs are stable; existing IDs need not be renamed. The form shows type-appropriate values and SI units.
+- Independent source definitions include DC, optional complex RMS AC, and optional constant, scheduled-step, or sinusoidal time waveform. Sinusoidal time amplitude is peak, distinct from RMS AC. New sources visibly default to DC 0, RMS AC `0+0j`, and constant time value 0. Voltage and current observations are named. Equilibrium and complete storage-initialization policies remain available; new storage values default to zero in specified mode.
+- Loading a current document into the builder preserves all supported native fields, including labels, omitted optional AC/waveform fields, and explicit storage values. Apply converts numeric draft strings to finite numbers, then uses the strict native parser. Invalid text and parser errors preserve the draft and current document. A valid document may still produce solver diagnostics such as inconsistent ideal sources.
+- A draft records the validated document from which it started. If another workflow changes the analyzed document, Apply stops and asks for explicit reload. The JSON editor follows the same conflict rule for its unapplied text. Language switching and analysis rerenders keep both drafts. Applying a draft updates the component/source/output controls, equations, provenance, and numerical analyses together. Valid input/output selections survive where their IDs remain; otherwise the lab chooses available replacements. Without either, show analysis unavailable. Only a matching verified preset topology gets its drawing; other circuits show the actual topology table. Exports contain only the validated native document.
+
+## Localization and accessibility
+
+All builder controls, help text, states, errors, and reference-protection messages use the shared typed English/Mongolian catalog. Scientific IDs, SI symbols, JSON keys, and numeric values remain language-independent. Labels bind to form fields; status and error messages use live or alert regions. At a 390 px viewport, rows wrap without horizontal page overflow. The terminology glossary covers draft, control branch, and terminal orientation.
+
+## Acceptance and verification
+
+Focused tests cover draft/native round-trip, optional-field preservation, all reference rules, invalid Apply and conflict preservation, selected-input/output behavior, and successful Apply. Independent physics checks include a 2000 Ω output load on the 12 V divider (`Vout=6 V`, restored to 8 V after removal), the form-built RC high-pass (`H(j/RC)=(1+j)/2`, magnitude `1/√2`, phase `+π/4`, immediate one-volt step jump and backward Euler decay), a controlled source retaining its control and source values, and a valid contradictory-source document whose DC solve reports `inconsistent`.
+
+Run `npm test`, `npm run typecheck`, `npm run build`, `npm run build:site`, and `git diff --check`. Exercise the actual local `/circuits/` browser app in English and Mongolian at 390 px: build, Apply, invalid correction and Discard, blocked node/component deletion, language changes with incomplete drafts, topology fallback, and native JSON/file round-trip where browser tooling permits. Report unavailable interactions separately. Phase 1B is prepared on a task branch and is not merged or deployed by this task.
