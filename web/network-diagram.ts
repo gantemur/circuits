@@ -23,8 +23,17 @@ interface RoutedEdge {
   segments: Segment[];
   crossingSegments: Segment[];
   center: Position;
+  along: Position;
+  normal: Position;
   angle: number;
 }
+
+// The visible symbol is 62×20 px. CSS can draw a 4 px selected outline;
+// these guards include its half-stroke and a small separation from other ink.
+const SYMBOL_HALF_LENGTH = 31;
+const SYMBOL_HALF_WIDTH = 10;
+const SYMBOL_CLEARANCE = 3;
+const WIRE_SYMBOL_CLEARANCE = 4;
 
 const e = escapeHtml;
 const value = (n: number): string => n === 0 ? '0' : Number(n.toPrecision(6)).toString();
@@ -33,6 +42,48 @@ const point = (x: number, y: number): Position => ({ x, y });
 const cross = (a: Position, b: Position): number => a.x * b.y - a.y * b.x;
 const difference = (a: Position, b: Position): Position => point(a.x - b.x, a.y - b.y);
 const distance = (a: Position, b: Position): number => Math.hypot(a.x - b.x, a.y - b.y);
+const dot = (a: Position, b: Position): number => a.x * b.x + a.y * b.y;
+
+/** Separating-axis check for the two actual rotated resistor rectangles. */
+function symbolsCollide(first: RoutedEdge, second: RoutedEdge): boolean {
+  const between = difference(second.center, first.center);
+  const axes = [first.along, first.normal, second.along, second.normal];
+  for (const axis of axes) {
+    const firstRadius = Math.abs(dot(axis, first.along)) * (SYMBOL_HALF_LENGTH + SYMBOL_CLEARANCE)
+      + Math.abs(dot(axis, first.normal)) * (SYMBOL_HALF_WIDTH + SYMBOL_CLEARANCE);
+    const secondRadius = Math.abs(dot(axis, second.along)) * (SYMBOL_HALF_LENGTH + SYMBOL_CLEARANCE)
+      + Math.abs(dot(axis, second.normal)) * (SYMBOL_HALF_WIDTH + SYMBOL_CLEARANCE);
+    if (Math.abs(dot(axis, between)) >= firstRadius + secondRadius) return false;
+  }
+  return true;
+}
+
+/** Rotate a wire into the symbol's axes, then clip it against the padded box. */
+function wireHitsSymbol([start, end]: Segment, symbol: RoutedEdge): boolean {
+  const from = difference(start, symbol.center);
+  const to = difference(end, symbol.center);
+  const localStart = [dot(from, symbol.along), dot(from, symbol.normal)];
+  const localEnd = [dot(to, symbol.along), dot(to, symbol.normal)];
+  const bounds = [SYMBOL_HALF_LENGTH + WIRE_SYMBOL_CLEARANCE,
+    SYMBOL_HALF_WIDTH + WIRE_SYMBOL_CLEARANCE];
+  let enter = 0;
+  let leave = 1;
+  for (let axis = 0; axis < 2; axis++) {
+    const initial = localStart[axis]!;
+    const change = localEnd[axis]! - initial;
+    const halfSize = bounds[axis]!;
+    if (Math.abs(change) < 1e-9) {
+      if (Math.abs(initial) > halfSize) return false;
+      continue;
+    }
+    const first = (-halfSize - initial) / change;
+    const second = (halfSize - initial) / change;
+    enter = Math.max(enter, Math.min(first, second));
+    leave = Math.min(leave, Math.max(first, second));
+    if (enter > leave) return false;
+  }
+  return true;
+}
 
 function pointToSegmentDistance(p: Position, [a, b]: Segment): number {
   const dx = b.x - a.x, dy = b.y - a.y;
@@ -117,7 +168,7 @@ export function resistorNetworkSvg(network: ResistorNetwork, options: NetworkDra
     const key = JSON.stringify([edge.p, edge.n].sort());
     const rank = pairs.get(key) ?? 0;
     pairs.set(key, rank + 1);
-    const offset = (rank - ((pairCounts.get(key) ?? 1) - 1) / 2) * 25;
+    const offset = (rank - ((pairCounts.get(key) ?? 1) - 1) / 2) * 30;
     const dx = b.x - a.x, dy = b.y - a.y;
     const length = Math.hypot(dx, dy);
     if (length < 90) return null; // The 62 px symbol needs visible leads.
@@ -141,6 +192,7 @@ export function resistorNetworkSvg(network: ResistorNetwork, options: NetworkDra
       if (along < 44 && across < 23) return null;
     }
     routes.push({ edge, segments, crossingSegments:[[a,start],[start,end],[end,b]], center,
+      along:point(ux,uy), normal:point(normalX,normalY),
       angle: Math.atan2(dy, dx) * 180 / Math.PI });
   }
 
@@ -154,6 +206,11 @@ export function resistorNetworkSvg(network: ResistorNetwork, options: NetworkDra
         if (shared.some(id => distance(crossing, positions[id]!) < 13)) continue;
         return null;
       }
+      // Sharing a terminal only permits the wires to meet at that terminal.
+      // It never excuses overlapping symbols or another wire crossing a symbol.
+      if (symbolsCollide(first, second)) return null;
+      if (first.segments.some(segment => wireHitsSymbol(segment, second)) ||
+          second.segments.some(segment => wireHitsSymbol(segment, first))) return null;
     }
   }
 

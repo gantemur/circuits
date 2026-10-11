@@ -101,6 +101,7 @@ test('all six resistor methods have a selectable explicit preview and unavailabl
     assert.equal(view.ui.latestJson,null,operation);
     view.click('#res-preview');
     assert.match(view.root.innerHTML,/Verified terminal-equivalent preview/,operation);
+    assert.match(view.root.innerHTML,/class="one-port-layout res-layout"/,operation);
     assert.ok(view.ui.latestJson,operation);
   }
   const series=uiFor(createLab('res-series'));
@@ -189,7 +190,7 @@ test('parallel branches lead all the way to both real node centers',()=>{
   const branchPaths=[...svg.matchAll(/<g class="network-edge[^>]*><title>[^<]*<\/title><path class="network-wire" d="([^"]+)"/g)].map(m=>m[1]);
   assert.equal(branchPaths.length,2);
   for(const path of branchPaths){
-    assert.match(path,/^M95 160L95 (147\.5|172\.5)/);
+    assert.match(path,/^M95 160L95 (145|175)/);
     assert.match(path,/L585 160$/);
     assert.equal((path.match(/M/g)??[]).length,4);
   }
@@ -260,4 +261,63 @@ test('RC capacitor and circular voltage source leads meet their symbol boundarie
   assert.match(html,/M467 195L467 256/);
   assert.match(html,/M88 120L88 159/);
   assert.match(html,/M88 209L88 256/);
+});
+
+test('automatic five-resistor Kron layout falls back for overlapping rotated symbols without losing the reduction',()=>{
+  const state=createLab('res-series');
+  const document={circuit:{schemaVersion:1,nodes:['0','out','a','b','c'],components:[
+    ['R1','0','a'],['R2','0','c'],['R3','a','c'],['R4','c','out'],['R5','b','out']]
+      .map(([id,p,n])=>({id,type:'R',p,n,value:1000})),
+    observations:[{id:'Vout',type:'voltage',p:'0',n:'out'}]},
+    experiment:{schemaVersion:1,sources:[],initial:{kind:'equilibrium'}}};
+  assert.equal(importNative(state,JSON.stringify(document)).ok,true);
+  const network={nodes:state.document.circuit.nodes,edges:state.document.circuit.components.map(c=>({id:c.id,p:c.p,n:c.n,resistance:c.value}))};
+  const retained=['0','out'];
+  const positions=networkPositions(network,retained);
+  assert.deepEqual([positions.a,positions.b,positions.c],[{x:285,y:75},{x:285,y:245},{x:395,y:75}]);
+  assert.equal(resistorNetworkSvg(network,{positions,retained,label:'colliding symbols'}),null);
+  const original=exportNative(state);
+  const choice=resistorCandidates(network,retained).find(c=>c.selection.operation==='kron');
+  assert.ok(choice);
+  const result=transformResistors(state.document,retained,choice.selection);
+  assert.equal(result.status,'ok');
+  // 0–c has a 1000 Ω path in parallel with the 0–a–c 2000 Ω path;
+  // c–out adds 1000 Ω. The b–out leaf carries no boundary current.
+  assert.ok(Math.abs(result.transformed.edges[0].resistance-5000/3)<1e-9);
+  assert.deepEqual(result.transformed.nodes,retained);
+  const view=uiFor(state);
+  view.change('res-operation','kron');view.click('#res-preview');
+  assert.match(view.root.innerHTML,/Verified terminal-equivalent preview/);
+  assert.match(view.root.innerHTML,/A reliable compact drawing is unavailable/);
+  assert.doesNotMatch(view.root.innerHTML,/class="one-port-layout res-layout"/);
+  for(const id of ['R1','R2','R3','R4','R5'])assert.match(view.root.innerHTML,new RegExp(`<td>${id}</td>`));
+  assert.match(view.root.innerHTML,/R_kron/);
+  assert.match(view.root.innerHTML,/1666\.66667 Ω/);
+  assert.match(view.root.innerHTML,/Use transformed circuit/);
+  assert.equal(exportNative(state),original);
+  const exported=JSON.parse(view.ui.latestJson);
+  assert.equal(exported.circuit.components.length,1);
+  assert.ok(Math.abs(exported.circuit.components[0].value-5000/3)<1e-9);
+});
+
+test('another branch wire near a rotated symbol triggers fallback without requiring centerline crossing',()=>{
+  const network={nodes:['a','b','c','d'],edges:[
+    {id:'R1',p:'a',n:'b',resistance:1000},{id:'R2',p:'c',n:'d',resistance:1000}]};
+  const base={a:{x:95,y:160},b:{x:585,y:160},c:{x:250,y:173.5},d:{x:650,y:173.5}};
+  // The resistor boxes have centers (340,160) and (450,173.5), so their
+  // 62 px lengths do not overlap. R2's lead passes 3.5 px below R1's fill.
+  assert.equal(resistorNetworkSvg(network,{positions:base,label:'wire near symbol'}),null);
+  const clear={...base,c:{x:250,y:190},d:{x:650,y:190}};
+  assert.ok(resistorNetworkSvg(network,{positions:clear,label:'clear routes'}));
+});
+
+test('separate parallel branches with overlapping symbols are rejected without a wire collision',()=>{
+  const network={nodes:['a','b','c','d'],edges:[
+    {id:'upper',p:'a',n:'b',resistance:1000},{id:'lower',p:'c',n:'d',resistance:1000}]};
+  // Centers are (340,160) and (340,179). The 20 px tall rectangles overlap
+  // by 1 px, while their wire centerlines and all four nodes stay distinct.
+  const overlapping={a:{x:95,y:160},b:{x:585,y:160},c:{x:95,y:179},d:{x:585,y:179}};
+  assert.equal(resistorNetworkSvg(network,{positions:overlapping,label:'overlapping symbols'}),null);
+  const separated={...overlapping,c:{x:95,y:190},d:{x:585,y:190}};
+  assert.ok(resistorNetworkSvg(network,{positions:separated,label:'separate symbols'}));
 });
