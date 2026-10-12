@@ -91,3 +91,7 @@ Exact node/component IDs, generated resistor names, equations, units, and JSON r
 | Cutoff | Заагийн давтамж | Overall −3 dB point, distinct from an individual element break |
 
 The translated filter guides keep native IDs such as `resistorVoltage`, SI coefficients, and normalized variables `s` and `z` exact. They distinguish an authored baseline from the live numerical result and describe undefined phase at an ideal zero without inventing a plotted value.
+
+# Phase 3A2 diode terminology
+
+The task-branch browser uses **диодын ажлын цэг** for operating point Q, **орон нутгийн дифференциал эсэргүүцэл** for `rd=dV/dI`, **диодын тодорхойломж** for the terminal I–V characteristic, and **ачааллын шулуун** for an externally proved resistor/source load line. `Rs` is **дотоод цуваа эсэргүүцэл**; it is distinct from the external resistor and from the bias ratio `V/I`. **Бага дохионы хариу** means the local incremental response around a specific DC bias, not the absolute nonlinear response. A **DC үүсгүүрийн мужийн тооцоо** samples source values, not physical time or certified hysteresis. Keep `Is`, `Rs`, `rd`, `Q`, exact device IDs, equations, SI units, JSON names, and CSV headers unchanged across languages. Failure details and progress labels must re-render when language changes while preserving pending drafts.

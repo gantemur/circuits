@@ -42,3 +42,18 @@ export function algebraicSummary(reason: string | undefined): string {
     default: return t('statusNotSupported');
   }
 }
+
+/** Nonlinear solver identifiers remain stable in native/test data; the panel
+ * translates their explanations when it renders in the current language. */
+export function diodeFailureReason(code: string): string {
+  const reasons: Record<string, TranslationKey> = {
+    'numeric-range': 'diodeFailureNumeric',
+    'linearized-system': 'diodeFailureLinearized',
+    'line-search': 'diodeFailureLineSearch',
+    'iteration-limit': 'diodeFailureIterations',
+    'stale-bias': 'diodeFailureStale',
+    'unrepresentable-resistance': 'diodeFailureResistance',
+    'missing-selection': 'diodeFailureSelection',
+  };
+  return translate(reasons[code] ?? 'statusNotSupported');
+}

@@ -1,4 +1,6 @@
 import type { Component } from '../src/model.js';
+import type { Diode } from '../src/nonlinear-model.js';
+import type { NativeDocument } from '../src/model.js';
 import type { LabState } from './lab.js';
 import { t } from './i18n.js';
 import { matchingPreset } from './presets.js';
@@ -7,13 +9,15 @@ import { resistorNetworkSvg, type Positions } from './network-diagram.js';
 export const escapeHtml = (value: unknown): string => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const number = (value: number): string => value !== 0 && (Math.abs(value) < .01 || Math.abs(value) >= 1e5)
   ? value.toExponential(3) : Number(value.toPrecision(5)).toString();
-function item(state: LabState, id: string): Component { return state.document.circuit.components.find(c => c.id === id)!; }
-function valueLabel(c: Component): string {
+function item(state: LabState, id: string): Component | Diode { return state.document.circuit.components.find(c => c.id === id)!; }
+function valueLabel(c: Component | Diode): string {
+  if (c.type === 'D') return `Is=${number(c.model.saturationCurrentA)} A, n=${number(c.model.idealityFactor)}, Rs=${number(c.model.seriesResistanceOhm)} Ω, T=${number(c.model.temperatureK)} K`;
   if ('value' in c) return `${number(c.value)} ${c.type === 'R' ? 'Ω' : c.type === 'C' ? 'F' : 'H'}`;
   if ('gain' in c) return `${number(c.gain)} ${c.type === 'VCCS' ? 'S' : c.type === 'CCVS' ? 'Ω' : ''}`.trim();
   return c.type === 'V' ? t('valueSource') : t('currentSource');
 }
-function exactValueLabel(c: Component): string {
+function exactValueLabel(c: Component | Diode): string {
+  if (c.type === 'D') return `Is=${c.model.saturationCurrentA} A; n=${c.model.idealityFactor}; Rs=${c.model.seriesResistanceOhm} Ω; T=${c.model.temperatureK} K`;
   if ('value' in c) return `${c.value} ${c.type === 'R' ? 'Ω' : c.type === 'C' ? 'F' : 'H'}`;
   if ('gain' in c) return `${c.gain} ${c.type === 'VCCS' ? 'S' : c.type === 'CCVS' ? 'Ω' : ''}`.trim();
   return valueLabel(c);
@@ -149,6 +153,54 @@ function rlcMeasurementSchematic(state:LabState,notch:boolean):{html:string;note
   }
   return wrap(state,svg,t(notch?'schematicRlcNotch':'schematicRlcBand'));
 }
+/** Four verified diode layouts share a source–R–output path; optional shunts
+ * are explicitly wired from the output node to reference node 0. */
+function diodeSchematic(state:LabState,preset:string,tangent?:NativeDocument):{html:string;note:string;schematic:boolean} {
+  const devices: (Component | Diode)[]=state.document.circuit.components;
+  const drive=devices.find(c=>c.type==='V')!;
+  const resistorDevice=devices.find(c=>c.type==='R')!;
+  const diodes=devices.filter((c):c is Diode=>'model' in c);
+  const capacitorDevice=devices.find(c=>c.type==='C');
+  const selected=state.document.circuit.observations.find(o=>o.id===state.output);
+  const selectedNode=selected?.type==='voltage'&&selected.n==='0'?selected.p:'';
+  const inputNode=drive.p==='0'?drive.n:drive.p;
+  let body=node(80,inputNode,selectedNode===inputNode)+node(500,'out',selectedNode==='out')+
+    wire(80,120,210,120)+resistor(state,resistorDevice.id,210,330)+wire(330,120,500,120)+
+    source(state,drive.id,80,'V')+dot(80,120)+dot(500,120);
+  const branch=(diode:Diode,x:number):string=>{
+    const cathodeAtBottom=diode.n==='0';
+    const resistance=tangent?.circuit.components.find(c=>c.id===diode.id);
+    const incremental=resistance&&resistance.type==='R';
+    const symbol=incremental?`<rect class="symbol" x="${x-12}" y="170" width="24" height="48" rx="2"/>`:
+      cathodeAtBottom
+        ? `<path class="symbol" d="M${x-17} 174H${x+17}L${x} 195Z M${x-20} 199H${x+20}"/>`
+        : `<path class="symbol" d="M${x-17} 202H${x+17}L${x} 181Z M${x-20} 177H${x+20}"/>`;
+    const top=incremental?170:cathodeAtBottom?174:177;
+    const bottom=incremental?218:cathodeAtBottom?199:202;
+    const selectedComponent=state.selectedComponent===diode.id;
+    const annotation=incremental?`rd=${number(resistance.value)} Ω`:
+      cathodeAtBottom?'I ↓':'I ↑';
+    return wire(x,120,x,top)+`<g class="component${selectedComponent?' selected':''}" role="button" tabindex="0" data-schematic-component="${escapeHtml(diode.id)}" aria-label="${escapeHtml(t('selectComponent',{id:diode.id,type:diode.type,value:valueLabel(diode)}))}"><title>${escapeHtml(diode.id)}: ${escapeHtml(valueLabel(diode))}</title>${symbol}<text x="${x+27}" y="168" class="component-label">${escapeHtml(diode.id)}</text><text x="${x+27}" y="220" class="schematic-small">${escapeHtml(annotation)}</text></g>`+
+      wire(x,bottom,x,256)+ground(x);
+  };
+  body+=branch(diodes[0]!,500);
+  if(preset==='diode-pair')body+=wire(500,120,610,120)+dot(610,120)+branch(diodes[1]!,610);
+  if(preset==='diode-rc'&&capacitorDevice)body+=wire(500,120,610,120)+dot(610,120)+capacitor(state,capacitorDevice.id,610);
+  const sourceDC=state.document.experiment.sources.find(s=>s.id===drive.id)?.dc;
+  if(sourceDC!==undefined)body+=`<text x="22" y="287" class="schematic-small">${escapeHtml(drive.id)}: DC=${number(sourceDC)} ${drive.type==='I'?'A':'V'}</text>`;
+  const descriptions=diodes.map((diode,index)=>{
+    const replacement=tangent?.circuit.components.find(c=>c.id===diode.id);
+    const value=replacement?.type==='R'?`rd=${number(replacement.value)} Ω`:valueLabel(diode);
+    return `<text x="22" y="${310+index*20}" class="schematic-small">${escapeHtml(diode.id)}: ${escapeHtml(value)}</text>`;
+  }).join('');
+  return wrap(state,body+descriptions,t(tangent?'diodeIncrementalDrawing':'diodeDrawing'),
+    diodes.length>1?410:390);
+}
+export function diodeTangentSchematic(state:LabState,tangent:NativeDocument):{html:string;note:string;schematic:boolean}|null {
+  const preset=matchingPreset(state.document.circuit)?.id;
+  if(!preset?.startsWith('diode-'))return null;
+  return diodeSchematic(state,preset,tangent);
+}
 export function schematic(state:LabState):{html:string;note:string;schematic:boolean} {
   // Preset identity alone survives value edits and imports. Confirm the actual
   // endpoint/ID topology before attaching a curated layout to a document.
@@ -160,6 +212,7 @@ export function schematic(state:LabState):{html:string;note:string;schematic:boo
     ...drawing,
     html:`${drawing.html}<details class="schematic-topology"><summary>${t('topologyTable')}</summary>${topology}</details>`,
   });
+  if(preset?.startsWith('diode-'))return withTopology(diodeSchematic(state,preset));
   if(preset==='rc3-low-pass' || preset==='rc3-high-pass') {
     const low=preset==='rc3-low-pass';
     return withTopology(ladderSchematic(state,low?['R1','R2','R3']:['C1','C2','C3'],

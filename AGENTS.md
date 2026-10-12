@@ -4,7 +4,7 @@
 
 At the start of a task, read this file, `docs/DECISIONS.md`, and the specification for the active milestone. Read `docs/MATHEMATICAL_CONVENTIONS.md` before changing circuit equations, device laws, or analyses. Use `docs/VISION.md` for context; it is not an instruction to implement all planned capabilities at once.
 
-The active task-branch milestone is **Phase 3A1 headless diode operating points and tangent circuits**, specified in `docs/PHASE_3A_SPECIFICATION.md`. The released browser remains the Phase 2D2 linear lab (`docs/PHASE_2D2_SPECIFICATION.md`); Phase 3A2 browser integration is later work. Earlier phase specifications and `docs/UX_SPECIFICATION.md` remain the contracts for their released behavior. Inspect the actual repository before assuming code or build commands exist.
+The active task-branch milestone is **Phase 3A2 browser diode teaching lab**, specified in `docs/PHASE_3A2_SPECIFICATION.md`. It uses the reviewed Phase 3A1 headless kernel (`docs/PHASE_3A_SPECIFICATION.md`). The released public browser remains the Phase 2D2 linear lab until Phase 3A2 is reviewed and integrated. Earlier phase specifications and `docs/UX_SPECIFICATION.md` remain contracts for their released behavior. Inspect the actual repository before assuming code or build commands exist.
 
 ## Authority and scope
 

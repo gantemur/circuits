@@ -33,6 +33,12 @@ await build({ entryPoints: ['test/support/diagnostics-ui-entry.ts'], bundle: tru
   target: 'es2022', outfile: 'dist/diagnostics-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/plot.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/plot-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/diode-math.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/diode-math-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/presets.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/presets-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/dc-sweep.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/dc-sweep-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['test/support/builder-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/builder-ui-test.js', logLevel: 'silent' });
 const [html, app, style] = await Promise.all([

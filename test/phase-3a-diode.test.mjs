@@ -82,11 +82,12 @@ test('strict separate v2 contract, exact IDs, ownership, and unchanged v1/browse
   duplicate.circuit.components.find(c => c.id === 'D1').id = 'R1';
   assert.throws(() => parseNonlinearDocument(JSON.stringify(duplicate)), /duplicate IDs/);
   const lab = createLab('divider'), before = exportNative(lab);
-  assert.equal(importNative(lab, serializeNonlinearDocument(fixture('resistor-diode'))).ok, false);
-  assert.equal(exportNative(lab), before);
   const linear = parseDocument(before);
   assert.deepEqual(solveOperatingPoint(linear), solveOperatingPoint(linear));
   assert.equal(solveOperatingPoint(linear).status, 'ok');
+  assert.equal(importNative(lab, serializeNonlinearDocument(fixture('resistor-diode'))).ok, true);
+  assert.equal(JSON.parse(exportNative(lab)).circuit.schemaVersion, 2);
+  assert.throws(() => parseDocument(exportNative(lab)), /schemaVersion/);
 });
 
 test('two distinct thermal-voltage benchmarks retain their independently supplied answers', () => {

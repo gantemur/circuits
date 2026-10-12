@@ -1,5 +1,6 @@
 import { dcOnePort, type OnePortResult, type OnePortSolve } from '../src/one-port.js';
 import type { LabState } from './lab.js';
+import { isNonlinearDocument } from './native-document.js';
 import { escapeHtml, schematic } from './schematic.js';
 import { statusSummary } from './diagnostics.js';
 import { t, translate, type TranslationKey } from './i18n.js';
@@ -81,7 +82,11 @@ export class OnePortUI {
     this.p = p; this.q = q; this.loadText = String(load); this.selectionInitialized = true; this.render();
   }
   render(): void {
-    const state = this.getState(), nodes = state.document.circuit.nodes;
+    const state = this.getState(), native = state.document, nodes = native.circuit.nodes;
+    if (isNonlinearDocument(native)) {
+      this.root.innerHTML = `<div class="warning" role="status">${t('diodeUnavailableTransform')}</div>`;
+      return;
+    }
     if (!this.selectionInitialized) {
       const probe = state.document.circuit.observations.find((o): o is Extract<typeof o, { type: 'voltage' }> => o.type === 'voltage' && o.p !== o.n);
       this.p = probe?.p ?? nodes.find(n => n !== '0') ?? '0';
@@ -93,7 +98,7 @@ export class OnePortUI {
     const load = Number(this.loadText), validLoad = this.loadText.trim() !== '' && Number.isFinite(load) && load > 0;
     const key = JSON.stringify([this.p,this.q,this.loadText]);
     if (this.resultDocument !== state.document || this.resultKey !== key || !this.result) {
-      this.result = dcOnePort(state.document, this.p, this.q, validLoad ? load : NaN);
+      this.result = dcOnePort(native, this.p, this.q, validLoad ? load : NaN);
       this.resultDocument = state.document; this.resultKey = key;
     }
     const result = this.result;

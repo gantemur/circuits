@@ -1,4 +1,5 @@
-import type { Component, Observation } from '../src/model.js';
+import type { Observation } from '../src/model.js';
+import type { DraftComponent } from './builder.js';
 import { addComponent, addNode, addObservation, applyBuilder, builderConflict, changeInitial, changeWaveform,
   componentReferences, createBuilder, deviceTypes, newBuilder, nodeReferences, reloadBuilder,
   removeComponent, removeNode, renameNode, syncCleanBuilder, touchBuilder, type BuilderState,
@@ -18,15 +19,15 @@ const select = (label: string, path: string, value: string, options: readonly { 
 const button = (key: TranslationKey, action: string, index = '') =>
   `<button type="button" class="button outline" data-builder-action="${action}" data-index="${e(index)}">${translate(key)}</button>`;
 const rowTitle = (id: string, type: string) => `<h3>${e(id)} · ${e(type)}</h3>`;
-const unit = (type: Component['type']) => type === 'R' || type === 'CCVS' ? 'Ω' : type === 'C' ? 'F' : type === 'L' ? 'H' : type === 'VCCS' ? 'S' : '';
-const typeKeys: Record<Component['type'], TranslationKey> = {
+const unit = (type: DraftComponent['type']) => type === 'R' || type === 'CCVS' ? 'Ω' : type === 'C' ? 'F' : type === 'L' ? 'H' : type === 'VCCS' ? 'S' : '';
+const typeKeys: Record<DraftComponent['type'], TranslationKey> = {
   R: 'builderTypeR', C: 'builderTypeC', L: 'builderTypeL', V: 'builderTypeV', I: 'builderTypeI',
-  VCVS: 'builderTypeVCVS', VCCS: 'builderTypeVCCS', CCVS: 'builderTypeCCVS', CCCS: 'builderTypeCCCS',
+  VCVS: 'builderTypeVCVS', VCCS: 'builderTypeVCCS', CCVS: 'builderTypeCCVS', CCCS: 'builderTypeCCCS', D: 'builderTypeD',
 };
 export class BuilderUI {
   readonly builder: BuilderState;
   private notice = '';
-  private selectedType: Component['type'] = 'R';
+  private selectedType: DraftComponent['type'] = 'R';
   private selectedObservation: Observation['type'] = 'voltage';
   private nodePending = new Map<string, string>();
   private nodeErrors = new Map<string, Exclude<RenameNodeResult, { ok: true }>['code']>();
@@ -42,7 +43,7 @@ export class BuilderUI {
     const [section, index, field] = path.split(':');
     if (section === 'component') {
       const c = this.builder.draft.circuit.components[Number(index)];
-      return `${c?.id ?? index} · ${field === 'value' ? t('value') : t('gain')}`;
+      return `${c?.id ?? index} · ${field === 'value' ? t('value') : field === 'gain' ? t('gain') : t('builderDiodeModel')}`;
     }
     if (section === 'source') {
       const s = this.builder.draft.experiment.sources[Number(index)];
@@ -79,6 +80,7 @@ export class BuilderUI {
         <div class="field-row">${select('p', `component:${i}:p`, c.p, nodes)}${select('n', `component:${i}:n`, c.n, nodes)}</div>
         ${'value' in c ? input(t('value'), `component:${i}:value`, c.value, unit(c.type)) : ''}
         ${'gain' in c ? input(t('gain'), `component:${i}:gain`, c.gain, unit(c.type)) : ''}
+        ${c.type === 'D' ? `<p class="muted small">${t('diodeModelNote')}</p><div class="controls-grid">${input(t('diodeIs'),`component:${i}:saturationCurrentA`,c.model.saturationCurrentA,'A')}${input(t('diodeIdeality'),`component:${i}:idealityFactor`,c.model.idealityFactor)}${input(t('diodeRs'),`component:${i}:seriesResistanceOhm`,c.model.seriesResistanceOhm,'Ω')}${input(t('diodeTemperature'),`component:${i}:temperatureK`,c.model.temperatureK,'K')}</div>` : ''}
         ${'cp' in c ? `<div class="field-row">${select(t('builderControlP'), `component:${i}:cp`, c.cp, nodes)}${select(t('builderControlN'), `component:${i}:cn`, c.cn, nodes)}</div>` : ''}
         ${'control' in c ? select(t('builderControlBranch'), `component:${i}:control`, c.control, [{ value: '', label: t('builderChooseBranch') }, ...controls]) : ''}
         ${button('builderRemove', 'remove-component', String(i))}</div>`).join('')}
@@ -130,7 +132,7 @@ export class BuilderUI {
     const path = target.dataset.builderField; if (!path) return;
     const [section, indexText, key] = path.split(':');
     if (section === 'add') {
-      if (indexText === 'type') this.selectedType = target.value as Component['type'];
+      if (indexText === 'type') this.selectedType = target.value as DraftComponent['type'];
       if (indexText === 'observation') this.selectedObservation = target.value as Observation['type'];
       return;
     }
@@ -152,6 +154,7 @@ export class BuilderUI {
       else if (key === 'label') { if (target.value) c.label = target.value; else delete c.label; }
       else if (key === 'value' && 'value' in c) c.value = target.value;
       else if (key === 'gain' && 'gain' in c) c.gain = target.value;
+      else if (c.type === 'D' && key in c.model && key !== 'kind') Object.assign(c.model, { [key]: target.value });
       else if ((key === 'cp' || key === 'cn') && 'cp' in c) c[key] = target.value;
       else if (key === 'control' && 'control' in c) c.control = target.value;
     } else if (section === 'observation') {

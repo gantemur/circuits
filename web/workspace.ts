@@ -1,11 +1,19 @@
 import { abs, assemble, complex, extractFirstOrder, polar, solveDC, solveFrequency, transfer, transient,
   type Assembly, type AnalysisResult, type FirstOrderTransfer, type NotSupported,
   type TransientResult, type Unit } from '../src/index.js';
+import { assembleDiodeSystem, evaluateDiodeSystem, solveDiodeOperatingPoint,
+  type DiodeSystem, type NonlinearEvaluation, type NonlinearResult, type NonlinearSuccess } from '../src/diode-operating-point.js';
+import { createDiodeTangent, type TangentSuccess } from '../src/diode-tangent.js';
+import type { Diode, NonlinearDocument } from '../src/nonlinear-model.js';
+import { diodeCharacteristic, eligibleLoadLine, type CharacteristicPoint, type LoadLine } from './diode-math.js';
+import { nonlinearUnknownCount } from './dc-sweep.js';
+import { isNonlinearDocument } from './native-document.js';
 import { dcOnePort, type OnePortResult } from '../src/one-port.js';
 import { analyzePorts, type PortAnalysisResult, type PortConfig, type PortLoad } from '../src/port-analysis.js';
 import type { LabState, SweepPoint } from './lab.js';
 
-export type PanelType = 'dc' | 'frequency' | 'transient' | 'equations' | 'port' | 'port-frequency';
+export type PanelType = 'dc' | 'frequency' | 'transient' | 'equations' | 'port' | 'port-frequency'
+  | 'diode-characteristic' | 'dc-sweep';
 export type WorkspaceView = 'analyze' | 'transform' | 'editor';
 export type EditorView = 'form' | 'json';
 export interface PanelConfig {
@@ -16,6 +24,8 @@ export interface PanelConfig {
   portFrequencyHz: number; portMinHz: number; portMaxHz: number; portPoints: number;
   portView: 'single' | 'sweep' | 'loading'; portMatrix: 'z' | 'y'; portRow: 0 | 1; portColumn: 0 | 1;
   portSourceResistance: number; portLoadResistance: number; portLoadOpen: boolean;
+  diodeId: string; curveMinV: number; curveMaxV: number; curvePoints: number;
+  sweepMin: number; sweepMax: number; sweepCount: number;
   collapsed: boolean; expanded: boolean; settingsOpen: boolean;
   pending: Record<string, string>; errors: Record<string, string>;
   selectionNeeded: string | null;
@@ -27,11 +37,19 @@ export interface WorkspaceState {
 export type PanelResult =
   | { type: 'dc'; assembly: Assembly; dc: AnalysisResult }
   | { type: 'frequency'; assembly: Assembly; unit: `${Unit}/${Unit}`; sweep: SweepPoint[];
-      ac: AnalysisResult; algebraic: FirstOrderTransfer | NotSupported }
+      ac: AnalysisResult; algebraic: FirstOrderTransfer | NotSupported;
+      incremental?: { bias: NonlinearSuccess; tangent: TangentSuccess } }
   | { type: 'transient'; assembly: Assembly; time: TransientResult }
   | { type: 'equations'; assembly: Assembly; dc: AnalysisResult }
   | { type: 'port'; port: OnePortResult }
-  | { type: 'port-frequency'; single: PortAnalysisResult; sweep: PortSweepPoint[] };
+  | { type: 'port-frequency'; single: PortAnalysisResult; sweep: PortSweepPoint[] }
+  | { type: 'nonlinear-dc'; bias: NonlinearResult }
+  | { type: 'nonlinear-equations'; bias: NonlinearSuccess; system: DiodeSystem;
+      evaluation: NonlinearEvaluation; tangent: TangentSuccess; assembly: Assembly }
+  | { type: 'diode-characteristic'; diode: Diode; curve: (CharacteristicPoint | null)[];
+      minimumV: number; maximumV: number; bias: NonlinearResult; loadLine: LoadLine | null }
+  | { type: 'dc-sweep' }
+  | { type: 'nonlinear-failure'; reason: string };
 
 export interface PortSweepPoint {
   frequencyHz: number; status: string; value: import('../src/complex.js').Complex | null;
@@ -39,6 +57,8 @@ export interface PortSweepPoint {
 }
 
 const defaultType = (preset: string | null): PanelType[] => preset?.endsWith('-impedance-ladder') ? ['port-frequency', 'equations'] :
+  preset === 'diode-single' || preset === 'diode-series' ? ['dc', 'diode-characteristic'] :
+  preset === 'diode-pair' ? ['dc', 'dc-sweep'] : preset === 'diode-rc' ? ['dc', 'frequency'] :
   preset?.startsWith('port-') ? ['port-frequency', 'equations'] :
   preset?.startsWith('res-') ? ['dc', 'equations'] : preset === 'divider' ? ['dc', 'port'] :
   preset === 'vcvs' ? ['dc', 'frequency'] : ['frequency', 'transient'];
@@ -62,6 +82,15 @@ export function createPanel(state: LabState, id: string, type: PanelType): Panel
     portFrequencyHz: 1000, portMinHz: 1, portMaxHz: impedanceLadder ? 1e5 : 10000, portPoints: 81,
     portView: impedanceLadder ? 'sweep' : 'single', portMatrix: impedanceLadder ? 'z' : 'y', portRow: 0, portColumn: 0,
     portSourceResistance: 0, portLoadResistance: 2000, portLoadOpen: false,
+    diodeId: state.document.circuit.components.find(c => c.type === 'D')?.id ?? '',
+    // The signed linear I axis should show the initial Q/load-line intersection,
+    // rather than being dominated by the exponential far above forward bias.
+    // Later bias edits never recenter a student's accepted range implicitly.
+    curveMinV: state.presetId === 'diode-pair' ? -.6 : state.presetId === 'diode-series' ? .47 : .44,
+    curveMaxV: state.presetId === 'diode-pair' ? .6 : state.presetId === 'diode-series' ? .59 : .55,
+    curvePoints: 121,
+    sweepMin: state.presetId === 'diode-pair' ? -2 : 0,
+    sweepMax: 2, sweepCount: state.presetId === 'diode-pair' ? 81 : 51,
     pending: {}, errors: {}, selectionNeeded: null };
 }
 export function createWorkspace(state: LabState): WorkspaceState {
@@ -98,8 +127,9 @@ export function reconcilePanels(workspace: WorkspaceState, state: LabState): voi
     const excluded = p.externalDrive === null ? null : state.document.circuit.components.find(component =>
       component.id === p.externalDrive && component.type === 'V' &&
       ((component.p === p.p && component.n === p.q) || (component.p === p.q && component.n === p.p)));
-    const missing = p.type === 'frequency' && !inputs.includes(p.input) ? 'input' :
-      ['frequency', 'transient', 'equations'].includes(p.type) && !outputs.includes(p.output) ? 'output' :
+    const missing = (p.type === 'frequency' || p.type === 'dc-sweep') && !inputs.includes(p.input) ? 'input' :
+      ['frequency', 'transient', 'equations', 'dc-sweep'].includes(p.type) && !outputs.includes(p.output) ? 'output' :
+      p.type === 'diode-characteristic' && !state.document.circuit.components.some(c => c.type === 'D' && c.id === p.diodeId) ? 'diode' :
       (p.type === 'port' || p.type === 'port-frequency') && missingPort ? 'port' :
       p.type === 'port-frequency' && p.externalDrive !== null && !excluded ? 'externalDrive' : null;
     p.selectionNeeded = missing;
@@ -133,10 +163,19 @@ const limits = (p: PanelConfig, state: LabState): string | null => {
     if (!Number.isFinite(p.portSourceResistance) || p.portSourceResistance < 0) return 'portInvalidSourceResistance';
     if (!p.portLoadOpen && (!Number.isFinite(p.portLoadResistance) || p.portLoadResistance <= 0)) return 'onePortInvalidLoad';
   }
+  if (p.type === 'diode-characteristic') {
+    if (!Number.isFinite(p.curveMinV) || !Number.isFinite(p.curveMaxV) || p.curveMaxV <= p.curveMinV) return 'diodeInvalidRange';
+    if (!Number.isInteger(p.curvePoints) || p.curvePoints < 2 || p.curvePoints > 241) return 'diodeInvalidPoints';
+  }
+  if (p.type === 'dc-sweep') {
+    if (!Number.isFinite(p.sweepMin) || !Number.isFinite(p.sweepMax) || p.sweepMax <= p.sweepMin) return 'diodeInvalidRange';
+    if (!Number.isInteger(p.sweepCount) || p.sweepCount < 2 || p.sweepCount > 121) return 'diodeInvalidPoints';
+  }
   return null;
 };
 export type NumericPanelField = 'minHz' | 'maxHz' | 'points' | 'inspectHz' | 'duration' | 'step' | 'load'
-  | 'portFrequencyHz' | 'portMinHz' | 'portMaxHz' | 'portPoints' | 'portSourceResistance' | 'portLoadResistance';
+  | 'portFrequencyHz' | 'portMinHz' | 'portMaxHz' | 'portPoints' | 'portSourceResistance' | 'portLoadResistance'
+  | 'curveMinV' | 'curveMaxV' | 'curvePoints' | 'sweepMin' | 'sweepMax' | 'sweepCount';
 export function editPanelNumber(panel: PanelConfig, state: LabState, field: NumericPanelField, text: string): boolean {
   panel.pending[field] = text;
   const value = Number(text);
@@ -146,13 +185,14 @@ export function editPanelNumber(panel: PanelConfig, state: LabState, field: Nume
   if (error) { panel[field] = before; panel.errors[field] = error; return false; }
   delete panel.pending[field]; delete panel.errors[field]; return true;
 }
-export function editPanelSelection(panel: PanelConfig, field: 'input' | 'output' | 'p' | 'q' | 'p2' | 'q2', value: string, state: LabState): void {
+export function editPanelSelection(panel: PanelConfig, field: 'input' | 'output' | 'p' | 'q' | 'p2' | 'q2' | 'diodeId', value: string, state: LabState): void {
   panel[field] = value;
   const inputs = state.document.experiment.sources.map(source => source.id);
   const outputs = state.document.circuit.observations.map(output => output.id);
   const nodes = state.document.circuit.nodes;
-  panel.selectionNeeded = panel.type === 'frequency' && !inputs.includes(panel.input) ? 'input' :
-    ['frequency', 'transient', 'equations'].includes(panel.type) && !outputs.includes(panel.output) ? 'output' :
+  panel.selectionNeeded = (panel.type === 'frequency' || panel.type === 'dc-sweep') && !inputs.includes(panel.input) ? 'input' :
+    ['frequency', 'transient', 'equations', 'dc-sweep'].includes(panel.type) && !outputs.includes(panel.output) ? 'output' :
+    panel.type === 'diode-characteristic' && !state.document.circuit.components.some(c => c.type === 'D' && c.id === panel.diodeId) ? 'diode' :
     (panel.type === 'port' || panel.type === 'port-frequency') &&
       (!nodes.includes(panel.p) || !nodes.includes(panel.q) ||
        (panel.type === 'port-frequency' && panel.portMode === 2 &&
@@ -164,9 +204,9 @@ export function handlePanelFieldChange(workspace: WorkspaceState, state: LabStat
   const panel = workspace.panels.find(p => p.id === panelId);
   if (!panel) return false;
   if (field === 'type') {
-    if (!['dc','frequency','transient','equations','port','port-frequency'].includes(value)) return false;
+    if (!['dc','frequency','transient','equations','port','port-frequency','diode-characteristic','dc-sweep'].includes(value)) return false;
     changePanelType(workspace, panel, value as PanelType, state);
-  } else if (field === 'input' || field === 'output' || field === 'p' || field === 'q' || field === 'p2' || field === 'q2') {
+  } else if (field === 'input' || field === 'output' || field === 'p' || field === 'q' || field === 'p2' || field === 'q2' || field === 'diodeId') {
     editPanelSelection(panel, field, value, state);
     reconcilePanels(workspace, state);
   } else if (field === 'externalDrive') {
@@ -190,7 +230,8 @@ export function handlePanelFieldChange(workspace: WorkspaceState, state: LabStat
     if (value !== 'open' && value !== 'resistor') return false;
     panel.portLoadOpen = value === 'open';
   } else if (['minHz','maxHz','points','inspectHz','duration','step','load','portFrequencyHz',
-      'portMinHz','portMaxHz','portPoints','portSourceResistance','portLoadResistance'].includes(field)) {
+      'portMinHz','portMaxHz','portPoints','portSourceResistance','portLoadResistance',
+      'curveMinV','curveMaxV','curvePoints','sweepMin','sweepMax','sweepCount'].includes(field)) {
     editPanelNumber(panel, state, field as NumericPanelField, value);
   } else return false;
   workspace.layoutIsSuggested = false;
@@ -201,10 +242,74 @@ export class PanelCalculator {
   private assemblyRevision = -1;
   private assembly: Assembly | null = null;
   private document: LabState['document'] | null = null;
+  private biasRevision = -1;
+  private biasDocument: LabState['document'] | null = null;
+  private bias: NonlinearResult | null = null;
+  private biasFor(state: LabState, document: NonlinearDocument): NonlinearResult {
+    if (this.biasRevision === state.revision && this.biasDocument === document && this.bias) return this.bias;
+    this.biasRevision = state.revision;
+    this.biasDocument = document;
+    this.bias = nonlinearUnknownCount(document) > 64
+      ? { status: 'failed', code: 'numeric-range', message: 'The nonlinear browser limit is 64 unknowns', trace: [] }
+      : solveDiodeOperatingPoint(document);
+    return this.bias;
+  }
+  private nonlinear(panel: PanelConfig, state: LabState, document: NonlinearDocument): PanelResult {
+    if (panel.type === 'transient' || panel.type === 'port' || panel.type === 'port-frequency')
+      return { type: 'nonlinear-failure', reason: 'unsupported-panel' };
+    if (panel.type === 'dc-sweep') return { type: 'dc-sweep' };
+    if (panel.type === 'diode-characteristic') {
+      const diode = document.circuit.components.find((c): c is Diode => c.type === 'D' && c.id === panel.diodeId);
+      if (!diode) return { type: 'nonlinear-failure', reason: 'missing-diode' };
+      const curve = Array.from({ length: panel.curvePoints }, (_, index) => {
+        const fraction = index / (panel.curvePoints - 1);
+        const terminalVoltageV = (1 - fraction) * panel.curveMinV + fraction * panel.curveMaxV;
+        return diodeCharacteristic(diode, terminalVoltageV);
+      });
+      return { type: 'diode-characteristic', diode, curve, minimumV: panel.curveMinV,
+        maximumV: panel.curveMaxV, bias: this.biasFor(state, document),
+        loadLine: eligibleLoadLine(document, diode.id) };
+    }
+    const bias = this.biasFor(state, document);
+    if (panel.type === 'dc') return { type: 'nonlinear-dc', bias };
+    if (bias.status !== 'ok') return { type: 'nonlinear-failure', reason: bias.code };
+    const tangent = createDiodeTangent(bias, document);
+    if (tangent.status !== 'ok') return { type: 'nonlinear-failure', reason: tangent.code };
+    const assembly = assemble(tangent.document.circuit);
+    if (panel.type === 'equations') {
+      const system = assembleDiodeSystem(document);
+      const evaluation = evaluateDiodeSystem(system, bias.x);
+      return evaluation ? { type: 'nonlinear-equations', bias, system, evaluation, tangent, assembly }
+        : { type: 'nonlinear-failure', reason: 'numeric-range' };
+    }
+    const input = assembly.inputs.find(i => i.id === panel.input);
+    const output = assembly.outputs.find(o => o.id === panel.output);
+    if (!input || !output) return { type: 'nonlinear-failure', reason: 'missing-selection' };
+    const unit = `${output.unit}/${input.unit}` as `${Unit}/${Unit}`;
+    const sweep: SweepPoint[] = [];
+    for (let index = 0; index < panel.points; index++) {
+      const frequencyHz = panel.minHz * (panel.maxHz / panel.minHz) ** (index / (panel.points - 1));
+      const response = transfer(assembly, panel.input, panel.output, complex(0, 2 * Math.PI * frequencyHz));
+      if (response.status !== 'ok') sweep.push({ frequencyHz, status: response.status, value: null,
+        magnitude: null, magnitudeDb: null, phaseDegrees: null, message: response.message });
+      else {
+        const { value, magnitude } = response.transfer;
+        sweep.push({ frequencyHz, status: magnitude === 0 ? 'zero-magnitude' : 'ok', value, magnitude,
+          magnitudeDb: magnitude > 0 && (unit === 'V/V' || unit === 'A/A') ? 20 * Math.log10(magnitude) : null,
+          phaseDegrees: magnitude > 0 ? response.transfer.phaseRadians * 180 / Math.PI : null,
+          message: magnitude === 0 ? 'Magnitude is zero; phase is undefined' : '' });
+      }
+    }
+    return { type: 'frequency', assembly, unit, sweep,
+      ac: solveFrequency(assembly, tangent.document.experiment, complex(0, 2 * Math.PI * panel.inspectHz)),
+      algebraic: extractFirstOrder(assembly, panel.input, panel.output), incremental: { bias, tangent } };
+  }
   private assemblyFor(state: LabState): Assembly {
-    if (this.assemblyRevision !== state.revision || !this.assembly || this.document !== state.document) {
-      this.assembly = assemble(state.document.circuit); this.assemblyRevision = state.revision;
-      this.document = state.document;
+    const document = state.document;
+    if (isNonlinearDocument(document)) throw new RangeError('Linear assembly requires a v1 circuit');
+    if (this.assemblyRevision !== state.revision || !this.assembly || this.document !== document) {
+      this.assembly = assemble(document.circuit); this.assemblyRevision = state.revision;
+      this.document = document;
       this.cache.clear();
     }
     return this.assembly;
@@ -218,10 +323,20 @@ export class PanelCalculator {
       panel.points, panel.inspectHz, panel.duration, panel.step, panel.p, panel.q, panel.load,
       panel.portMode, panel.p2, panel.q2, panel.externalDrive, panel.portFrequencyHz, panel.portMinHz,
       panel.portMaxHz, panel.portPoints, panel.portView, panel.portMatrix, panel.portRow, panel.portColumn,
-      panel.portSourceResistance, panel.portLoadResistance, panel.portLoadOpen]);
+      panel.portSourceResistance, panel.portLoadResistance, panel.portLoadOpen,
+      panel.diodeId, panel.curveMinV, panel.curveMaxV, panel.curvePoints,
+      panel.sweepMin, panel.sweepMax, panel.sweepCount]);
     const cached = this.cache.get(key); if (cached) return cached;
+    const document = state.document;
+    if (isNonlinearDocument(document)) {
+      const result = this.nonlinear(panel, state, document);
+      this.cache.set(key, result);
+      return result;
+    }
     let result: PanelResult;
-    if (panel.type === 'port') result = { type: 'port', port: dcOnePort(state.document, panel.p, panel.q, panel.load) };
+    if (panel.type === 'diode-characteristic') result = { type: 'nonlinear-failure', reason: 'missing-diode' };
+    else if (panel.type === 'dc-sweep') result = { type: 'dc-sweep' };
+    else if (panel.type === 'port') result = { type: 'port', port: dcOnePort(document, panel.p, panel.q, panel.load) };
     else if (panel.type === 'port-frequency') {
       const ports = panel.portMode === 1 ? [{ p: panel.p, q: panel.q }] as PortConfig['ports'] :
         [{ p: panel.p, q: panel.q }, { p: panel.p2, q: panel.q2 }] as PortConfig['ports'];
@@ -229,13 +344,13 @@ export class PanelCalculator {
         { kind: 'resistor', resistance: panel.portLoadResistance };
       const base: Omit<PortConfig, 'frequencyHz'> = { ports, externalDrive: panel.externalDrive,
         ...(panel.portMode === 2 ? { loading: { sourceResistance: panel.portSourceResistance, load } } : {}) };
-      const single = analyzePorts(state.document, { ...base, frequencyHz: panel.portFrequencyHz });
+      const single = analyzePorts(document, { ...base, frequencyHz: panel.portFrequencyHz });
       const sweep: PortSweepPoint[] = [];
       if (panel.portView === 'sweep') {
         for (let index = 0; index < panel.portPoints; index++) {
           const frequencyHz = panel.portMinHz *
             (panel.portMaxHz / panel.portMinHz) ** (index / (panel.portPoints - 1));
-          const analyzed = analyzePorts(state.document, { ports, externalDrive: panel.externalDrive, frequencyHz });
+          const analyzed = analyzePorts(document, { ports, externalDrive: panel.externalDrive, frequencyHz });
           const representation = analyzed.status === 'ok' ? analyzed[panel.portMatrix] : analyzed;
           const value = representation.status === 'ok' ? representation.values[panel.portMode === 1 ? 0 : panel.portRow]![panel.portMode === 1 ? 0 : panel.portColumn]! : null;
           const magnitude = value ? abs(value) : null;

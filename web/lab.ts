@@ -1,12 +1,14 @@
 import { assemble, complex, currentRow, extractFirstOrder, inputValues, outputValue, ValidationError,
-  parseDocument, serializeDocument, solveDC, solveFrequency, transfer, transient,
+  solveDC, solveFrequency, transfer, transient,
   type AnalysisResult, type Assembly, type Complex, type FirstOrderTransfer,
-  type NativeDocument, type NotSupported, type TransientResult, type Unit } from '../src/index.js';
+  type NotSupported, type TransientResult, type Unit } from '../src/index.js';
 import { copyDocument, matchingPreset, presets } from './presets.js';
+import { isNonlinearDocument, parseBrowserDocument, serializeBrowserDocument,
+  type BrowserDocument } from './native-document.js';
 
 export interface Settings { minHz: number; maxHz: number; points: number; inspectHz: number; duration: number; step: number }
 export interface LabState {
-  document: NativeDocument; presetId: string | null; input: string; output: string;
+  document: BrowserDocument; presetId: string | null; input: string; output: string;
   selectedComponent: string | null; settings: Settings; revision: number;
 }
 export interface SweepPoint {
@@ -52,17 +54,17 @@ export function createLab(presetId = 'divider'): LabState {
 export function resetExample(state: LabState): LabState {
   return createLab(state.presetId ?? 'divider');
 }
-export function updateDocument(state: LabState, mutate: (d: NativeDocument) => void): EditResult {
+export function updateDocument(state: LabState, mutate: (d: BrowserDocument) => void): EditResult {
   try {
     const next = copyDocument(state.document); mutate(next);
-    parseDocument(JSON.stringify(next));
+    parseBrowserDocument(JSON.stringify(next));
     state.document = next; state.revision++;
     return { ok: true };
   } catch (error) { return editError(error); }
 }
 export function importNative(state: LabState, json: string, preserveSelection = false): EditResult {
   try {
-    const next = parseDocument(json);
+    const next = parseBrowserDocument(json);
     const p = matchingPreset(next.circuit);
     state.document = next; state.presetId = p?.id ?? null;
     state.input = preserveSelection && next.experiment.sources.some(s => s.id === state.input)
@@ -73,7 +75,7 @@ export function importNative(state: LabState, json: string, preserveSelection = 
     return { ok: true };
   } catch (error) { return editError(error); }
 }
-export const exportNative = (state: LabState): string => serializeDocument(state.document);
+export const exportNative = (state: LabState): string => serializeBrowserDocument(state.document);
 
 export function parseFinite(text: string, name: string, positive = false): number {
   if (!text.trim()) throw new RangeError(`${name} is required`);
@@ -103,6 +105,7 @@ export function settingsProblems(s: Settings, sourceEvents = 0): SettingsProblem
 }
 export function dimensionless(unit: `${Unit}/${Unit}`): boolean { return unit === 'V/V' || unit === 'A/A'; }
 export function analyze(state: LabState): LabAnalysis {
+  if (isNonlinearDocument(state.document)) throw new RangeError('Use nonlinear panel analysis for a v2 diode circuit');
   const events = state.document.experiment.sources.filter(s => s.waveform?.type === 'step' && s.waveform.at >= 0 && s.waveform.at <= state.settings.duration).length;
   const errors = validateSettings(state.settings, events);
   if (errors.length) throw new RangeError(errors.join('; '));
@@ -135,6 +138,7 @@ export function analyze(state: LabState): LabAnalysis {
 
 /** DC currents reconstructed by the kernel's own branch laws, including unobserved branches. */
 export function dcBranchCurrents(analysis: LabAnalysis, state: LabState): { id: string; value: number; unit: 'A' }[] {
+  if (isNonlinearDocument(state.document)) return [];
   if (analysis.dc.status !== 'ok') return [];
   const u = inputValues(analysis.assembly, state.document.experiment, 'dc');
   const caps = new Map(state.document.circuit.components.filter(c => c.type === 'C').map(c => [c.id, complex(0)]));

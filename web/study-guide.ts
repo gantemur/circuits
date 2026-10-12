@@ -3,9 +3,10 @@ import { referenceResponses } from './reference-responses.js';
 import { presets } from './presets.js';
 import type { LabState } from './lab.js';
 import { phase2d2Lessons } from './phase-2d2-guides.js';
+import { phase3a2Lessons } from './phase-3a2-guides.js';
 export { referenceResponses } from './reference-responses.js';
 
-export type GuideAction = 'transform' | 'dc' | 'frequency' | 'transient' | 'equations' | 'port' | 'port-frequency';
+export type GuideAction = 'transform' | 'dc' | 'frequency' | 'transient' | 'equations' | 'port' | 'port-frequency' | 'diode-characteristic' | 'dc-sweep';
 export interface GuideStep { text: string; action: GuideAction }
 export interface GuideLesson { question: string; conditions: string; equation: string; steps: readonly GuideStep[]; compare: string }
 export type Bilingual = { en: GuideLesson; mn: GuideLesson };
@@ -54,6 +55,7 @@ export const lessons: Readonly<Record<string,Bilingual>> = {
     {question:'How does the second RC section load the first?',conditions:'Directly connected source-free RC cascade; external source/load specified in port panel.',equation:'For equal open-output sections, H(s)=1/(1+3sRC+(sRC)²).',steps:[{text:'In Analyze, compare direct and Z/Y loading predictions.',action:'port-frequency'},{text:'In Analyze, sweep a selected matrix entry.',action:'port-frequency'}],compare:'The loaded cascade is not a product of isolated unloaded gains.'},
     {question:'Хоёр дахь RC шат эхнийхийг яаж ачаалах вэ?',conditions:'Шууд холбосон үүсгүүргүй RC шатууд; гаднах үүсгүүр/ачааллыг туйлын самбарт өгнө.',equation:'Ижил, нээлттэй гаралттай шатанд H(s)=1/(1+3sRC+(sRC)²).',steps:[{text:'Шинжилгээнд шууд ба Z/Y ачааллын таамгийг харьцуул.',action:'port-frequency'},{text:'Шинжилгээнд матрицын сонгосон бичлэгийг давтамжаар үз.',action:'port-frequency'}],compare:'Ачаалалтай шатуудын хариу нь тусгаар ачаалалгүй өсгөлтийн үржвэр биш.'}),
   ...phase2d2Lessons,
+  ...phase3a2Lessons,
 };
 export function guideFor(id: string | null): GuideLesson | null { return id ? lessons[id]?.[language()] ?? null : null; }
 export function referenceFor(id: string | null) { return id ? referenceResponses[id] ?? null : null; }

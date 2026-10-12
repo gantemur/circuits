@@ -58,3 +58,9 @@
 }
 .schematic-observation{display:inline-block;margin:.4rem .6rem;padding:.25rem .45rem;border-radius:6px;background:#fff0e8;color:#9e4e31;font-weight:700}
 @media(max-width:650px){.circuit-overview .schematic-panel #schematic svg.network-diagram{min-width:540px}}
+.plot-line.overlay-dashed{stroke:#b95d35;stroke-dasharray:9 5;stroke-width:2}
+.plot-line.overlay-dotted{stroke:#425daa;stroke-dasharray:2 5;stroke-width:2}
+.plot-marker{fill:#fff;stroke:#253f39;stroke-width:2.5}
+.legend .overlay-dashed{border-top:2px dashed #b95d35}
+.legend .overlay-dotted{border-top:2px dotted #425daa}
+.legend span{padding:.15rem .25rem}
