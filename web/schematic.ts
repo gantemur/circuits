@@ -13,6 +13,11 @@ function valueLabel(c: Component): string {
   if ('gain' in c) return `${number(c.gain)} ${c.type === 'VCCS' ? 'S' : c.type === 'CCVS' ? 'Ω' : ''}`.trim();
   return c.type === 'V' ? t('valueSource') : t('currentSource');
 }
+function exactValueLabel(c: Component): string {
+  if ('value' in c) return `${c.value} ${c.type === 'R' ? 'Ω' : c.type === 'C' ? 'F' : 'H'}`;
+  if ('gain' in c) return `${c.gain} ${c.type === 'VCCS' ? 'S' : c.type === 'CCVS' ? 'Ω' : ''}`.trim();
+  return valueLabel(c);
+}
 const wire = (x1:number,y1:number,x2:number,y2:number) => `<path class="wire" d="M${x1} ${y1}L${x2} ${y2}"/>`;
 const dot = (x:number,y:number) => `<circle class="node-dot" cx="${x}" cy="${y}" r="4"/>`;
 const node = (x:number,name:string,selected:boolean) => `<text x="${x}" y="90" text-anchor="middle" class="schematic-label${selected?' schematic-output':''}">${escapeHtml(name)}${selected?' ◉':''}</text>`;
@@ -24,6 +29,21 @@ function group(state:LabState,id:string,symbol:string,x:number,labelY:number):st
 function resistor(state:LabState,id:string,x1:number,x2:number,y=120):string {
   const cx=(x1+x2)/2;
   return group(state,id,`<rect class="symbol" x="${x1}" y="${y-11}" width="${x2-x1}" height="22" rx="2"/>`,cx,y-30);
+}
+function seriesComponent(state:LabState,id:string,x1:number,x2:number,y=120):string {
+  const component = item(state,id);
+  if (component.type === 'R') return resistor(state,id,x1,x2,y);
+  if (component.type === 'C') {
+    const middle = (x1+x2)/2;
+    return wire(x1,y,middle-7,y)+group(state,id,
+      `<path class="symbol" d="M${middle-7} ${y-22}v44M${middle+7} ${y-22}v44"/>`,middle,y-45)+
+      wire(middle+7,y,x2,y);
+  }
+  // Four arcs terminate exactly at the right-hand lead.
+  const middle=(x1+x2)/2;
+  return wire(x1,y,middle-30,y)+group(state,id,
+    `<path class="symbol" d="M${middle-30} ${y}c0-25 15-25 15 0c0-25 15-25 15 0c0-25 15-25 15 0c0-25 15-25 15 0"/>`,middle,y-45)+
+    wire(middle+30,y,x2,y);
 }
 function branchResistor(state:LabState,id:string,x:number):string {
   return wire(x,120,x,165)+group(state,id,`<rect class="symbol" x="${x-11}" y="165" width="22" height="48" rx="2"/>`,x,158)+wire(x,213,x,256)+ground(x);
@@ -37,6 +57,12 @@ function capacitorHorizontal(state:LabState,id:string,x1:number,x2:number):strin
 }
 function inductorVertical(state:LabState,id:string,x:number):string {
   return wire(x,120,x,160)+group(state,id,`<path class="symbol" d="M${x} 160c-24 0-24 15 0 15c-24 0-24 15 0 15c-24 0-24 15 0 15c-24 0-24 15 0 15"/>`,x,150)+wire(x,220,x,256)+ground(x);
+}
+function shuntComponent(state:LabState,id:string,x:number):string {
+  const type=item(state,id).type;
+  if(type==='R') return branchResistor(state,id,x);
+  if(type==='C') return capacitor(state,id,x);
+  return inductorVertical(state,id,x);
 }
 function inductorHorizontal(state:LabState,id:string,x1:number,x2:number):string {
   const x=(x1+x2)/2;
@@ -55,6 +81,66 @@ function wrap(state:LabState,body:string,note:string):{html:string;note:string;s
   const html=`<svg viewBox="0 0 690 305" role="img" aria-label="${t('diagramLabel')}"><rect width="690" height="305" fill="#fafcf9"/><text x="22" y="29" class="schematic-small">${t('terminalOrientation')}</text>${body}<rect x="330" y="275" width="340" height="25" rx="6" fill="#fff0e8"/><text x="500" y="292" text-anchor="middle" class="schematic-small schematic-output">${escapeHtml(t('outputBadge',{output:description}))}</text></svg>`;
   return { html, note, schematic:true };
 }
+/** Four horizontal nodes joined by three real series elements; every shunt ends at node 0. */
+function ladderSchematic(state:LabState,series:string[],shunts:string[],withSource:boolean,note:string):{html:string;note:string;schematic:boolean} {
+  const names=['in','a','b','out'];
+  const x=[70,225,380,535];
+  const selected=state.document.circuit.observations.find(o=>o.id===state.output);
+  const selectedNode=selected?.type==='voltage' && selected.n==='0' ? selected.p : '';
+  let svg='';
+  for(let index=0;index<names.length;index++) {
+    svg+=node(x[index]!,names[index]!,selectedNode===names[index])+dot(x[index]!,120);
+  }
+  for(let index=0;index<series.length;index++) {
+    const left=x[index]!,right=x[index+1]!;
+    svg+=wire(left,120,left+40,120)+seriesComponent(state,series[index]!,left+40,right-40)+wire(right-40,120,right,120);
+  }
+  for(let index=0;index<shunts.length;index++) svg+=shuntComponent(state,shunts[index]!,x[index+1]!);
+  if(withSource) svg+=source(state,'Vin',x[0]!,'V');
+  else svg+=`<text x="28" y="113" class="schematic-small">I →</text><text x="46" y="137" class="schematic-small">+</text><text x="558" y="256" class="schematic-small">−</text>`;
+  return wrap(state,svg,note);
+}
+/** The feedback element connects a to the *output* of the ideal follower. */
+function activeFilterSchematic(state:LabState,highPass:boolean):{html:string;note:string;schematic:boolean} {
+  const input=70,a=225,b=380,out=535,load=630;
+  const selected=state.document.circuit.observations.find(o=>o.id===state.output);
+  const selectedNode=selected?.type==='voltage'&&selected.n==='0'?selected.p:'';
+  const first=highPass?'C1':'R1',second=highPass?'C2':'R2';
+  const groundShunt=highPass?'Rg':'Cg',feedback=highPass?'Rf':'Cf';
+  let svg=node(input,'in',selectedNode==='in')+node(a,'a',selectedNode==='a')+
+    node(b,'b',selectedNode==='b')+node(out,'out',selectedNode==='out');
+  svg+=wire(input,120,123,120)+seriesComponent(state,first,123,172)+wire(172,120,a,120);
+  svg+=wire(a,120,278,120)+seriesComponent(state,second,278,327)+wire(327,120,b,120);
+  svg+=source(state,'Vin',input,'V')+shuntComponent(state,groundShunt,b);
+  // Upper route deliberately passes above b; there is no connection at its crossing longitude.
+  svg+=wire(a,120,a,55)+wire(a,55,345,55)+seriesComponent(state,feedback,345,405,55)+
+    wire(405,55,out,55)+wire(out,55,out,120);
+  svg+=source(state,'Follower',out,'VCVS')+wire(out,120,load,120)+branchResistor(state,'RL',load);
+  // The dashed sensing lead starts at b, then reaches the VCVS control input.
+  // It is not a conductive connection to the output branch.
+  svg+=`<path class="control-wire" d="M${b} 145H475V184H508"/>`+
+    `<text x="428" y="140" class="schematic-small">V(b)−V(0)</text>`+
+    `<text x="476" y="237" class="schematic-small">V(out)=V(b)</text>`;
+  svg+=dot(input,120)+dot(a,120)+dot(b,120)+dot(b,145)+dot(out,120)+dot(load,120);
+  return wrap(state,svg,t(highPass?'schematicButterHigh':'schematicButterLow'));
+}
+function rlcMeasurementSchematic(state:LabState,notch:boolean):{html:string;note:string;schematic:boolean} {
+  const r=notch?'Rn':'Rbp',l=notch?'Ln':'Lbp',c=notch?'Cn':'Cbp';
+  const positions:Record<string,{x:number;y:number}>={in:{x:78,y:120},a:{x:345,y:120},b:{x:590,y:120},'0':{x:590,y:256}};
+  const selected=state.document.circuit.observations.find(o=>o.id===state.output);
+  let svg=node(78,'in',false)+node(345,'a',false)+node(590,'b',false)+
+    wire(78,120,184,120)+resistor(state,r,184,254)+wire(254,120,345,120)+
+    wire(345,120,405,120)+seriesComponent(state,l,405,485)+wire(485,120,590,120)+
+    source(state,'Vin',78,'V')+capacitor(state,c,590)+dot(78,120)+dot(345,120)+dot(590,120);
+  if(selected?.type==='voltage') {
+    const positive=positions[selected.p],negative=positions[selected.n];
+    if(positive&&negative) svg+=`<text x="${positive.x+12}" y="${positive.y+23}" class="schematic-output">+</text>`+
+      `<text x="${negative.x+12}" y="${negative.y+23}" class="schematic-output">−</text>`;
+  } else if(selected?.type==='current'&&selected.component===l) {
+    svg+=`<text x="414" y="152" class="schematic-output">I(a→b) →</text>`;
+  }
+  return wrap(state,svg,t(notch?'schematicRlcNotch':'schematicRlcBand'));
+}
 export function schematic(state:LabState):{html:string;note:string;schematic:boolean} {
   // Preset identity alone survives value edits and imports. Confirm the actual
   // endpoint/ID topology before attaching a curated layout to a document.
@@ -66,6 +152,20 @@ export function schematic(state:LabState):{html:string;note:string;schematic:boo
     ...drawing,
     html:`${drawing.html}<details class="schematic-topology"><summary>${t('topologyTable')}</summary>${topology}</details>`,
   });
+  if(preset==='rc3-low-pass' || preset==='rc3-high-pass') {
+    const low=preset==='rc3-low-pass';
+    return withTopology(ladderSchematic(state,low?['R1','R2','R3']:['C1','C2','C3'],
+      low?['C1','C2','C3']:['R1','R2','R3'],true,t(low?'schematicRc3Low':'schematicRc3High')));
+  }
+  if(preset==='rc-impedance-ladder' || preset==='rl-impedance-ladder') {
+    const rc=preset==='rc-impedance-ladder';
+    return withTopology(ladderSchematic(state,rc?['R1','R2','R3']:['L1','L2','L3'],
+      rc?['C1','C2','C3']:['R1','R2','R3'],false,t(rc?'schematicRcLadder':'schematicRlLadder')));
+  }
+  if(preset==='butterworth2-low-pass' || preset==='butterworth2-high-pass')
+    return withTopology(activeFilterSchematic(state,preset==='butterworth2-high-pass'));
+  if(preset==='rlc-band-pass' || preset==='rlc-notch')
+    return withTopology(rlcMeasurementSchematic(state,preset==='rlc-notch'));
   if(preset==='divider') {
     const svg=node(88,'in',selectedNode==='in')+node(467,'out',selectedNode==='out')+wire(88,120,218,120)+resistor(state,'R1',218,292)+wire(292,120,467,120)+dot(88,120)+dot(467,120)+source(state,'Vin',88,'V')+branchResistor(state,'R2',467);
     return withTopology(wrap(state,svg,t('schematicDivider')));
@@ -133,5 +233,5 @@ export function schematic(state:LabState):{html:string;note:string;schematic:boo
 }
 function topologyTable(state:LabState):string {
   const nodes=state.document.circuit.nodes,components=state.document.circuit.components;
-  return `<p class="muted small">${escapeHtml(t('nodesList',{nodes:nodes.map(n=>JSON.stringify(n)).join(', ')}))}</p><div class="table-wrap"><table class="result-table"><thead><tr><th>ID</th><th>Type</th><th>p</th><th>n</th><th>${t('parameter')}</th></tr></thead><tbody>${components.map(c=>`<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.type)}</td><td>${escapeHtml(c.p)}</td><td>${escapeHtml(c.n)}</td><td>${escapeHtml(valueLabel(c))}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<p class="muted small">${escapeHtml(t('nodesList',{nodes:nodes.map(n=>JSON.stringify(n)).join(', ')}))}</p><div class="table-wrap"><table class="result-table"><thead><tr><th>ID</th><th>Type</th><th>p</th><th>n</th><th>${t('parameter')}</th></tr></thead><tbody>${components.map(c=>`<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.type)}</td><td>${escapeHtml(c.p)}</td><td>${escapeHtml(c.n)}</td><td>${escapeHtml(exactValueLabel(c))}</td></tr>`).join('')}</tbody></table></div>`;
 }

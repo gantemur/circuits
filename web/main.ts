@@ -108,7 +108,7 @@ function renderGuide(): void {
 function renderCircuitChoice(): void {
   const select = byId('circuit-select') as HTMLSelectElement;
   const group = (label: TranslationKey, ids: string[]) => `<optgroup label="${translate(label)}">${presets.filter(p=>ids.includes(p.id)).map(p=>`<option value="${e(p.id)}"${state.presetId === p.id ? ' selected' : ''}>${translate(p.titleKey)}</option>`).join('')}</optgroup>`;
-  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}${group('presetGroupPort',['port-t','port-rc-section','port-rc-cascade'])}`;
+  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupPassiveFilters',['rc3-low-pass','rc3-high-pass','rlc-band-pass','rlc-notch'])}${group('presetGroupActiveFilters',['butterworth2-low-pass','butterworth2-high-pass'])}${group('presetGroupImpedance',['rc-impedance-ladder','rl-impedance-ladder'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}${group('presetGroupPort',['port-t','port-rc-section','port-rc-cascade'])}`;
   const preset = presets.find(p => p.id === state.presetId);
   const modified = preset && JSON.stringify(state.document) !== JSON.stringify(preset.document);
   byId('circuit-status').textContent = state.presetId ? t(modified ? 'circuitModified' : 'circuitPreset') : t('circuitCustom');
@@ -467,7 +467,15 @@ document.addEventListener('change',async event=>{
     loadPreset(target.value);return;
   }
   if((target instanceof HTMLInputElement||target instanceof HTMLSelectElement)&&target.dataset.panelField){
-    if(handlePanelFieldChange(workspace,state,target.dataset.panelId??'',target.dataset.panelField,target.value)) renderPanels();
+    if(handlePanelFieldChange(workspace,state,target.dataset.panelId??'',target.dataset.panelField,target.value)) {
+      // A panel's chosen observation also identifies the measurement marked in
+      // the circuit drawing. Other panels retain their independent selections.
+      if(target.dataset.panelField==='output' && state.document.circuit.observations.some(o=>o.id===target.value)) {
+        state.output=target.value;
+        renderSchematic();
+      }
+      renderPanels();
+    }
     return;
   }
   if((target instanceof HTMLInputElement||target instanceof HTMLSelectElement)&&target.dataset.kind)editField(target);

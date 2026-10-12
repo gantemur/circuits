@@ -75,3 +75,19 @@ An explicit language choice is stored under `circuits-unfolded-language` in brow
 | Study guide | Математик ба санал болгох туршилтууд | Shared Analyze/Transform lesson |
 
 Exact node/component IDs, generated resistor names, equations, units, and JSON remain untranslated. The 1 V boundary experiment is explained separately from the existing independent equivalence checks. Source/storage blocker labels are translated, but the native device codes remain exact.
+
+## Phase 2D2 filter and impedance terms
+
+| English | Монгол | Use |
+| --- | --- | --- |
+| Passive filter | Идэвхгүй шүүлтүүр | R/C/L network without the ideal follower |
+| Active filter | Идэвхтэй шүүлтүүр | Baseline RC filter using an ideal powered VCVS follower |
+| Butterworth baseline | Баттервортын суурь | Flat-magnitude component ratio at the stated fixture values; edits need not retain it |
+| Follower | Дагагч | Ideal unity-gain voltage-controlled voltage source, not a realistic op-amp |
+| Band-pass | Зурвас нэвтрүүлэх | Series RLC resistor-voltage measurement |
+| Notch / band-stop | Зурвас хориглох | Series RLC L+C-voltage cancellation measurement |
+| Impedance ladder | Импедансын шаталсан сүлжээ | Source-free driving-point RC or RL network |
+| Continued fraction | Үргэлжилсэн бутархай | Tail-first series/shunt expression for driving-point Z |
+| Cutoff | Заагийн давтамж | Overall −3 dB point, distinct from an individual element break |
+
+The translated filter guides keep native IDs such as `resistorVoltage`, SI coefficients, and normalized variables `s` and `z` exact. They distinguish an authored baseline from the live numerical result and describe undefined phase at an ideal zero without inventing a plotted value.

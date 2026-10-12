@@ -24,9 +24,24 @@ export interface EditResult { ok: boolean; error?: string; errorCode?: string; e
 const editError = (error: unknown): EditResult => ({ ok: false, error: error instanceof Error ? error.message : String(error),
   errorCode: error instanceof ValidationError ? error.code : 'invalid-document',
   errorParams: error instanceof ValidationError ? error.params : {} });
-const defaults = (preset: string): Settings => ({ minHz: 1, maxHz: preset === 'rlc' ? 1e5 : 1e4,
-  points: 81, inspectHz: preset === 'rc' || preset === 'rc-high-pass' ? 1/(2*Math.PI*.001) : 1000,
-  duration: preset === 'rlc' ? .003 : .005, step: preset === 'rlc' ? 1e-5 : 5e-5 });
+const defaults = (preset: string): Settings => {
+  const rlcMeasurement = preset === 'rlc-band-pass' || preset === 'rlc-notch';
+  const newFilter = preset.startsWith('rc3-') || preset.startsWith('butterworth2-');
+  const ladder = preset.endsWith('-impedance-ladder');
+  const resonanceHz = 10000 / (2 * Math.PI);
+  const duration = preset === 'rc3-high-pass' ? .02 : newFilter || rlcMeasurement ? .002 :
+    preset === 'rlc' ? .003 : .005;
+  return {
+    minHz: rlcMeasurement ? resonanceHz / 100 : newFilter ? 10 : 1,
+    maxHz: rlcMeasurement ? resonanceHz * 100 : newFilter || ladder ? 1e5 :
+      preset === 'rlc' ? 1e5 : 1e4,
+    points: 81,
+    inspectHz: rlcMeasurement ? resonanceHz : preset === 'rc' || preset === 'rc-high-pass'
+      ? 1 / (2 * Math.PI * .001) : 1000,
+    duration,
+    step: newFilter || rlcMeasurement ? duration / 1000 : preset === 'rlc' ? 1e-5 : 5e-5,
+  };
+};
 
 export function createLab(presetId = 'divider'): LabState {
   const p = presets.find(p => p.id === presetId);

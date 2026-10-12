@@ -70,3 +70,20 @@ These native v1 documents have no source branches. The example selector suggests
 | `port-rc-cascade.json` | Two equal sections connect directly. With ideal input drive and open output, `Vout/Vs=1/(1+3sRC+(sRC)²)` from nodal equations, rather than the product of two isolated `1/(1+sRC)` gains. Finite `Rs` and `RL` cases are derived from the same connected KCL equations. |
 
 Additional regressions cover one-port series RC, nonreciprocal VCCS, port reversal and swapping, explicit independent-source suppression and drive exclusion, differential ports, exact punctuation-containing IDs, generated-ID collisions, invalid/dependent selections, and nonfinite or singular outcomes.
+
+## Phase 2D2 example-library cases
+
+The six transfer examples have a 1 V DC value, 1 V RMS real AC phasor, and 0→1 V step at t=0, with zero pre-step capacitor voltages and inductor currents. All `H` references divide the named zero-state output by `Vin` from `in` to `0`. The source-free ladders have no permanent drive or load and measure the ordered `(in,0)` port with current entering at `in`. `test/phase-2d2.test.mjs` evaluates the following independently from the kernel, including complex samples and backward Euler refinement.
+
+| Fixture | Independent expectation |
+| --- | --- |
+| `rc3-low-pass.json` | Three connected 1 kΩ series R and three equal shunt C, with `C=x3/(2π·10⁶)` F, `x3=0.1942860004595122`; `H(z)=1/(1+6z+5z²+z³)`, `z=sRC`. Magnitude is `1/√2` at 1 kHz. A temporary 1 kΩ output load gives DC gain `1/4` for `Rs=0` and `2/9` for `Rs=500 Ω`. |
+| `rc3-high-pass.json` | Three equal series C, three 1 kΩ shunt R, `C=1/(x3·2π·10⁶)` F; `H(z)=z³/(1+5z+6z²+z³)`. At the 1 V step, output jumps from 0 to 1 V while all three capacitor voltages remain zero at the event. |
+| `butterworth2-low-pass.json` | `R1=R2=11253.953951963826 Ω`, `Cg=10 nF`, `Cf=20 nF` from `a` to the follower's actual output, and `RL=10 kΩ`. The ideal unity VCVS senses `b–0`; `H(z)=1/(1+√2z+z²)`, `z=s/(2π·1000)`. At 1 kHz, `H=−i/√2`; at 2 kHz, `|H|=1/√17`. |
+| `butterworth2-high-pass.json` | Series `C1=C2=10 nF`, `Rf=11253.953951963826 Ω` from `a` to output, `Rg=2Rf` to ground, same follower/load. `H(z)=z²/(1+√2z+z²)`. At 1 kHz, `H=+i/√2`; at 500 Hz, `|H|=1/√17`. Changing RL changes load/follower currents but not ideal transfer. |
+| `rlc-band-pass.json` | Series `R=100 Ω`, `L=0.01 H`, `C=1 µF`; default output is resistor voltage `V(in)−V(a)`. `H=sRC/(1+sRC+s²LC)`, unity at `ω0=10000 rad/s`; `Q=1`, bandwidth `R/L`. Other named observations retain the same circuit. |
+| `rlc-notch.json` | Same physical series circuit with distinct branch IDs, default output `V(a)−V(0)` across L+C. `H=(1+s²LC)/(1+sRC+s²LC)`, and band-pass plus notch is one; the notch has an analytical zero at `ω0` whose numerical phase is undefined. |
+| `rc-impedance-ladder.json` | Source-free R `[1,2,3] kΩ` series and C `[1,0.5,0.25] µF` shunts. Evaluate `Z3=R3+1/(sC3)`, `Z2=R2+1/(sC2+1/Z3)`, `Z=R1+1/(sC1+1/Z2)`. DC Y is zero while finite DC Z is unavailable; `Z(∞)=R1`. |
+| `rl-impedance-ladder.json` | Source-free L `[1,2,3] H` series and R `[1,2,3] kΩ` shunts. Evaluate `Z3=sL3+R3`, `Z2=sL2+1/(1/R2+1/Z3)`, `Z=sL1+1/(1/R1+1/Z2)`. `Z(0)=6000/11 Ω`, `Z/s→L1` and `Z−sL1→R1` at high frequency. |
+
+The two Butterworth step references use `α=β=(2π·1000)/√2`: low-pass `1−e^(−αt)[cos(βt)+sin(βt)]`, high-pass `e^(−αt)[cos(βt)−sin(βt)]`. The RLC resistor step uses `(2α/β)e^(−αt)sin(βt)` with `α=R/(2L)`, `β=√(1/(LC)−α²)`; the L+C step is one minus it. The test compares finite backward Euler samples to these continuous references at two step sizes; it does not assert exact finite-step agreement.

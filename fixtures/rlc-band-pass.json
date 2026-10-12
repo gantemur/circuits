@@ -1,0 +1,110 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rlc-band-pass",
+    "nodes": [
+      "0",
+      "in",
+      "a",
+      "b"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "Rbp",
+        "type": "R",
+        "p": "in",
+        "n": "a",
+        "value": 100
+      },
+      {
+        "id": "Lbp",
+        "type": "L",
+        "p": "a",
+        "n": "b",
+        "value": 0.01
+      },
+      {
+        "id": "Cbp",
+        "type": "C",
+        "p": "b",
+        "n": "0",
+        "value": 1e-06
+      }
+    ],
+    "observations": [
+      {
+        "id": "resistorVoltage",
+        "type": "voltage",
+        "p": "in",
+        "n": "a"
+      },
+      {
+        "id": "lcVoltage",
+        "type": "voltage",
+        "p": "a",
+        "n": "0"
+      },
+      {
+        "id": "inductorVoltage",
+        "type": "voltage",
+        "p": "a",
+        "n": "b"
+      },
+      {
+        "id": "capacitorVoltage",
+        "type": "voltage",
+        "p": "b",
+        "n": "0"
+      },
+      {
+        "id": "inductorCurrent",
+        "type": "current",
+        "component": "Lbp"
+      },
+      {
+        "id": "source",
+        "type": "current",
+        "component": "Vin"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rlc-band-pass experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 1,
+        "ac": {
+          "re": 1,
+          "im": 0
+        },
+        "waveform": {
+          "type": "step",
+          "at": 0,
+          "before": 0,
+          "after": 1
+        }
+      }
+    ],
+    "initial": {
+      "kind": "storage",
+      "values": [
+        {
+          "id": "Lbp",
+          "value": 0
+        },
+        {
+          "id": "Cbp",
+          "value": 0
+        }
+      ]
+    }
+  }
+}

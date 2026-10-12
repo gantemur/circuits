@@ -47,6 +47,7 @@
 .res-preview .result-table{min-width:420px}.res-preview .network-diagram{max-height:330px}
 .study-guide{margin:1.2rem 0}.study-guide summary{cursor:pointer;font:700 1.05rem var(--display)}
 .guide-content{max-width:80ch}.guide-content h3{font-size:.84rem;margin:1rem 0 .2rem}.guide-content p{margin:.25rem 0 .6rem;line-height:1.5}
+.guide-content .equation-line{max-width:100%;overflow-x:auto;white-space:nowrap}
 .guide-content ol{padding-left:1.3rem}.guide-content li{margin:.6rem 0;line-height:1.5}.guide-content li .button{margin-left:.4rem}
 @media(max-width:650px){.res-diagram-grid{grid-template-columns:1fr}.res-preview .result-table{min-width:420px}.study-guide .button{white-space:normal}}
 @media(max-width:650px){

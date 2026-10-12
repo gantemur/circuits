@@ -13,6 +13,14 @@ import resBridge from '../fixtures/res-bridge.json';
 import portT from '../fixtures/port-t.json';
 import portRc from '../fixtures/port-rc-section.json';
 import portCascade from '../fixtures/port-rc-cascade.json';
+import rc3Low from '../fixtures/rc3-low-pass.json';
+import rc3High from '../fixtures/rc3-high-pass.json';
+import butterLow from '../fixtures/butterworth2-low-pass.json';
+import butterHigh from '../fixtures/butterworth2-high-pass.json';
+import rlcBand from '../fixtures/rlc-band-pass.json';
+import rlcNotch from '../fixtures/rlc-notch.json';
+import rcLadder from '../fixtures/rc-impedance-ladder.json';
+import rlLadder from '../fixtures/rl-impedance-ladder.json';
 import type { TranslationKey } from './i18n.js';
 
 export interface Preset { id: string; titleKey: TranslationKey; subtitleKey: TranslationKey; document: NativeDocument; defaultOutput: string; }
@@ -31,6 +39,14 @@ export const presets: Preset[] = [
   { id: 'port-t', titleKey: 'presetPortTTitle', subtitleKey: 'presetPortTSubtitle', document: portT as NativeDocument, defaultOutput: 'out' },
   { id: 'port-rc-section', titleKey: 'presetPortRcTitle', subtitleKey: 'presetPortRcSubtitle', document: portRc as NativeDocument, defaultOutput: 'out' },
   { id: 'port-rc-cascade', titleKey: 'presetPortCascadeTitle', subtitleKey: 'presetPortCascadeSubtitle', document: portCascade as NativeDocument, defaultOutput: 'out' },
+  { id: 'rc3-low-pass', titleKey: 'presetRc3LowTitle', subtitleKey: 'presetRc3LowSubtitle', document: rc3Low as NativeDocument, defaultOutput: 'out' },
+  { id: 'rc3-high-pass', titleKey: 'presetRc3HighTitle', subtitleKey: 'presetRc3HighSubtitle', document: rc3High as NativeDocument, defaultOutput: 'out' },
+  { id: 'butterworth2-low-pass', titleKey: 'presetButterLowTitle', subtitleKey: 'presetButterLowSubtitle', document: butterLow as NativeDocument, defaultOutput: 'out' },
+  { id: 'butterworth2-high-pass', titleKey: 'presetButterHighTitle', subtitleKey: 'presetButterHighSubtitle', document: butterHigh as NativeDocument, defaultOutput: 'out' },
+  { id: 'rlc-band-pass', titleKey: 'presetRlcBandTitle', subtitleKey: 'presetRlcBandSubtitle', document: rlcBand as NativeDocument, defaultOutput: 'resistorVoltage' },
+  { id: 'rlc-notch', titleKey: 'presetRlcNotchTitle', subtitleKey: 'presetRlcNotchSubtitle', document: rlcNotch as NativeDocument, defaultOutput: 'lcVoltage' },
+  { id: 'rc-impedance-ladder', titleKey: 'presetRcLadderTitle', subtitleKey: 'presetRcLadderSubtitle', document: rcLadder as NativeDocument, defaultOutput: 'port' },
+  { id: 'rl-impedance-ladder', titleKey: 'presetRlLadderTitle', subtitleKey: 'presetRlLadderSubtitle', document: rlLadder as NativeDocument, defaultOutput: 'port' },
 ];
 
 export const copyDocument = (d: NativeDocument): NativeDocument => JSON.parse(JSON.stringify(d)) as NativeDocument;

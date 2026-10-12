@@ -1,0 +1,125 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rc3-low-pass",
+    "nodes": [
+      "0",
+      "in",
+      "a",
+      "b",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "Vin",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "R1",
+        "type": "R",
+        "p": "in",
+        "n": "a",
+        "value": 1000
+      },
+      {
+        "id": "R2",
+        "type": "R",
+        "p": "a",
+        "n": "b",
+        "value": 1000
+      },
+      {
+        "id": "R3",
+        "type": "R",
+        "p": "b",
+        "n": "out",
+        "value": 1000
+      },
+      {
+        "id": "C1",
+        "type": "C",
+        "p": "a",
+        "n": "0",
+        "value": 3.0921577346685614e-08
+      },
+      {
+        "id": "C2",
+        "type": "C",
+        "p": "b",
+        "n": "0",
+        "value": 3.0921577346685614e-08
+      },
+      {
+        "id": "C3",
+        "type": "C",
+        "p": "out",
+        "n": "0",
+        "value": 3.0921577346685614e-08
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "a",
+        "type": "voltage",
+        "p": "a",
+        "n": "0"
+      },
+      {
+        "id": "b",
+        "type": "voltage",
+        "p": "b",
+        "n": "0"
+      },
+      {
+        "id": "source",
+        "type": "current",
+        "component": "Vin"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rc3-low-pass experiment",
+    "sources": [
+      {
+        "id": "Vin",
+        "dc": 1,
+        "ac": {
+          "re": 1,
+          "im": 0
+        },
+        "waveform": {
+          "type": "step",
+          "at": 0,
+          "before": 0,
+          "after": 1
+        }
+      }
+    ],
+    "initial": {
+      "kind": "storage",
+      "values": [
+        {
+          "id": "C1",
+          "value": 0
+        },
+        {
+          "id": "C2",
+          "value": 0
+        },
+        {
+          "id": "C3",
+          "value": 0
+        }
+      ]
+    }
+  }
+}

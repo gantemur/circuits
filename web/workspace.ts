@@ -38,7 +38,8 @@ export interface PortSweepPoint {
   magnitude: number | null; phaseDegrees: number | null; message: string;
 }
 
-const defaultType = (preset: string | null): PanelType[] => preset?.startsWith('port-') ? ['port-frequency', 'equations'] :
+const defaultType = (preset: string | null): PanelType[] => preset?.endsWith('-impedance-ladder') ? ['port-frequency', 'equations'] :
+  preset?.startsWith('port-') ? ['port-frequency', 'equations'] :
   preset?.startsWith('res-') ? ['dc', 'equations'] : preset === 'divider' ? ['dc', 'port'] :
   preset === 'vcvs' ? ['dc', 'frequency'] : ['frequency', 'transient'];
 const defaultPort = (state: LabState): [string, string] => {
@@ -50,6 +51,7 @@ const defaultPort = (state: LabState): [string, string] => {
 };
 export function createPanel(state: LabState, id: string, type: PanelType): PanelConfig {
   const [p, q] = defaultPort(state);
+  const impedanceLadder = state.presetId?.endsWith('-impedance-ladder');
   const portPreset = state.presetId?.startsWith('port-');
   const primary = portPreset && state.document.circuit.nodes.includes('in') ? 'in' : p;
   const secondary = state.document.circuit.nodes.includes('out') ? 'out' :
@@ -57,8 +59,8 @@ export function createPanel(state: LabState, id: string, type: PanelType): Panel
   return { id, type, input: state.input, output: state.output, ...state.settings,
     p: primary, q, load: 2000, collapsed: false, expanded: type === 'equations', settingsOpen: false,
     portMode: portPreset ? 2 : 1, p2: secondary, q2: '0', externalDrive: null,
-    portFrequencyHz: 1000, portMinHz: 1, portMaxHz: 10000, portPoints: 81,
-    portView: 'single', portMatrix: 'y', portRow: 0, portColumn: 0,
+    portFrequencyHz: 1000, portMinHz: 1, portMaxHz: impedanceLadder ? 1e5 : 10000, portPoints: 81,
+    portView: impedanceLadder ? 'sweep' : 'single', portMatrix: impedanceLadder ? 'z' : 'y', portRow: 0, portColumn: 0,
     portSourceResistance: 0, portLoadResistance: 2000, portLoadOpen: false,
     pending: {}, errors: {}, selectionNeeded: null };
 }

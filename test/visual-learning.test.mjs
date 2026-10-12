@@ -114,7 +114,9 @@ test('all six resistor methods have a selectable explicit preview and unavailabl
 });
 
 test('every preset draws selectable current values; custom topology stays a table',()=>{
-  const ids=['divider','rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc','vcvs','res-series','res-star','res-bridge','port-t','port-rc-section','port-rc-cascade'];
+  const ids=['divider','rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc','vcvs','res-series','res-star','res-bridge','port-t','port-rc-section','port-rc-cascade',
+    'rc3-low-pass','rc3-high-pass','butterworth2-low-pass','butterworth2-high-pass','rlc-band-pass','rlc-notch','rc-impedance-ladder','rl-impedance-ladder'];
+  assert.equal(ids.length,22);
   for(const id of ids){
     const state=createLab(id),view=schematic(state);
     assert.equal(view.schematic,true,id);assert.doesNotMatch(view.html,/unknown-layout/,id);
@@ -129,8 +131,9 @@ test('every preset draws selectable current values; custom topology stays a tabl
   assert.match(schematic(state).html,/unknown-layout/);
 });
 
-test('all fourteen guides have bilingual conditions and workspace-specific actions; four references are authored baselines',()=>{
-  const ids=['divider','rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc','vcvs','res-series','res-star','res-bridge','port-t','port-rc-section','port-rc-cascade'];
+test('all twenty-two guides have bilingual conditions and workspace-specific actions; authored references are baselines',()=>{
+  const ids=['divider','rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc','vcvs','res-series','res-star','res-bridge','port-t','port-rc-section','port-rc-cascade',
+    'rc3-low-pass','rc3-high-pass','butterworth2-low-pass','butterworth2-high-pass','rlc-band-pass','rlc-notch','rc-impedance-ladder','rl-impedance-ladder'];
   for(const id of ids){
     for(const lang of ['en','mn']){
       const guide=lessons[id][lang];
@@ -139,7 +142,7 @@ test('all fourteen guides have bilingual conditions and workspace-specific actio
       assert.ok(guide.steps.every(s=>s.action&&s.text));
     }
   }
-  assert.deepEqual(Object.keys(referenceResponses).sort(),['divider','rc','rc-high-pass','res-series'].sort());
+  assert.deepEqual(Object.keys(referenceResponses).sort(),['divider','rc','rc-high-pass','res-series',...ids.slice(14)].sort());
   assert.deepEqual(referenceResponses.rc.numerator,[1]);
   assert.deepEqual(referenceResponses['rc-high-pass'].numerator,[0,.001]);
   assert.deepEqual(referenceResponses['res-series'].numerator,[3000]);

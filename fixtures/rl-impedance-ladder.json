@@ -1,0 +1,93 @@
+{
+  "circuit": {
+    "schemaVersion": 1,
+    "label": "rl-impedance-ladder",
+    "nodes": [
+      "0",
+      "in",
+      "a",
+      "b",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "L1",
+        "type": "L",
+        "p": "in",
+        "n": "a",
+        "value": 1
+      },
+      {
+        "id": "R1",
+        "type": "R",
+        "p": "a",
+        "n": "0",
+        "value": 1000
+      },
+      {
+        "id": "L2",
+        "type": "L",
+        "p": "a",
+        "n": "b",
+        "value": 2
+      },
+      {
+        "id": "R2",
+        "type": "R",
+        "p": "b",
+        "n": "0",
+        "value": 2000
+      },
+      {
+        "id": "L3",
+        "type": "L",
+        "p": "b",
+        "n": "out",
+        "value": 3
+      },
+      {
+        "id": "R3",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 3000
+      }
+    ],
+    "observations": [
+      {
+        "id": "port",
+        "type": "voltage",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "label": "rl-impedance-ladder experiment",
+    "sources": [],
+    "initial": {
+      "kind": "storage",
+      "values": [
+        {
+          "id": "L1",
+          "value": 0
+        },
+        {
+          "id": "L2",
+          "value": 0
+        },
+        {
+          "id": "L3",
+          "value": 0
+        }
+      ]
+    }
+  }
+}
