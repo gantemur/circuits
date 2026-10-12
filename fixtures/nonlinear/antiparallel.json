@@ -1,0 +1,27 @@
+{
+  "circuit": {
+    "schemaVersion": 2,
+    "label": "Resistor-driven antiparallel junctions",
+    "nodes": ["0", "drive", "out"],
+    "components": [
+      { "id": "V1", "type": "V", "p": "drive", "n": "0" },
+      { "id": "R1", "type": "R", "p": "drive", "n": "out", "value": 1000 },
+      { "id": "Dplus", "type": "D", "p": "out", "n": "0", "model": {
+        "kind": "shockley-series", "saturationCurrentA": 1e-12, "idealityFactor": 1,
+        "seriesResistanceOhm": 0, "temperatureK": 300
+      } },
+      { "id": "Dminus", "type": "D", "p": "0", "n": "out", "model": {
+        "kind": "shockley-series", "saturationCurrentA": 1e-12, "idealityFactor": 1,
+        "seriesResistanceOhm": 0, "temperatureK": 300
+      } }
+    ],
+    "observations": [
+      { "id": "vout", "type": "voltage", "p": "out", "n": "0" },
+      { "id": "iplus", "type": "current", "component": "Dplus" },
+      { "id": "iminus", "type": "current", "component": "Dminus" },
+      { "id": "vreverse", "type": "voltage", "p": "0", "n": "out" }
+    ]
+  },
+  "experiment": { "schemaVersion": 1, "sources": [ { "id": "V1", "dc": 1 } ],
+    "initial": { "kind": "equilibrium" } }
+}

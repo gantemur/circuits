@@ -10,6 +10,8 @@ The repository is named `circuits`. **Circuits Unfolded** is the working applica
 
 ## Status
 
+**Phase 3A1 is implemented on the `codex/phase-3a-diode-kernel` task branch, pending review:** a separate strict v2 document adds an explicit Shockley-series diode, analytical DC residual/Jacobian, bounded damped Newton solve, physical and power checks, and a v1 incremental tangent circuit for local linear analysis. Four independent fixtures, tests, and a headless demo document the bounded model. This work is not integrated or published; the public browser remains the 22-example linear Phase 2D2 lab. See the [Phase 3A specification](docs/PHASE_3A_SPECIFICATION.md) and [diode reading path](docs/CODE_GUIDE.md#reading-the-phase-3a1-diode-kernel).
+
 **Phase 1A and Phase 1B are published on `main`:** they introduced eight editable examples, including the default voltage divider and an RC high-pass, plus native JSON editing and a form-based **Build / edit circuit** panel. The form constructs supported linear circuits without writing JSON. The Phase 0 TypeScript kernel computes DC and frequency responses, backward Euler transients where storage is present, and matrix provenance; the browser also provides verified preset schematics and JSON/CSV exports.
 
 **Phase 1B is published on `main`:** the form builder includes draft validation, conflict protection, node-reference renaming, and English/Mongolian errors. A graphical wiring editor remains future work.
@@ -72,7 +74,7 @@ npm run build
 npm run demo
 ```
 
-`npm test` builds the kernel and app first and runs the Node test runner. `npm run build` emits ESM modules and declarations in `dist/`, plus the standalone `dist/browser.js` kernel bundle. `npm run build:app` also emits `dist/app.js`, `dist/index.html`, and `dist/style.css`. `npm run demo` prints the RC element laws, labeled matrices and contributions, DC/frequency/transfer results, step refinement, controlled-source examples, Kron reduction, and explicit failure diagnostics. It needs no private book files.
+`npm test` builds the kernel and app first and runs the Node test runner. `npm run build` emits ESM modules and declarations in `dist/`, plus the standalone `dist/browser.js` kernel bundle. `npm run build:app` also emits `dist/app.js`, `dist/index.html`, and `dist/style.css`. `npm run demo` prints the RC element laws, labeled matrices and contributions, DC/frequency/transfer results, step refinement, controlled-source examples, Kron reduction, and explicit failure diagnostics. It needs no private book files. On the Phase 3A1 branch, `npm run demo:diode` prints a headless nonlinear DC bias, signed currents, physical residuals, bounded Newton trace, differential resistance, and local RC tangent response. The v2 parser and operating-point API remain separate from v1 browser import until Phase 3A2.
 
 ```js
 import { assemble, parseDocument, transfer, complex } from './dist/index.js';
@@ -91,7 +93,7 @@ The solver uses dense floating-point systems for small linear circuits. It repor
 
 The published site has 22 topology-matched built-in drawings with current values and expandable exact topology tables. Custom or imported topologies without a matching layout use the named node/component table; generated small resistor networks use a labeled deterministic node-edge diagram, with a table fallback when compact geometry is ambiguous or the network is too large. The form builder and JSON editor both create strict native v1 documents, alongside file import/export. There is no draggable wiring canvas or general custom schematic autorouter. Ordinary numerical sweeps are capped at 241 points, port sweeps at 121 points, and transient work at 3000 intervals. Zero magnitude has undefined logarithmic magnitude and phase; failed samples are gaps with statuses. Browser plots are numerical, and algebraic extraction remains restricted to the kernel's one-storage-element cases. The app does not infer internal stability from an input-output denominator.
 
-Phase 2D2 is the current public release. Transform includes the positive-resistor-only methods specified in [PHASE_2B_SPECIFICATION.md](docs/PHASE_2B_SPECIFICATION.md) and the DC one-port method in [PHASE_2A_SPECIFICATION.md](docs/PHASE_2A_SPECIFICATION.md). No sources or storage devices are reduced, and no internal voltages or branch currents are claimed preserved. Phase 2C adds bounded one/two-port Z/Y sampling and loading; Phase 2D1 adds the visual transformation workflow, drawings, and guides. Phase 2D2 adds the eight examples without general rational extraction or synthesis. Dynamic reduction, nonlinear models, synthesis, and graphical wiring remain later work. The current full-state solver can reject a network with undetermined internal currents even if terminal behavior is unique.
+Phase 2D2 is the current public release. Transform includes the positive-resistor-only methods specified in [PHASE_2B_SPECIFICATION.md](docs/PHASE_2B_SPECIFICATION.md) and the DC one-port method in [PHASE_2A_SPECIFICATION.md](docs/PHASE_2A_SPECIFICATION.md). No sources or storage devices are reduced, and no internal voltages or branch currents are claimed preserved. Phase 2C adds bounded one/two-port Z/Y sampling and loading; Phase 2D1 adds the visual transformation workflow, drawings, and guides. Phase 2D2 adds the eight examples without general rational extraction or synthesis. Phase 3A1 adds only headless diode bias and local tangent analysis on its branch; nonlinear transients, browser diode controls, broader device models, dynamic reduction, synthesis, and graphical wiring remain later work. The current full-state solver can reject a network with undetermined internal currents even if terminal behavior is unique.
 
 ## Intended laboratory
 
@@ -119,6 +121,7 @@ The defining feature is the connection between three views: schematic and physic
 | [docs/PHASE_2A_SPECIFICATION.md](docs/PHASE_2A_SPECIFICATION.md) | DC one-port scope, conventions, and acceptance cases |
 | [docs/PHASE_2D1_SPECIFICATION.md](docs/PHASE_2D1_SPECIFICATION.md) | Task-branch visual transformation and guided-example scope |
 | [docs/PHASE_2D2_SPECIFICATION.md](docs/PHASE_2D2_SPECIFICATION.md) | Eight additional linear examples, filters, and impedance ladders |
+| [docs/PHASE_3A_SPECIFICATION.md](docs/PHASE_3A_SPECIFICATION.md) | Headless diode bias and local tangent contract; later browser boundary |
 | [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | English/Mongolian terminology and language-neutral export convention |
 | [docs/MATHEMATICAL_CONVENTIONS.md](docs/MATHEMATICAL_CONVENTIONS.md) | Terminal signs, matrix signs, phasors, units, and evidence conventions |
 | [docs/REFERENCE_WORKFLOW.md](docs/REFERENCE_WORKFLOW.md) | How the companion book is supplied and used without publishing it |

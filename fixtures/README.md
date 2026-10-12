@@ -71,6 +71,12 @@ These native v1 documents have no source branches. The example selector suggests
 
 Additional regressions cover one-port series RC, nonreciprocal VCCS, port reversal and swapping, explicit independent-source suppression and drive exclusion, differential ports, exact punctuation-containing IDs, generated-ID collisions, invalid/dependent selections, and nonfinite or singular outcomes.
 
+## Phase 3A1 nonlinear fixtures
+
+The separate `nonlinear/` directory contains strict v2 circuits. `resistor-diode.json` sets a 1 V source, 1 kΩ resistor, and an explicit 300 K Shockley diode with `Is=1e-12 A`, `n=1`, `Rs=0`. Its bias independently solves `(1−v)/1000 = Is·expm1(v/eta)`; its local slope is `rd/(1000+rd)`. The two book checkpoints instead set `T=0.025·q/kB` and `T=0.02585·q/kB` in tests and must not be conflated with 300 K.
+
+`resistor-diode-series.json` sets `Rs=10 Ω` and a source of `1.5457378640168373 V`, independently constructed from `i=1 mA`, `vj=eta·log1p(i/Is)`, `v=vj+Rs·i`, and `E=1000·i+v`. `antiparallel.json` has opposite diode orientations and tests `(E−v)/1000 = 2 Is sinh(v/eta)` for positive and negative drive; the reverse-oriented device current is negative in its own p→n direction. `diode-rc-tangent.json` adds an external `1 µF` shunt capacitor and retains AC and waveform fields that do not select DC bias. Its incremental transfer is `(1/1000)/(1/1000+gterminal+s·1 µF)` with pole `−(1/1000+gterminal)/(1 µF)`. These are headless tests; no browser v2 preset is registered.
+
 ## Phase 2D2 example-library cases
 
 The six transfer examples have a 1 V DC value, 1 V RMS real AC phasor, and 0→1 V step at t=0, with zero pre-step capacitor voltages and inductor currents. All `H` references divide the named zero-state output by `Vin` from `in` to `0`. The source-free ladders have no permanent drive or load and measure the ordered `(in,0)` port with current entering at `in`. `test/phase-2d2.test.mjs` evaluates the following independently from the kernel, including complex samples and backward Euler refinement.

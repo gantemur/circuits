@@ -42,6 +42,8 @@ Inverse notation describes the mathematics. Implement it by solves. Singular `E`
 
 For a smooth nonlinear residual $F(x,\dot x,u)=0$ at a DC equilibrium, the tangent form has $E=F_{\dot x}$, $K=F_x$, $B=-F_u$. If presenting the book state form, $A=-F_x$.
 
+For the Phase 3A1 memoryless diode, `p` is the anode, `n` the cathode, $v=V(p)-V(n)$, and positive $i$ flows p→n. With supplied $I_s$ at temperature $T$, $V_T=k_B T/q$, $\eta=n V_T$, and series resistance $R_s$, its junction voltage is $v_j=v-R_s i$ and its DC law is $i=I_s\operatorname{expm1}(v_j/\eta)$. Temperature changes $V_T$ only; there is no inferred $I_s(T)$ or self-heating. The auxiliary diode-current row $i-I_s\operatorname{expm1}(v_j/\eta)=0$ has amperes as units. Its analytical junction conductance is $g_j=I_s\exp(v_j/\eta)/\eta$, and its local terminal resistance is $R_s+1/g_j$ when finite and positive. The native v1 tangent circuit describes increments about the recorded bias, not an absolute nonlinear equivalent or finite-amplitude 1 V response. See [the Phase 3A specification](PHASE_3A_SPECIFICATION.md).
+
 ## Frequency, phase, and amplitude
 
 Frequency $f$ is in hertz; angular frequency $\omega=2\pi f$ is in radians per second. Complex sweeps use $s=i\omega$. Returned phase values state radians or degrees.

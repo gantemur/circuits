@@ -1,0 +1,23 @@
+{
+  "circuit": {
+    "schemaVersion": 2,
+    "label": "Resistor-driven diode",
+    "nodes": ["0", "in", "out"],
+    "components": [
+      { "id": "V1", "type": "V", "p": "in", "n": "0" },
+      { "id": "R1", "type": "R", "p": "in", "n": "out", "value": 1000 },
+      { "id": "D1", "type": "D", "p": "out", "n": "0", "model": {
+        "kind": "shockley-series", "saturationCurrentA": 1e-12, "idealityFactor": 1,
+        "seriesResistanceOhm": 0, "temperatureK": 300
+      } }
+    ],
+    "observations": [
+      { "id": "vout", "type": "voltage", "p": "out", "n": "0" },
+      { "id": "id", "type": "current", "component": "D1" },
+      { "id": "isource", "type": "current", "component": "V1" }
+    ]
+  },
+  "experiment": { "schemaVersion": 1, "sources": [
+    { "id": "V1", "dc": 1, "ac": { "re": 1, "im": 0 } }
+  ], "initial": { "kind": "equilibrium" } }
+}
