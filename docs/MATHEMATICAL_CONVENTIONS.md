@@ -70,6 +70,8 @@ $$
 
 Capacitor voltages and inductor currents are continuous across ordinary source changes only when the model does not impose an ideal impulse. Unsupported impulsive cases must be identified.
 
+For the headless Phase 3A3 v2 transient, the existing static nonlinear residual is lifted by the linear storage factorization: $q=Sx$, $E=\Phi S$, and $\Phi\dot q+r(x,u)=0$. The ordered $q$ entries are external capacitor voltages (V) and inductor currents (A); corresponding rates are V/s and A/s. A regular backward-Euler interval solves $r(x_{n+1},u_{n+1})+\Phi(Sx_{n+1}-q_n)/h=0$. At a scheduled source step, left and right solutions share exactly the accepted $q$ but may have different algebraic values and capacitor currents. Its energy identity is $\Delta W+h\sum p_{\mathrm{nonstorage}}+D_{BE}\approx0$, where $D_{BE}=\tfrac12\sum C(\Delta v_C)^2+\tfrac12\sum L(\Delta i_L)^2$ is numerical dissipation in joules, not physical resistor loss. The browser does not yet enable this headless API.
+
 ## Equivalence, stability, and evidence
 
 Specify the preserved ports, inputs, outputs, loading, frequency/time class, and initialization assumptions. Terminal equivalence does not imply equality of internal quantities or hidden dynamics.

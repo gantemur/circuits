@@ -1,0 +1,79 @@
+{
+  "circuit": {
+    "schemaVersion": 2,
+    "label": "Series half-wave diode rectifier",
+    "nodes": [
+      "0",
+      "in",
+      "a",
+      "out"
+    ],
+    "components": [
+      {
+        "id": "V1",
+        "type": "V",
+        "p": "in",
+        "n": "0"
+      },
+      {
+        "id": "Rsource",
+        "type": "R",
+        "p": "in",
+        "n": "a",
+        "value": 100
+      },
+      {
+        "id": "D1",
+        "type": "D",
+        "p": "a",
+        "n": "out",
+        "model": {
+          "kind": "shockley-series",
+          "saturationCurrentA": 1e-12,
+          "idealityFactor": 1,
+          "seriesResistanceOhm": 0,
+          "temperatureK": 300
+        }
+      },
+      {
+        "id": "Rload",
+        "type": "R",
+        "p": "out",
+        "n": "0",
+        "value": 10000
+      }
+    ],
+    "observations": [
+      {
+        "id": "vout",
+        "type": "voltage",
+        "p": "out",
+        "n": "0"
+      },
+      {
+        "id": "id",
+        "type": "current",
+        "component": "D1"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "sources": [
+      {
+        "id": "V1",
+        "dc": 0,
+        "waveform": {
+          "type": "sinusoid",
+          "offset": 0,
+          "amplitudePeak": 2,
+          "frequencyHz": 50,
+          "phaseRadians": 0
+        }
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}

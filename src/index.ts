@@ -11,3 +11,4 @@ export * from './kron.js';
 export * from './one-port.js';
 export * from './port-analysis.js';
 export * from './resistor-transform.js';
+export * from './diode-transient.js';
