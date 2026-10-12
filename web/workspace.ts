@@ -245,6 +245,11 @@ export class PanelCalculator {
   private biasRevision = -1;
   private biasDocument: LabState['document'] | null = null;
   private bias: NonlinearResult | null = null;
+  /** Inspector and panels share the same current document/revision bias. */
+  currentBias(state: LabState): NonlinearResult | null {
+    const document = state.document;
+    return isNonlinearDocument(document) ? this.biasFor(state, document) : null;
+  }
   private biasFor(state: LabState, document: NonlinearDocument): NonlinearResult {
     if (this.biasRevision === state.revision && this.biasDocument === document && this.bias) return this.bias;
     this.biasRevision = state.revision;

@@ -2,7 +2,10 @@ import { assemble, assembleDiodeSystem, complex, currentRow, inputValues, output
   type Assembly, type AnalysisResult } from '../src/index.js';
 import { createLab, exportNative, importNative, updateDocument, } from './lab.js';
 import { isNonlinearDocument } from './native-document.js';
-import { dcSweepCsv, nonlinearUnknownCount, runDcSweep, type DcSweepResult } from './dc-sweep.js';
+import { dcSweepCsv, nonlinearUnknownCount } from './dc-sweep.js';
+import { SweepLifecycle, sweepSignature } from './sweep-lifecycle.js';
+import { currentDiodeContributions, currentDiodeResidualTerms, diodeContributions, diodeJacobianCoordinates,
+  selectedDiodeMetricHtml, tangentProvenanceHtml } from './diode-presentation.js';
 import { presets } from './presets.js';
 import { diodeTangentSchematic, escapeHtml, schematic } from './schematic.js';
 import { plot } from './plot.js';
@@ -60,10 +63,7 @@ const transformMethod: { method: 'dc' | 'resistor' } = { method: 'dc' };
 const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'port', 'port-frequency', 'diode-characteristic', 'dc-sweep'];
 const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort', 'port-frequency': 'panelPortFrequency',
   'diode-characteristic': 'panelDiodeCharacteristic', 'dc-sweep': 'panelDcSweep' };
-interface SweepView { token: number; document: typeof state.document; revision: number; settings: string;
-  status: 'running' | 'complete' | 'cancelled'; points: DcSweepResult['points']; result?: DcSweepResult }
-const sweepViews = new Map<string, SweepView>();
-let nextSweepToken = 1;
+const sweeps = new SweepLifecycle();
 const sourceUnit = (id: string): 'V' | 'A' => state.document.circuit.components.find(c => c.id === id)?.type === 'I' ? 'A' : 'V';
 const componentUnit = (c: Component | Diode): string => c.type === 'R' || c.type === 'CCVS' ? 'Ω' : c.type === 'C' ? 'F' : c.type === 'L' ? 'H' : c.type === 'VCCS' ? 'S' : '';
 const nativeJson = (): HTMLTextAreaElement => byId('json-editor') as HTMLTextAreaElement;
@@ -158,12 +158,23 @@ function renderInspector(): void {
       ? assembleDiodeSystem(currentDocument).linear : null
     : assemble(currentDocument.circuit);
   const contributions = assembly?.contributions.filter(x => x.component === selected.id) ?? [];
+  const bias = selected.type === 'D' ? calculator.currentBias(state) : null;
+  const diodeRows = selected.type === 'D' && isNonlinearDocument(currentDocument) && bias?.status === 'ok'
+    ? currentDiodeContributions(currentDocument, bias, selected.id) : [];
+  const diodeResidualRows = selected.type === 'D' && isNonlinearDocument(currentDocument) && bias?.status === 'ok'
+    ? currentDiodeResidualTerms(currentDocument, bias, selected.id) : [];
+  const diodeResistance = selected.type === 'D' && bias?.status === 'ok'
+    ? bias.diodes[selected.id]?.differentialResistanceOhm : undefined;
   const param = 'value' in selected ? field(t('value'),'component',selected.id,selected.value,componentUnit(selected),true) :
     'gain' in selected ? field(t('gain'),'component',selected.id,selected.gain,componentUnit(selected)) :
-    selected.type === 'D' ? `<div class="controls-grid">${field(t('diodeIs'),'diode.saturationCurrentA',selected.id,selected.model.saturationCurrentA,'A',true)}${field(t('diodeIdeality'),'diode.idealityFactor',selected.id,selected.model.idealityFactor,'',true)}${field(t('diodeRs'),'diode.seriesResistanceOhm',selected.id,selected.model.seriesResistanceOhm,'Ω')}${field(t('diodeTemperature'),'diode.temperatureK',selected.id,selected.model.temperatureK,'K',true)}</div><p class="muted small">${t('diodeModelNote')}</p>`
+    selected.type === 'D' ? `<div class="controls-grid">${field(t('diodeIs'),'diode.saturationCurrentA',selected.id,selected.model.saturationCurrentA,'A',true)}${field(t('diodeIdeality'),'diode.idealityFactor',selected.id,selected.model.idealityFactor,'',true)}${field(t('diodeRs'),'diode.seriesResistanceOhm',selected.id,selected.model.seriesResistanceOhm,'Ω')}${field(t('diodeTemperature'),'diode.temperatureK',selected.id,selected.model.temperatureK,'K',true)}</div><p class="muted small">${t('diodeModelNote')}</p><p class="soft-note">${t('diodeResistance')}: ${diodeResistance === undefined ? t('diodeDerivativeUnavailable') : diodeResistance === null ? t('portUndefined') : `${fmt(diodeResistance)} Ω`} (${t('diodeReadOnly')})</p>`
       : `<p class="muted small">${t('sourceEditorHint')}</p>`;
   const diodeLaw = selected.type === 'D' ? 'i = Is·expm1((V(p)−V(n)−Rs·i)/(n·kB·T/q))' : '';
-  byId('component-editor').innerHTML = `<div class="editor-card"><p class="editor-title">${e(selected.id)} · ${e(selected.type)}</p><p class="terminal-note">${e(t('orderedTerminals',{p:selected.p,n:selected.n}))}</p>${param}<div class="subheading">${t('kernelTerminalLaw')}</div><div class="law-box">${diodeLaw ? e(diodeLaw) : contributions.length ? e([...new Set(contributions.map(x => x.law))].join(' · ')) : t('noContribution')}</div><button type="button" id="view-contributions" class="button quiet" aria-expanded="${inspectorContribOpen}" aria-controls="inspector-contributions">${t('viewContributions')}</button><div id="inspector-contributions" ${inspectorContribOpen?'':'hidden'}>${contributions.length ? `<div class="table-wrap"><table class="result-table"><thead><tr><th>${t('matrix')}</th><th>${t('row')}</th><th>${t('column')}</th><th>${t('value')}</th></tr></thead><tbody>${contributions.map(c=>`<tr><td>${c.matrix}</td><td>${e(c.row)}</td><td>${e(c.column)}</td><td>${fmt(c.value)} ${e(c.units)}</td></tr>`).join('')}</tbody></table></div>`:t('noContribution')}</div></div>`;
+  const diodeContributionTable = `<p class="soft-note">${t('diodeContributionIntro')}</p>${selected.p===selected.n?`<p>${t('diodeCoincident')}</p>`:''}<div class="table-wrap"><table class="result-table"><thead><tr><th>F ${t('row')}</th><th>${t('terminalLaw')}</th><th>${t('value')}</th></tr></thead><tbody>${diodeResidualRows.map(row=>`<tr><td>${e(row.row)}</td><td>${e(row.term)}</td><td>${fmt(row.valueA)} A</td></tr>`).join('')}</tbody></table></div><div class="table-wrap"><table class="result-table"><thead><tr><th>J ${t('row')}</th><th>${t('column')}</th><th>${t('value')}</th><th>${t('terminalLaw')}</th></tr></thead><tbody>${diodeRows.map(row=>`<tr><td>${e(row.row)}</td><td>${e(row.column)}</td><td>${fmt(row.coefficient)} ${row.units}</td><td>${t(`diodeTerm_${row.meaning}`)}${row.assembled?'':` · ${t('diodeReferenceTerm')}`}</td></tr>`).join('')}</tbody></table></div>`;
+  const contributionContent = selected.type === 'D'
+    ? bias?.status === 'ok' ? diodeContributionTable : t('diodeDerivativeUnavailable')
+    : contributions.length ? `<div class="table-wrap"><table class="result-table"><thead><tr><th>${t('matrix')}</th><th>${t('row')}</th><th>${t('column')}</th><th>${t('value')}</th></tr></thead><tbody>${contributions.map(c=>`<tr><td>${c.matrix}</td><td>${e(c.row)}</td><td>${e(c.column)}</td><td>${fmt(c.value)} ${e(c.units)}</td></tr>`).join('')}</tbody></table></div>` : t('noContribution');
+  byId('component-editor').innerHTML = `<div class="editor-card"><p class="editor-title">${e(selected.id)} · ${e(selected.type)}</p><p class="terminal-note">${e(t('orderedTerminals',{p:selected.p,n:selected.n}))}</p>${param}<div class="subheading">${t('kernelTerminalLaw')}</div><div class="law-box">${diodeLaw ? e(diodeLaw) : contributions.length ? e([...new Set(contributions.map(x => x.law))].join(' · ')) : t('noContribution')}</div><button type="button" id="view-contributions" class="button quiet" aria-expanded="${inspectorContribOpen}" aria-controls="inspector-contributions">${t('viewContributions')}</button><div id="inspector-contributions" ${inspectorContribOpen?'':'hidden'}>${contributionContent}</div></div>`;
 }
 function renderSchematic(): void {
   const view = schematic(state); byId('schematic').innerHTML = view.html;
@@ -189,8 +200,7 @@ function nonlinearDcContent(panel: PanelConfig, result: Extract<PanelResult,{typ
     const reason=nonlinearUnknownCount(state.document)>64?t('diodeUnknownLimit'):diodeFailureReason(bias.code);
     return `<div class="warning" role="status">${t('diodeBiasFailure',{reason})}</div>`;
   }
-  const selected = bias.diodes[panel.diodeId] ?? Object.values(bias.diodes)[0];
-  const summary = selected ? `<div class="metric-grid"><div class="metric"><div class="metric-label">${t('diodeTerminalVoltage')}</div><div class="metric-value">${fmt(selected.terminalVoltageV)} V</div></div><div class="metric"><div class="metric-label">${t('diodeCurrent')}</div><div class="metric-value">${fmt(selected.currentA)} A</div></div><div class="metric"><div class="metric-label">${t('diodeResistance')}</div><div class="metric-value">${selected.differentialResistanceOhm === null ? t('portUndefined') : `${fmt(selected.differentialResistanceOhm)} Ω`}</div></div></div>` : '';
+  const summary = selectedDiodeMetricHtml(bias,panel.diodeId);
   const residuals = `<div class="table-wrap"><table class="result-table"><thead><tr><th>${t('residualRow')}</th><th>${t('absolute')}</th><th>${t('diodePhysicalAllowance')}</th><th>${t('diodeArithmeticAllowance')}</th><th>${t('unit')}</th></tr></thead><tbody>${bias.residuals.map(row=>`<tr><td>${e(row.label)}</td><td>${fmt(row.absolute)}</td><td>${fmt(row.physicalAllowance)}</td><td>${fmt(row.arithmeticAllowance)}</td><td>${row.unit}</td></tr>`).join('')}</tbody></table></div>`;
   const diodeDetails = Object.entries(bias.diodes).map(([id,d])=>`<p>${e(id)}: vj=${fmt(d.junctionVoltageV)} V, gj=${fmt(d.junctionConductanceS)} S, i=${fmt(d.currentA)} A</p>`).join('');
   const trace = `<div class="table-wrap"><table class="result-table"><thead><tr><th>#</th><th>α</th><th>${t('absolute')}</th><th>ΔV</th><th>ΔI</th></tr></thead><tbody>${bias.trace.map(step=>`<tr><td>${step.iteration}</td><td>${fmt(step.damping)}</td><td>${fmt(step.merit)}</td><td>${fmt(step.voltageCorrectionV)} V</td><td>${fmt(step.currentCorrectionA)} A</td></tr>`).join('')}</tbody></table></div>`;
@@ -199,8 +209,14 @@ function nonlinearDcContent(panel: PanelConfig, result: Extract<PanelResult,{typ
 function nonlinearEquationContent(result: Extract<PanelResult,{type:'nonlinear-equations'}>): string {
   const { system, evaluation, assembly } = result;
   const tangentDrawing=diodeTangentSchematic(state,result.tangent.document);
-  const jacobian = `<div class="table-wrap"><table class="matrix-table"><thead><tr><th>${t('rowColumn')}</th>${system.unknowns.map(label=>`<th>${e(label.id)} (${label.unit})</th>`).join('')}</tr></thead><tbody>${evaluation.jacobian.map((row,i)=>`<tr><th>${e(system.rows[i]!.id)} (${system.rows[i]!.unit})</th>${row.map(value=>`<td>${fmt(value)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-  return `<p class="equation-line">F(x,uDC)=0 · J=∂F/∂x (${system.rows.length}×${system.unknowns.length})</p><p class="soft-note">${t('diodeEquationsIntro')}</p>${jacobian}<details class="explanation"><summary>${t('diodeTangentPreview')}</summary><p>${t('diodeBiasProvenance')}</p><p>${e(Object.entries(result.bias.diodes).map(([id,d])=>`${id} → ${d.differentialResistanceOhm === null ? 'unavailable' : `${fmt(d.differentialResistanceOhm)} Ω`}`).join('; '))}</p>${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${e(JSON.stringify(result.tangent.document.circuit,null,2))}</pre>`}<p class="equation-line">E·δẋ + KQ·δx = B·δu (${assembly.rows.length}×${assembly.unknowns.length})</p><div class="matrix-grid">${matrix('E',assembly)}${matrix('K',assembly)}${matrix('B',assembly)}</div></details>`;
+  const selectedId=state.selectedComponent??'';
+  const marked=diodeJacobianCoordinates(system,evaluation,selectedId);
+  const selectedRows=diodeContributions(system,evaluation,selectedId);
+  const jacobian = `<div class="table-wrap"><table class="matrix-table"><thead><tr><th>${t('rowColumn')}</th>${system.unknowns.map(label=>`<th>${e(label.id)} (${label.unit})</th>`).join('')}</tr></thead><tbody>${evaluation.jacobian.map((row,i)=>`<tr><th>${e(system.rows[i]!.id)} (${system.rows[i]!.unit})</th>${row.map((value,j)=>`<td class="${marked.has(`${i}:${j}`)?'highlight':''}">${fmt(value)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const selectedNotice=selectedRows.length?`<p class="soft-note">${t('diodeContributionSelected',{id:selectedId})} ${t('diodeContributionIntro')}</p>`:'';
+  const provenance=isNonlinearDocument(state.document)
+    ? tangentProvenanceHtml(state.document,result.tangent.document,result.bias) : '';
+  return `<p class="equation-line">F(x,uDC)=0 · J=∂F/∂x (${system.rows.length}×${system.unknowns.length})</p><p class="soft-note">${t('diodeEquationsIntro')}</p>${selectedNotice}${jacobian}<details class="explanation"><summary>${t('diodeTangentPreview')}</summary>${provenance}${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${e(JSON.stringify(result.tangent.document.circuit,null,2))}</pre>`}<p class="equation-line">E·δẋ + KQ·δx = B·δu (${assembly.rows.length}×${assembly.unknowns.length})</p><div class="matrix-grid">${matrix('E',assembly)}${matrix('K',assembly)}${matrix('B',assembly)}</div></details>`;
 }
 function characteristicContent(panel: PanelConfig, result: Extract<PanelResult,{type:'diode-characteristic'}>): string {
   const { curve, bias, loadLine } = result;
@@ -229,8 +245,8 @@ function characteristicContent(panel: PanelConfig, result: Extract<PanelResult,{
   return `${graph}<div class="file-actions"><button type="button" class="button quiet" data-panel-action="fit-bias" data-panel-id="${panel.id}" ${diodeBias?'':'disabled'}>${t('diodeFitBias')}</button></div>${biasMessage}<p class="muted small">${loadLine?`${t('diodeLoadLine')}: E=${fmt(loadLine.sourceVoltageV)} V, R=${fmt(loadLine.resistanceOhm)} Ω` : t('diodeLoadLineUnavailable')}</p><p class="muted small">${t('diodeModelNote')}</p>`;
 }
 function sweepContent(panel: PanelConfig): string {
-  const view=sweepViews.get(panel.id);
-  const signature=JSON.stringify([panel.input,panel.output,panel.sweepMin,panel.sweepMax,panel.sweepCount]);
+  const view=sweeps.get(panel.id);
+  const signature=sweepSignature(panel);
   const current=view&&view.document===state.document&&view.revision===state.revision&&view.settings===signature;
   const points=current?view.points:[];
   const graph=points.length>1?plot(points.map(point=>({x:point.sourceValue,y:point.output,status:point.status})),
@@ -252,7 +268,9 @@ function frequencyContent(panel: PanelConfig, result: Extract<PanelResult,{type:
     e(t('algebraicUnavailable',{reason:algebraicSummary(result.algebraic.reason)}));
   const incremental=result.incremental;
   const tangentDrawing=incremental?diodeTangentSchematic(state,incremental.tangent.document):null;
-  return `<p class="analysis-note">${incremental?t('diodeSmallSignalIntro'):e(t('transferIntro',{input:panel.input,output:panel.output,unit:result.unit}))}</p><div class="plot-grid">${plot(mag,{title:t('magnitude'),xLabel:t('frequencyAxis'),yLabel:t('magnitudeWithUnit',{unit:dim ? 'dB' : result.unit}),xLog:true})}${plot(phase,{title:t('phase'),xLabel:t('frequencyAxis'),yLabel:t('phaseWithUnit'),xLog:true,color:'orange'})}</div>${failed.length ? `<p class="warning">${t('failedFrequency',{count:failed.length,reason:statusSummary(failed[0]!.status)})}</p>` : ''}${zero.length ? `<p class="warning">${t('zeroFrequency',{count:zero.length})}</p>` : ''}<details class="explanation"><summary>${t('panelExplanation')}</summary>${incremental?`<p>${t('diodeConfiguredAc')}</p>`:''}<p>${e(t('acSummary',{frequency:fmt(panel.inspectHz),sources:acInputs || t('noSourcesShort'),output:acText}))}</p><p class="soft-note">${alg}</p>${incremental?`<details><summary>${t('diodeTangentPreview')}</summary><p>${t('diodeBiasProvenance')}</p><p>${e(Object.entries(incremental.bias.diodes).map(([id,d])=>`${id} → ${d.differentialResistanceOhm === null ? 'unavailable' : `${fmt(d.differentialResistanceOhm)} Ω`}`).join('; '))}</p>${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${e(JSON.stringify(incremental.tangent.document.circuit,null,2))}</pre>`}</details>`:''}</details>`;
+  const provenance=incremental&&isNonlinearDocument(state.document)
+    ? tangentProvenanceHtml(state.document,incremental.tangent.document,incremental.bias) : '';
+  return `<p class="analysis-note">${incremental?t('diodeSmallSignalIntro'):e(t('transferIntro',{input:panel.input,output:panel.output,unit:result.unit}))}</p><div class="plot-grid">${plot(mag,{title:t('magnitude'),xLabel:t('frequencyAxis'),yLabel:t('magnitudeWithUnit',{unit:dim ? 'dB' : result.unit}),xLog:true})}${plot(phase,{title:t('phase'),xLabel:t('frequencyAxis'),yLabel:t('phaseWithUnit'),xLog:true,color:'orange'})}</div>${failed.length ? `<p class="warning">${t('failedFrequency',{count:failed.length,reason:statusSummary(failed[0]!.status)})}</p>` : ''}${zero.length ? `<p class="warning">${t('zeroFrequency',{count:zero.length})}</p>` : ''}<details class="explanation"><summary>${t('panelExplanation')}</summary>${incremental?`<p>${t('diodeConfiguredAc')}</p>`:''}<p>${e(t('acSummary',{frequency:fmt(panel.inspectHz),sources:acInputs || t('noSourcesShort'),output:acText}))}</p><p class="soft-note">${alg}</p>${incremental?`<details><summary>${t('diodeTangentPreview')}</summary>${provenance}${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${e(JSON.stringify(incremental.tangent.document.circuit,null,2))}</pre>`}</details>`:''}</details>`;
 }
 function transientContent(panel: PanelConfig, result: Extract<PanelResult,{type:'transient'}>): string {
   const time = result.time, output = result.assembly.outputs.find(o => o.id === panel.output)!;
@@ -430,60 +448,30 @@ function renderPanel(panel: PanelConfig, index: number): string {
   }
   const error = Object.keys(panel.errors).length ? `<p class="warning" role="status">${t('panelLastValid')}</p>` : '';
   const controls = (action:string,key:TranslationKey,symbol:string,disabled=false) => `<button type="button" class="panel-icon" data-panel-action="${action}" data-panel-id="${panel.id}" aria-label="${translate(key)}" title="${translate(key)}" ${disabled?'disabled':''}>${symbol}</button>`;
-  const sweepView = sweepViews.get(panel.id);
-  const sweepComplete = panel.type==='dc-sweep' && sweepView?.status==='complete' &&
-    sweepView.document===state.document && sweepView.revision===state.revision &&
-    sweepView.settings===sweepSignature(panel);
+  const sweepComplete = panel.type==='dc-sweep' && sweeps.canExport(panel,state,workspace,!document.hidden);
   const exportable = result?.type==='frequency' || result?.type==='transient' ||
     result?.type==='port-frequency' || sweepComplete;
   return `<section class="panel analysis-panel ${panel.expanded?'expanded':''}" data-panel="${panel.id}" aria-label="${translate(panelKeys[panel.type])}"><div class="panel-head"><div class="panel-heading"><label for="${panel.id}-type">${t('panelType')}</label><select id="${panel.id}-type" data-panel-id="${panel.id}" data-panel-field="type">${panelTypes.map(type=>`<option value="${type}"${type===panel.type?' selected':''}>${translate(panelKeys[type])}</option>`).join('')}</select></div><div class="panel-tools">${controls('up','panelUp','↑',index===0)}${controls('down','panelDown','↓',index===workspace.panels.length-1)}${controls('wide',panel.expanded?'panelNormal':'panelFull','⤢')}${controls('collapse',panel.collapsed?'panelExpand':'panelCollapse',panel.collapsed?'▾':'▴')}${controls('remove','panelRemove','×')}</div></div><p class="panel-summary">${e(panelSummary(panel))}</p>${panel.collapsed ? '' : `<details class="panel-settings" data-panel-settings="${panel.id}" ${panel.settingsOpen||panel.selectionNeeded?'open':''}><summary>${t('panelSettings')}</summary>${panelSettings(panel)}</details>${error}<div class="panel-result">${content}</div>${exportable&&!panel.selectionNeeded ? `<button type="button" class="button quiet panel-export" data-panel-action="export" data-panel-id="${panel.id}">${t('exportCsv')}</button>` : ''}`}</section>`;
 }
 function renderPanels(): void {
-  const activeIds=new Set(workspace.panels.map(panel=>panel.id));
-  for(const id of sweepViews.keys())if(!activeIds.has(id))sweepViews.delete(id);
+  sweeps.reconcile(state,workspace,!document.hidden);
   const grid=byId('analysis-grid');
   grid.innerHTML=workspace.panels.length?workspace.panels.map(renderPanel).join(''):`<div class="panel"><p>${t('panelEmpty')}</p></div>`;
   const add=byId('add-analysis') as HTMLButtonElement;
   add.disabled=workspace.panels.length>=3; add.title=add.disabled?t('addLimit'):'';
   byId('analysis-limit').textContent=add.disabled?t('addLimit'):'';
 }
-function sweepSignature(panel: PanelConfig): string {
-  return JSON.stringify([panel.input,panel.output,panel.sweepMin,panel.sweepMax,panel.sweepCount]);
-}
 async function startSweep(panel: PanelConfig): Promise<void> {
-  const appliedDocument = state.document;
-  const token = nextSweepToken++;
-  const view: SweepView = {token, document:appliedDocument, revision:state.revision,
-    settings:sweepSignature(panel),status:'running',points:[]};
-  sweepViews.set(panel.id,view);
-  const isCurrent=()=>sweepViews.get(panel.id)===view && view.token===token &&
-    workspace.view==='analyze' && workspace.panels.includes(panel) && !panel.collapsed &&
-    state.document===appliedDocument && state.revision===view.revision && sweepSignature(panel)===view.settings;
+  const running=sweeps.start(panel,state,workspace,()=>!document.hidden,view=>{
+    // Keep the live Cancel button connected while progress advances.
+    const status=document.querySelector<HTMLElement>(`[data-panel="${panel.id}"] [data-sweep-progress]`);
+    if(status)status.textContent=t('diodeSweepProgress',{done:view.points.length,total:panel.sweepCount});
+  },()=>renderPanels());
   renderPanels();
-  try {
-    const result=await runDcSweep(appliedDocument,{sourceId:panel.input,observationId:panel.output,
-      minimum:panel.sweepMin,maximum:panel.sweepMax,count:panel.sweepCount},isCurrent,point=>{
-      view.points.push(point);
-      // Replace only the live status text. Rebuilding the whole panel on every
-      // sample would repeatedly detach its Cancel button while it is pressed.
-      if(isCurrent()){
-        const status=document.querySelector<HTMLElement>(`[data-panel="${panel.id}"] [data-sweep-progress]`);
-        if(status)status.textContent=t('diodeSweepProgress',{done:view.points.length,total:panel.sweepCount});
-      }
-    });
-    if(!isCurrent()){
-      // Leave a cancelled result attached to this panel only while it is still
-      // the same run. Later runs own their own record and are never overwritten.
-      if(sweepViews.get(panel.id)===view)view.status='cancelled';
-      return;
-    }
-    view.result=result;view.points=result.points;view.status=result.status;renderPanels();
-  } catch {
-    if(!isCurrent())return;
-    view.status='cancelled';renderPanels();
-  }
+  await running;
 }
 function renderAll(): void {
+  sweeps.reconcile(state,workspace,!document.hidden);
   renderStatic(); renderCircuitChoice(); renderView(); renderSchematic(); renderInspector(); renderSources();
   renderGuide();
   (byId('sources-details') as HTMLDetailsElement).open = sourceOpen;
@@ -491,6 +479,10 @@ function renderAll(): void {
   if (workspace.view!=='editor') renderJson();
   byId('import-error').textContent=importIssue?documentIssueText(importIssue,'import'):'';
 }
+document.addEventListener('visibilitychange',()=>{
+  sweeps.reconcile(state,workspace,!document.hidden);
+  if (!document.hidden && workspace.view==='analyze') renderPanels();
+});
 function validatedChange(): void {
   const focused = (document.activeElement as HTMLElement | null)?.id;
   inputDrafts.clear(); inputIssues.clear(); reconcilePanels(workspace,state); renderAll();
@@ -498,7 +490,7 @@ function validatedChange(): void {
 }
 function openView(view: WorkspaceView): void {
   if (workspace.view!=='editor') previousView=workspace.view;
-  workspace.view=view; renderAll();
+  workspace.view=view; sweeps.reconcile(state,workspace,!document.hidden); renderAll();
   const target = view==='editor' ? byId('return-workspace') : view==='analyze' ? byId('schematic-title') : byId('transform-method');
   target.setAttribute('tabindex','-1'); target.focus({preventScroll:true});
 }
@@ -665,12 +657,12 @@ document.addEventListener('click',event=>{
     }
     if(action==='run-sweep'){void startSweep(panel);return;}
     if(action==='cancel-sweep'){
-      const view=sweepViews.get(panel.id);if(view){view.token=nextSweepToken++;view.status='cancelled';renderPanels();}return;
+      sweeps.cancel(panel.id);renderPanels();return;
     }
     if(action==='export'){
       if(panel.type==='dc-sweep'){
-        const view=sweepViews.get(panel.id);
-        if(view?.status==='complete'&&view.result&&view.document===state.document&&view.revision===state.revision&&view.settings===sweepSignature(panel))
+        const view=sweeps.get(panel.id);
+        if(view?.result&&sweeps.canExport(panel,state,workspace,!document.hidden))
           download(`circuits-${panel.type}-${panel.id}.csv`,dcSweepCsv(view.result),'text/csv');
       }else{const result=calculator.calculate(panel,state);
         if(result&&(result.type==='frequency'||result.type==='transient'||result.type==='port-frequency'))

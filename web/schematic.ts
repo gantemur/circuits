@@ -78,10 +78,10 @@ function source(state:LabState,id:string,x:number,kind:'V'|'VCVS',labelX=x+58,la
   const upper=kind==='V'?159:151,lower=kind==='V'?209:217;
   return wire(x,120,x,upper)+group(state,id,shape,labelX,labelY)+wire(x,lower,x,256)+ground(x);
 }
-function wrap(state:LabState,body:string,note:string,height=305):{html:string;note:string;schematic:boolean} {
+function wrap(state:LabState,body:string,note:string,height=305,outputOverride?:string):{html:string;note:string;schematic:boolean} {
   const selected=state.document.circuit.observations.find(o=>o.id===state.output);
-  const description=selected?.type==='voltage'?`V(${selected.p}) − V(${selected.n})`:
-    selected?.type==='current'?`I(${selected.component})`:t('noOutputSelected');
+  const description=outputOverride??(selected?.type==='voltage'?`V(${selected.p}) − V(${selected.n})`:
+    selected?.type==='current'?`I(${selected.component})`:t('noOutputSelected'));
   const badgeY=height-30;
   const html=`<svg viewBox="0 0 690 ${height}" role="img" aria-label="${t('diagramLabel')}"><rect width="690" height="${height}" fill="#fafcf9"/><text x="22" y="29" class="schematic-small">${t('terminalOrientation')}</text>${body}<rect class="output-badge" x="330" y="${badgeY}" width="340" height="25" rx="6" fill="#fff0e8"/><text x="500" y="${badgeY+17}" text-anchor="middle" class="schematic-small schematic-output">${escapeHtml(t('outputBadge',{output:description}))}</text></svg>`;
   return { html, note, schematic:true };
@@ -180,21 +180,32 @@ function diodeSchematic(state:LabState,preset:string,tangent?:NativeDocument):{h
     const selectedComponent=state.selectedComponent===diode.id;
     const annotation=incremental?`rd=${number(resistance.value)} Ω`:
       cathodeAtBottom?'I ↓':'I ↑';
-    return wire(x,120,x,top)+`<g class="component${selectedComponent?' selected':''}" role="button" tabindex="0" data-schematic-component="${escapeHtml(diode.id)}" aria-label="${escapeHtml(t('selectComponent',{id:diode.id,type:diode.type,value:valueLabel(diode)}))}"><title>${escapeHtml(diode.id)}: ${escapeHtml(valueLabel(diode))}</title>${symbol}<text x="${x+27}" y="168" class="component-label">${escapeHtml(diode.id)}</text><text x="${x+27}" y="220" class="schematic-small">${escapeHtml(annotation)}</text></g>`+
+    const shownValue=incremental?annotation:valueLabel(diode);
+    return wire(x,120,x,top)+`<g class="component${selectedComponent?' selected':''}" role="button" tabindex="0" data-schematic-component="${escapeHtml(diode.id)}" aria-label="${escapeHtml(t('selectComponent',{id:diode.id,type:incremental?'R':'D',value:shownValue}))}"><title>${escapeHtml(diode.id)}: ${escapeHtml(shownValue)}</title>${symbol}<text x="${x+27}" y="168" class="component-label">${escapeHtml(diode.id)}</text><text x="${x+27}" y="220" class="schematic-small">${escapeHtml(annotation)}</text></g>`+
       wire(x,bottom,x,256)+ground(x);
   };
   body+=branch(diodes[0]!,500);
   if(preset==='diode-pair')body+=wire(500,120,610,120)+dot(610,120)+branch(diodes[1]!,610);
   if(preset==='diode-rc'&&capacitorDevice)body+=wire(500,120,610,120)+dot(610,120)+capacitor(state,capacitorDevice.id,610);
-  const sourceDC=state.document.experiment.sources.find(s=>s.id===drive.id)?.dc;
-  if(sourceDC!==undefined)body+=`<text x="22" y="287" class="schematic-small">${escapeHtml(drive.id)}: DC=${number(sourceDC)} ${drive.type==='I'?'A':'V'}</text>`;
+  const drawnSource=tangent?.experiment.sources.find(s=>s.id===drive.id)??
+    state.document.experiment.sources.find(s=>s.id===drive.id);
+  if(drawnSource){
+    const unit=drive.type==='I'?'A':'V';
+    const ac=drawnSource.ac??{re:0,im:0};
+    const sourceText=tangent?`${t('diodeIncrementSource')} ${drive.id}: DC=${number(drawnSource.dc)} ${unit}`:
+      `${drive.id}: DC=${number(drawnSource.dc)} ${unit}`;
+    body+=`<text x="22" y="286" class="schematic-small">${escapeHtml(sourceText)}</text>`;
+    if(tangent)body+=`<text x="22" y="304" class="schematic-small">AC=${number(ac.re)}${ac.im<0?'':'+'}${number(ac.im)}j ${unit} RMS</text>`;
+  }
   const descriptions=diodes.map((diode,index)=>{
     const replacement=tangent?.circuit.components.find(c=>c.id===diode.id);
     const value=replacement?.type==='R'?`rd=${number(replacement.value)} Ω`:valueLabel(diode);
-    return `<text x="22" y="${310+index*20}" class="schematic-small">${escapeHtml(diode.id)}: ${escapeHtml(value)}</text>`;
+    return `<text x="22" y="${(tangent?330:310)+index*20}" class="schematic-small">${escapeHtml(diode.id)}: ${escapeHtml(value)}</text>`;
   }).join('');
+  const incrementalOutput=selected?.type==='voltage'?`δV(${selected.p}) − δV(${selected.n})`:
+    selected?.type==='current'?`δI(${selected.component})`:t('noOutputSelected');
   return wrap(state,body+descriptions,t(tangent?'diodeIncrementalDrawing':'diodeDrawing'),
-    diodes.length>1?410:390);
+    diodes.length>1?410:390,tangent?incrementalOutput:undefined);
 }
 export function diodeTangentSchematic(state:LabState,tangent:NativeDocument):{html:string;note:string;schematic:boolean}|null {
   const preset=matchingPreset(state.document.circuit)?.id;

@@ -39,6 +39,10 @@ await build({ entryPoints: ['web/presets.ts'], bundle: true, platform: 'neutral'
   target: 'es2022', outfile: 'dist/presets-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/dc-sweep.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/dc-sweep-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/sweep-lifecycle.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/sweep-lifecycle-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['test/support/diode-presentation-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/diode-presentation-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['test/support/builder-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/builder-ui-test.js', logLevel: 'silent' });
 const [html, app, style] = await Promise.all([

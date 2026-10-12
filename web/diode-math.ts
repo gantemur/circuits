@@ -11,8 +11,10 @@ export interface LoadLine { sourceId: string; resistorId: string; diodeId: strin
 
 /**
  * Invert the monotone series-diode terminal law at prescribed terminal V.
- * The unknown is junction voltage vj. For V>=0, 0<=vj<=V; for V<0,
- * V<=vj<=V+Rs Is. On both intervals f(vj)=vj+Rs Is expm1(vj/eta)-V
+ * The unknown is junction voltage vj. Monotonicity and the sign of current
+ * give 0<=vj<=V for V>0 and V<=vj<=0 for V<0. The latter bound is tight
+ * even when |V| is tiny compared with Rs Is. On both intervals
+ * f(vj)=vj+Rs Is expm1(vj/eta)-V
  * changes sign and has derivative 1+Rs gj>0. Bisection preserves the
  * bracket even when a trial exponential exceeds floating-point range.
  * Return null for an unrepresentable terminal current or bracket.
@@ -28,12 +30,11 @@ export function diodeCharacteristic(diode: Diode, terminalVoltageV: number): Cha
   }
   if (terminalVoltageV === 0) return { terminalVoltageV, junctionVoltageV: 0, currentA: 0 };
   let lower = terminalVoltageV > 0 ? 0 : terminalVoltageV;
-  let upper = terminalVoltageV > 0 ? terminalVoltageV : terminalVoltageV + Rs * Is;
-  if (!Number.isFinite(upper)) return null;
+  let upper = terminalVoltageV > 0 ? terminalVoltageV : 0;
   // In deep reverse bias Rs·Is can be smaller than one ulp of V. Then the
   // physical junction/terminal difference is not representable in binary64;
   // the directly evaluated reverse saturation current remains meaningful.
-  if (lower === upper) {
+  if (terminalVoltageV < 0 && terminalVoltageV + Rs * Is === terminalVoltageV) {
     const currentA = Is * Math.expm1(terminalVoltageV / eta);
     return Number.isFinite(currentA)
       ? { terminalVoltageV, junctionVoltageV: terminalVoltageV, currentA } : null;
@@ -48,7 +49,16 @@ export function diodeCharacteristic(diode: Diode, terminalVoltageV: number): Cha
   }
   const junctionVoltageV = lower + (upper - lower) / 2;
   const currentA = Is * Math.expm1(junctionVoltageV / eta);
-  if (![junctionVoltageV, currentA].every(Number.isFinite)) return null;
+  const seriesDropV = Rs * currentA;
+  const reconstructedV = junctionVoltageV + seriesDropV;
+  if (![junctionVoltageV, currentA, seriesDropV, reconstructedV].every(Number.isFinite)) return null;
+  if (Math.sign(currentA) !== Math.sign(terminalVoltageV) ||
+      Math.sign(junctionVoltageV) !== Math.sign(terminalVoltageV)) return null;
+  // This is an arithmetic representability check, not a model-error bound.
+  // Scale by the actual voltage terms, including cancellation, rather than
+  // imposing a fixed absolute tolerance that would hide tiny sign mistakes.
+  const arithmeticScale = Math.max(Math.abs(terminalVoltageV), Math.abs(junctionVoltageV), Math.abs(seriesDropV));
+  if (Math.abs(reconstructedV - terminalVoltageV) > 16 * Number.EPSILON * arithmeticScale) return null;
   return { terminalVoltageV, junctionVoltageV, currentA };
 }
 
