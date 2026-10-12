@@ -4,8 +4,8 @@ import { createLab, exportNative, importNative, updateDocument, } from './lab.js
 import { isNonlinearDocument } from './native-document.js';
 import { dcSweepCsv, nonlinearUnknownCount } from './dc-sweep.js';
 import { SweepLifecycle, sweepSignature } from './sweep-lifecycle.js';
-import { currentDiodeContributions, currentDiodeResidualTerms, diodeContributions, diodeJacobianCoordinates,
-  selectedDiodeMetricHtml, tangentProvenanceHtml } from './diode-presentation.js';
+import { currentDiodeContributions, currentDiodeResidualTerms,
+  nonlinearEquationContent, selectedDiodeMetricHtml, tangentProvenanceHtml } from './diode-presentation.js';
 import { presets } from './presets.js';
 import { diodeTangentSchematic, escapeHtml, schematic } from './schematic.js';
 import { plot } from './plot.js';
@@ -205,18 +205,6 @@ function nonlinearDcContent(panel: PanelConfig, result: Extract<PanelResult,{typ
   const diodeDetails = Object.entries(bias.diodes).map(([id,d])=>`<p>${e(id)}: vj=${fmt(d.junctionVoltageV)} V, gj=${fmt(d.junctionConductanceS)} S, i=${fmt(d.currentA)} A</p>`).join('');
   const trace = `<div class="table-wrap"><table class="result-table"><thead><tr><th>#</th><th>α</th><th>${t('absolute')}</th><th>ΔV</th><th>ΔI</th></tr></thead><tbody>${bias.trace.map(step=>`<tr><td>${step.iteration}</td><td>${fmt(step.damping)}</td><td>${fmt(step.merit)}</td><td>${fmt(step.voltageCorrectionV)} V</td><td>${fmt(step.currentCorrectionA)} A</td></tr>`).join('')}</tbody></table></div>`;
   return `${summary}<details class="explanation"><summary>${t('diodeDetails')}</summary><p>${t('diodePartialModel')}</p><p>${t('diodeNotCertified')}</p><div class="subheading">${t('diodeJunction')}</div>${diodeDetails}<div class="subheading">${t('nodeVoltages')}</div>${table(Object.entries(bias.unknowns).filter(([id])=>id.startsWith('V(')).map(([label,value])=>({label,value,unit:'V'})))}<div class="subheading">${t('signedBranchCurrents')}</div>${table(bias.powers.map(power=>({label:`I(${power.id})`,value:power.currentA,unit:'A'})))}<div class="subheading">${t('diodeResiduals')}</div>${residuals}<div class="subheading">${t('diodePowers')}</div>${table(bias.powers.map(power=>({label:power.id,value:power.absorbedW,unit:'W'})))}<div class="subheading">${t('diodeTrace')}</div>${trace}</details>`;
-}
-function nonlinearEquationContent(result: Extract<PanelResult,{type:'nonlinear-equations'}>): string {
-  const { system, evaluation, assembly } = result;
-  const tangentDrawing=diodeTangentSchematic(state,result.tangent.document);
-  const selectedId=state.selectedComponent??'';
-  const marked=diodeJacobianCoordinates(system,evaluation,selectedId);
-  const selectedRows=diodeContributions(system,evaluation,selectedId);
-  const jacobian = `<div class="table-wrap"><table class="matrix-table"><thead><tr><th>${t('rowColumn')}</th>${system.unknowns.map(label=>`<th>${e(label.id)} (${label.unit})</th>`).join('')}</tr></thead><tbody>${evaluation.jacobian.map((row,i)=>`<tr><th>${e(system.rows[i]!.id)} (${system.rows[i]!.unit})</th>${row.map((value,j)=>`<td class="${marked.has(`${i}:${j}`)?'highlight':''}">${fmt(value)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-  const selectedNotice=selectedRows.length?`<p class="soft-note">${t('diodeContributionSelected',{id:selectedId})} ${t('diodeContributionIntro')}</p>`:'';
-  const provenance=isNonlinearDocument(state.document)
-    ? tangentProvenanceHtml(state.document,result.tangent.document,result.bias) : '';
-  return `<p class="equation-line">F(x,uDC)=0 · J=∂F/∂x (${system.rows.length}×${system.unknowns.length})</p><p class="soft-note">${t('diodeEquationsIntro')}</p>${selectedNotice}${jacobian}<details class="explanation"><summary>${t('diodeTangentPreview')}</summary>${provenance}${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${e(JSON.stringify(result.tangent.document.circuit,null,2))}</pre>`}<p class="equation-line">E·δẋ + KQ·δx = B·δu (${assembly.rows.length}×${assembly.unknowns.length})</p><div class="matrix-grid">${matrix('E',assembly)}${matrix('K',assembly)}${matrix('B',assembly)}</div></details>`;
 }
 function characteristicContent(panel: PanelConfig, result: Extract<PanelResult,{type:'diode-characteristic'}>): string {
   const { curve, bias, loadLine } = result;
@@ -440,7 +428,7 @@ function renderPanel(panel: PanelConfig, index: number): string {
       result.type==='frequency' ? frequencyContent(panel,result) :
       result.type==='transient' ? transientContent(panel,result) :
       result.type==='equations' ? equationContent(panel,result) :
-      result.type==='nonlinear-equations' ? nonlinearEquationContent(result) :
+      result.type==='nonlinear-equations' ? nonlinearEquationContent(state,result,matrix,fmt) :
       result.type==='diode-characteristic' ? characteristicContent(panel,result) :
       result.type==='dc-sweep' ? sweepContent(panel) :
       result.type==='nonlinear-failure' ? `<div class="warning" role="status">${result.reason==='unsupported-panel'?t('diodeUnavailablePanel'):result.reason==='missing-diode'?t('diodeUnavailableModel'):t('diodeBiasFailure',{reason:diodeFailureReason(result.reason)})}</div>` :

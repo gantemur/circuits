@@ -2,8 +2,12 @@ import { assembleDiodeSystem, evaluateDiodeSystem,
   type NonlinearSuccess, type DiodeSystem, type NonlinearEvaluation } from '../src/diode-operating-point.js';
 import type { NonlinearDocument } from '../src/nonlinear-model.js';
 import type { NativeDocument } from '../src/model.js';
+import type { Assembly } from '../src/assembly.js';
+import type { LabState } from './lab.js';
+import { isNonlinearDocument } from './native-document.js';
+import { diodeTangentSchematic, escapeHtml } from './schematic.js';
+import type { PanelResult } from './workspace.js';
 import { t } from './i18n.js';
-import { escapeHtml } from './schematic.js';
 
 /** Preserve the identity of a selected device across topology changes.
  * An empty v2 circuit still has a valid network operating point. */
@@ -19,12 +23,12 @@ export function selectedDiodeMetric(bias: NonlinearSuccess, selectedId: string):
 export function selectedDiodeMetricHtml(bias: NonlinearSuccess, selectedId: string): string {
   const metric = selectedDiodeMetric(bias, selectedId);
   if (metric.kind === 'none') return `<p class="warning" role="status">${t('diodeNoDevices')}</p>`;
-  if (metric.kind === 'missing') return `<p class="warning" role="status">${t('diodeReselect',{id:escapeHtml(metric.id)})}</p>`;
+  if (metric.kind === 'missing') return `<p class="warning" role="status">${escapeHtml(t('diodeReselect',{id:metric.id}))}</p>`;
   const value = metric.value;
   const format = (number: number): string => String(Number(number.toPrecision(6)));
   const resistance = value.differentialResistanceOhm === null ? t('portUndefined') :
     `${format(value.differentialResistanceOhm)} Ω`;
-  return `<p class="analysis-note">${t('diodeMetricsFor',{id:escapeHtml(metric.id)})}</p>`+
+  return `<p class="analysis-note">${escapeHtml(t('diodeMetricsFor',{id:metric.id}))}</p>`+
     `<div class="metric-grid"><div class="metric"><div class="metric-label">${t('diodeTerminalVoltage')}</div>`+
     `<div class="metric-value">${format(value.terminalVoltageV)} V</div></div>`+
     `<div class="metric"><div class="metric-label">${t('diodeCurrent')}</div>`+
@@ -164,4 +168,23 @@ export function tangentProvenanceHtml(document: NonlinearDocument, tangent: Nati
     `Q V=${value(diode.terminalVoltageV)} V, I=${value(diode.currentA)} A; `+
     `rd=${diode.resistanceOhm === null ? t('diodeDerivativeUnavailable') : `${value(diode.resistanceOhm)} Ω`}</li>`).join('');
   return `<div class="soft-note"><p>${t('diodeBiasProvenance')}</p><ul>${sources}${diodes}</ul></div>`;
+}
+
+/** Render the same Equations content for the browser and headless regressions.
+ * Translate first, then escape, so exact component IDs cannot become markup. */
+export function nonlinearEquationContent(state: LabState,
+  result: Extract<PanelResult,{type:'nonlinear-equations'}>,
+  renderMatrix: (name:'E'|'K'|'B', assembly:Assembly)=>string,
+  format: (value:number)=>string): string {
+  const { system, evaluation, assembly } = result;
+  const tangentDrawing=diodeTangentSchematic(state,result.tangent.document);
+  const selectedId=state.selectedComponent??'';
+  const marked=diodeJacobianCoordinates(system,evaluation,selectedId);
+  const selectedRows=diodeContributions(system,evaluation,selectedId);
+  const jacobian = `<div class="table-wrap"><table class="matrix-table"><thead><tr><th>${t('rowColumn')}</th>${system.unknowns.map(label=>`<th>${escapeHtml(label.id)} (${label.unit})</th>`).join('')}</tr></thead><tbody>${evaluation.jacobian.map((row,i)=>`<tr><th>${escapeHtml(system.rows[i]!.id)} (${system.rows[i]!.unit})</th>${row.map((value,j)=>`<td class="${marked.has(`${i}:${j}`)?'highlight':''}">${format(value)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const selectedNotice=selectedRows.length
+    ? `<p class="soft-note">${escapeHtml(t('diodeContributionSelected',{id:selectedId}))} ${t('diodeContributionIntro')}</p>` : '';
+  const provenance=isNonlinearDocument(state.document)
+    ? tangentProvenanceHtml(state.document,result.tangent.document,result.bias) : '';
+  return `<p class="equation-line">F(x,uDC)=0 · J=∂F/∂x (${system.rows.length}×${system.unknowns.length})</p><p class="soft-note">${t('diodeEquationsIntro')}</p>${selectedNotice}${jacobian}<details class="explanation"><summary>${t('diodeTangentPreview')}</summary>${provenance}${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${escapeHtml(JSON.stringify(result.tangent.document.circuit,null,2))}</pre>`}<p class="equation-line">E·δẋ + KQ·δx = B·δu (${assembly.rows.length}×${assembly.unknowns.length})</p><div class="matrix-grid">${renderMatrix('E',assembly)}${renderMatrix('K',assembly)}${renderMatrix('B',assembly)}</div></details>`;
 }

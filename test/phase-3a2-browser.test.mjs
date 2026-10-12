@@ -8,7 +8,7 @@ import { runDcSweep, dcSweepCsv } from '../dist/dc-sweep-test.js';
 import { SweepLifecycle } from '../dist/sweep-lifecycle-test.js';
 import { schematic, diodeTangentSchematic } from '../dist/schematic-test.js';
 import { selectedDiodeMetric, selectedDiodeMetricHtml, diodeContributions, diodeResidualTerms,
-  diodeJacobianCoordinates, tangentProvenance, tangentProvenanceHtml,
+  diodeJacobianCoordinates, tangentProvenance, tangentProvenanceHtml, nonlinearEquationContent,
   setLanguage as setPresentationLanguage } from '../dist/diode-presentation-test.js';
 import { assembleDiodeSystem, evaluateDiodeSystem } from '../dist/index.js';
 import { guideFor } from '../dist/study-guide-test.js';
@@ -267,6 +267,36 @@ test('inspector diode signs and Jacobian coordinates follow the augmented law', 
   const terms=diodeContributions(same,atZero,'Dseries');
   assert.equal(terms.filter(term=>term.column==='I(Dseries)'&&term.row==='KCL(out)').reduce((sum,term)=>sum+term.coefficient,0),0);
   assert.equal(diodeJacobianCoordinates(same,atZero,'Dseries').size,1);
+});
+
+test('production Equations renderer keeps exact markup-like diode IDs literal in both languages', () => {
+  const state=createLab('diode-single');
+  const exactId='<b>D</b> & "Q"';
+  const edited=structuredClone(state.document);
+  edited.circuit.components.find(component=>component.type==='D').id=exactId;
+  edited.circuit.observations.find(observation=>observation.type==='current').component=exactId;
+  assert.equal(importNative(state,JSON.stringify(edited)).ok,true);
+  state.selectedComponent=exactId;
+  const result=new PanelCalculator().calculate(createPanel(state,'eq','equations'),state);
+  assert.equal(result.type,'nonlinear-equations');
+  const escaped='&lt;b&gt;D&lt;/b&gt; &amp; &quot;Q&quot;';
+  const expectedHighlights=diodeJacobianCoordinates(result.system,result.evaluation,exactId).size;
+  assert.ok(expectedHighlights>0);
+  for(const lang of ['en','mn']) {
+    setPresentationLanguage(lang);
+    const html=nonlinearEquationContent(state,result,()=>'',value=>String(value));
+    assert.ok(html.includes(escaped));
+    assert.doesNotMatch(html,/<\/?b>/);
+    assert.equal((html.match(/<td class="highlight">/g)??[]).length,expectedHighlights);
+    assert.match(html,lang==='en'?/Highlighted Jacobian entries/:/Якобийн матрицын гишүүд/);
+    const metrics=selectedDiodeMetricHtml(result.bias,exactId);
+    assert.ok(metrics.includes(escaped));
+    assert.doesNotMatch(metrics,/<\/?b>/);
+    const missing=selectedDiodeMetricHtml(result.bias,'<b>missing</b>');
+    assert.ok(missing.includes('&lt;b&gt;missing&lt;/b&gt;'));
+    assert.doesNotMatch(missing,/<\/?b>/);
+  }
+  setPresentationLanguage('en');
 });
 
 test('source sweep samples independently, preserves document, and cancels without stale CSV', async () => {
