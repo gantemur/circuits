@@ -26,11 +26,15 @@ export interface TransientSample {
   observations: Record<string, { value: number; unit: Unit }>;
   diodes: NonNullable<ReturnType<typeof evaluateDiodeSystem>>['diode'];
   storage: TransientStorage[];
-  powers: { id: string; voltageV: number; currentA: number; absorbedW: number }[];
+  powers: { id: string; voltageV: number; currentA: number; absorbedW: number;
+    voltageArithmeticAllowanceV: number; currentArithmeticAllowanceA: number;
+    powerArithmeticAllowanceW: number }[];
   residuals: PhysicalResidual[]; groundKcl: PhysicalResidual;
   powerBalanceW: number; powerToleranceW: number;
+  powerPhysicalAllowanceW: number; powerArithmeticAllowanceW: number;
   energyJ: number; backwardEulerDissipationJ: number | null;
   energyBalanceJ: number | null; energyToleranceJ: number | null;
+  energyPhysicalAllowanceJ: number | null; energyArithmeticAllowanceJ: number | null;
   trace: TransientTrace[];
 }
 export interface TransientInitialization {
@@ -166,6 +170,65 @@ function checkedRows(system: DiodeSystem, stage: Stage, evaluated: Evaluated, t:
 function merit(evaluated: Evaluated, scales: number[]): number {
   return Math.max(0, ...evaluated.residual.map((value, i) => Math.abs(value) / scales[i]!));
 }
+
+/**
+ * Choose fixed, dimensioned Newton weights before trial steps. All ampere
+ * rows, including each diode law, share the same source- and circuit-sized
+ * current scale: a voltage source can imply Vnom/R even when the warm guess
+ * has zero branch voltage. C/h and L/h companions add their history scales.
+ * These weights guide search only; checkedRows keeps the original physical
+ * A/V acceptance allowances. A per-row initial-guess scale can overweight a
+ * diode law by orders of magnitude relative to its coupled KCL row.
+ */
+function meritScales(system: DiodeSystem, stage: Stage, evaluated: Evaluated): number[] | null {
+  let voltageV = 1;
+  let currentA = 1e-3;
+  for (const device of system.document.circuit.components) {
+    if (device.type === 'V') {
+      const index = system.linear.inputs.findIndex(input => input.id === device.id);
+      voltageV = Math.max(voltageV, Math.abs(system.dcInputs[index]!));
+    }
+  }
+  for (let k = 0; k < system.linear.storage.length; k++) {
+    const storage = system.linear.storage[k]!;
+    if (storage.unit === 'V') voltageV = Math.max(voltageV, Math.abs(stage.q[k]!));
+    else currentA = Math.max(currentA, Math.abs(stage.q[k]!));
+  }
+  for (const device of system.document.circuit.components) {
+    if (device.type === 'I') {
+      const index = system.linear.inputs.findIndex(input => input.id === device.id);
+      currentA = Math.max(currentA, Math.abs(system.dcInputs[index]!));
+    }
+    if (device.type === 'R') currentA = Math.max(currentA, voltageV / device.value);
+    if (device.type === 'VCCS') currentA = Math.max(currentA, Math.abs(device.gain) * voltageV);
+  }
+  // A current-controlled source can feed another KCL row with the same
+  // source-implied current; a CCVS creates a voltage-law scale in ohms·A.
+  const directCurrentA = currentA;
+  const directVoltageV = voltageV;
+  for (const device of system.document.circuit.components) {
+    if (device.type === 'CCCS') currentA = Math.max(currentA, Math.abs(device.gain) * directCurrentA);
+    if (device.type === 'VCVS') voltageV = Math.max(voltageV, Math.abs(device.gain) * directVoltageV);
+    if (device.type === 'CCVS') voltageV = Math.max(voltageV, Math.abs(device.gain) * directCurrentA);
+  }
+  if (stage.kind === 'step') {
+    for (let k = 0; k < system.linear.storage.length; k++) {
+      const storage = system.linear.storage[k]!;
+      const device = system.document.circuit.components.find(component => component.id === storage.id)!;
+      if (device.type !== 'C' && device.type !== 'L') continue;
+      const history = Math.max(storage.unit === 'V' ? voltageV : currentA, Math.abs(stage.q[k]!));
+      const companion = device.value * history / stage.h;
+      if (device.type === 'C') currentA = Math.max(currentA, companion);
+      else voltageV = Math.max(voltageV, companion);
+    }
+  }
+  const scales = evaluated.residual.map((_, i) => {
+    const unit = i < system.rows.length ? system.rows[i]!.unit : system.linear.storage[i - system.rows.length]!.unit;
+    const physical = evaluated.physical[i]!.reduce((sum, value) => sum + Math.abs(value), 0);
+    return Math.max(unit === 'V' ? voltageV : currentA, physical);
+  });
+  return scales.every(value => Number.isFinite(value) && value > 0) ? scales : null;
+}
 function solve(system: DiodeSystem, stage: Stage, guess: number[], options: EffectiveOptions): SolveResult {
   const n = system.unknowns.length;
   const m = system.linear.storage.length;
@@ -173,16 +236,8 @@ function solve(system: DiodeSystem, stage: Stage, guess: number[], options: Effe
   let current = evaluate(system, variables, stage);
   const trace: TransientTrace[] = [];
   if (!current) return failed('numeric-range', 'Initial augmented evaluation exceeds numeric range', trace);
-  // Fixed dimensioned merit scales guide search only. Source operands, present
-  // branch contributions, and storage companion terms enter before line search.
-  const scales = current.residual.map((_, i) => {
-    const unit = i < n ? system.rows[i]!.unit : system.linear.storage[i - n]!.unit;
-    const floor = unit === 'V' ? 1 : 1e-3;
-    const physical = current!.physical[i]!.reduce((sum, v) => sum + Math.abs(v), 0);
-    const companion = stage.kind === 'step' ? system.linear.storage.reduce((sum, storage, k) =>
-      sum + Math.abs(storage.F[i] ?? 0) * Math.abs(stage.q[k]!) / stage.h, 0) : 0;
-    return Math.max(floor, physical, companion);
-  });
+  const scales = meritScales(system, stage, current);
+  if (!scales) return failed('numeric-range', 'Merit scales exceed finite A/V range', trace);
   for (let iteration = 0; iteration <= options.maxIterations; iteration++) {
     if (checkedRows(system, stage, current, options.tolerance).every(row => row.passed)) {
       const regular = solveReal(current.jacobian, Array<number>(current.jacobian.length).fill(0), options.tolerance);
@@ -238,6 +293,9 @@ function sample(system: DiodeSystem, stage: Stage, solved: SolveOk, time: number
   const storageIndex = new Map(system.linear.storage.map((s, i) => [s.id, i]));
   const currents = new Map<string, number>();
   const powers: TransientSample['powers'] = [];
+  const epsilon = Number.EPSILON;
+  const voltageRoundoff = (p: string, n: string): number =>
+    4 * epsilon * (Math.abs(node(p)) + Math.abs(node(n)));
   for (const device of system.document.circuit.components) {
     let currentA: number;
     switch (device.type) {
@@ -252,14 +310,37 @@ function sample(system: DiodeSystem, stage: Stage, solved: SolveOk, time: number
     }
     const voltageV = voltage(device.p, device.n);
     const absorbedW = voltageV * currentA;
-    if (![voltageV, currentA, absorbedW].every(Number.isFinite))
+    const voltageArithmeticAllowanceV = voltageRoundoff(device.p, device.n);
+    let currentArithmeticAllowanceA = 4 * epsilon * Math.abs(currentA);
+    if (device.type === 'R')
+      currentArithmeticAllowanceA += voltageArithmeticAllowanceV / device.value;
+    if (device.type === 'VCCS')
+      currentArithmeticAllowanceA += Math.abs(device.gain) * voltageRoundoff(device.cp, device.cn);
+    if (device.type === 'C' && stage.kind === 'step') {
+      const index = storageIndex.get(device.id)!;
+      const previousQ = stage.q[index]!;
+      // C*(qnext-qprevious)/h is computed from two nearby voltages. Its
+      // current error is in A, not the already much smaller net current's
+      // relative scale. Include terminal subtraction and history subtraction.
+      currentArithmeticAllowanceA += device.value *
+        (voltageArithmeticAllowanceV + 4 * epsilon * (Math.abs(q[index]!) + Math.abs(previousQ))) / stage.h;
+    }
+    const powerArithmeticAllowanceW = Math.abs(voltageV) * currentArithmeticAllowanceA +
+      Math.abs(currentA) * voltageArithmeticAllowanceV +
+      voltageArithmeticAllowanceV * currentArithmeticAllowanceA +
+      4 * epsilon * Math.abs(absorbedW);
+    if (![voltageV, currentA, absorbedW, voltageArithmeticAllowanceV,
+      currentArithmeticAllowanceA, powerArithmeticAllowanceW].every(Number.isFinite))
       return failed('numeric-range', 'Reconstructed current or power exceeds range', solved.trace);
     currents.set(device.id, currentA);
-    powers.push({ id: device.id, voltageV, currentA, absorbedW });
+    powers.push({ id: device.id, voltageV, currentA, absorbedW,
+      voltageArithmeticAllowanceV, currentArithmeticAllowanceA, powerArithmeticAllowanceW });
     if (device.type === 'D') {
       const junctionW = solved.evaluation.base.diode[device.id]!.junctionVoltageV * currentA;
       const seriesW = device.model.seriesResistanceOhm * currentA * currentA;
       const allowance = t.voltageAbsolute * t.currentAbsolute + t.relative *
+        (Math.abs(absorbedW) + Math.abs(junctionW) + Math.abs(seriesW)) +
+        powerArithmeticAllowanceW + 8 * epsilon *
         (Math.abs(absorbedW) + Math.abs(junctionW) + Math.abs(seriesW));
       if (![junctionW, seriesW, allowance].every(Number.isFinite) ||
         Math.abs(absorbedW - junctionW - seriesW) > allowance)
@@ -267,14 +348,17 @@ function sample(system: DiodeSystem, stage: Stage, solved: SolveOk, time: number
     }
   }
   const groundTerms: number[] = [];
+  let groundCurrentArithmeticA = 0;
   for (const device of system.document.circuit.components) {
     if (device.p === '0') groundTerms.push(currents.get(device.id)!);
     if (device.n === '0') groundTerms.push(-currents.get(device.id)!);
+    if (device.p === '0' || device.n === '0')
+      groundCurrentArithmeticA += powers.find(power => power.id === device.id)!.currentArithmeticAllowanceA;
   }
   const ground = groundTerms.reduce((sum, value) => sum + value, 0);
   const groundMagnitude = groundTerms.reduce((sum, value) => sum + Math.abs(value), 0);
   const groundPhysical = t.currentAbsolute + t.relative * groundMagnitude;
-  const groundArithmetic = 8 * (groundTerms.length + 1) * Number.EPSILON * groundMagnitude;
+  const groundArithmetic = groundCurrentArithmeticA + 8 * (groundTerms.length + 1) * epsilon * groundMagnitude;
   const groundTolerance = groundPhysical + groundArithmetic;
   const groundKcl: PhysicalResidual = { label: 'KCL(0)', unit: 'A', value: complex(ground),
     absolute: Math.abs(ground), tolerance: groundTolerance, physicalAllowance: groundPhysical,
@@ -284,8 +368,10 @@ function sample(system: DiodeSystem, stage: Stage, solved: SolveOk, time: number
     return failed('physical-residual', 'A physical A/V residual exceeds its allowance', solved.trace);
   const powerBalanceW = powers.reduce((sum, item) => sum + item.absorbedW, 0);
   const powerMagnitude = powers.reduce((sum, item) => sum + Math.abs(item.absorbedW), 0);
-  const powerToleranceW = t.voltageAbsolute * t.currentAbsolute + t.relative * powerMagnitude +
-    8 * (powers.length + 1) * Number.EPSILON * powerMagnitude;
+  const powerPhysicalAllowanceW = t.voltageAbsolute * t.currentAbsolute + t.relative * powerMagnitude;
+  const powerArithmeticAllowanceW = powers.reduce((sum, power) => sum + power.powerArithmeticAllowanceW, 0) +
+    8 * (powers.length + 1) * epsilon * powerMagnitude;
+  const powerToleranceW = powerPhysicalAllowanceW + powerArithmeticAllowanceW;
   if (![powerBalanceW, powerToleranceW].every(Number.isFinite) || Math.abs(powerBalanceW) > powerToleranceW)
     return failed('power-balance', 'Endpoint device powers do not balance', solved.trace);
   let energyJ = 0;
@@ -300,15 +386,24 @@ function sample(system: DiodeSystem, stage: Stage, solved: SolveOk, time: number
   }
   let energyBalanceJ: number | null = null;
   let energyToleranceJ: number | null = null;
+  let energyPhysicalAllowanceJ: number | null = null;
+  let energyArithmeticAllowanceJ: number | null = null;
   if (previous && stage.kind === 'step') {
     const nonstorageW = powers.filter(power => !storageIndex.has(power.id))
       .reduce((sum, power) => sum + power.absorbedW, 0);
     energyBalanceJ = energyJ - previous.energyJ + intervalSeconds * nonstorageW + backwardEulerDissipationJ;
+    const energyChangeJ = energyJ - previous.energyJ;
+    const exchangedJ = intervalSeconds * powers.filter(power => !storageIndex.has(power.id))
+      .reduce((sum, power) => sum + Math.abs(power.absorbedW), 0);
     const magnitude = Math.abs(energyJ) + Math.abs(previous.energyJ) +
       intervalSeconds * powerMagnitude + backwardEulerDissipationJ;
-    energyToleranceJ = intervalSeconds * powerToleranceW +
-      t.relative * (Math.abs(energyJ) + Math.abs(previous.energyJ) + backwardEulerDissipationJ) +
-      16 * (powers.length + system.linear.storage.length + 1) * Number.EPSILON * magnitude;
+    energyPhysicalAllowanceJ = intervalSeconds * powerPhysicalAllowanceW +
+      t.relative * (Math.abs(energyChangeJ) + exchangedJ + backwardEulerDissipationJ);
+    // ΔW subtracts two stored energies. That cancellation and the power
+    // reconstruction above contribute joules of arithmetic uncertainty.
+    energyArithmeticAllowanceJ = intervalSeconds * powerArithmeticAllowanceW +
+      16 * (powers.length + system.linear.storage.length + 1) * epsilon * magnitude;
+    energyToleranceJ = energyPhysicalAllowanceJ + energyArithmeticAllowanceJ;
     if (!Number.isFinite(energyBalanceJ) || !Number.isFinite(energyToleranceJ) ||
       Math.abs(energyBalanceJ) > energyToleranceJ)
       return failed('power-balance', 'Backward-Euler joule identity failed', solved.trace);
@@ -332,8 +427,10 @@ function sample(system: DiodeSystem, stage: Stage, solved: SolveOk, time: number
     diodes: JSON.parse(JSON.stringify(solved.evaluation.base.diode)),
     storage: system.linear.storage.map((s, i) => ({ id: s.id, unit: s.unit, value: q[i]!, rate: solved.rates[i]!,
       rateUnit: s.unit === 'V' ? 'V/s' : 'A/s' })), powers, residuals, groundKcl,
-    powerBalanceW, powerToleranceW, energyJ, backwardEulerDissipationJ: stage.kind === 'step' ? backwardEulerDissipationJ : null,
-    energyBalanceJ, energyToleranceJ, trace: solved.trace };
+    powerBalanceW, powerToleranceW, powerPhysicalAllowanceW, powerArithmeticAllowanceW,
+    energyJ, backwardEulerDissipationJ: stage.kind === 'step' ? backwardEulerDissipationJ : null,
+    energyBalanceJ, energyToleranceJ, energyPhysicalAllowanceJ, energyArithmeticAllowanceJ,
+    trace: solved.trace };
 }
 
 /**
@@ -383,7 +480,9 @@ export function nonlinearTransient(input: NonlinearDocument, config: NonlinearTr
     });
     if (equilibrium.status !== 'ok')
       return fail('equilibrium', options.start, failed(equilibrium.code,
-        'Frozen-source equilibrium is unresolved', [], equilibrium.message));
+        'Frozen-source equilibrium is unresolved', equilibrium.trace.map(correction => ({
+          ...correction, storageRateCorrection: [],
+        })), equilibrium.message));
     guess = [...equilibrium.x];
     q = storageValues(system, guess);
   } else {
@@ -429,8 +528,21 @@ export function nonlinearTransient(input: NonlinearDocument, config: NonlinearTr
     const boundary = events.find(event => event > time) ?? options.stop;
     // Restart each nominal grid at the last event. Do not coalesce close but
     // distinct event times, even when their separation is below a tolerance.
-    const gridTime = segmentStart + (++segmentIndex) * options.step;
-    const next = Math.min(gridTime, boundary, options.stop);
+    const gridOffset = (++segmentIndex) * options.step;
+    const gridTime = segmentStart + gridOffset;
+    let next = Math.min(gridTime, boundary, options.stop);
+    // Multiplication and addition can put a nominal grid endpoint a few ulps
+    // below the requested boundary. Land on that boundary *before* evaluating
+    // the BE equations, so its source side and actual h are used. The bound
+    // covers those two operations but is capped at a billionth of one nominal
+    // step; distinct event timestamps are never coalesced. Requiring a
+    // representable grid advance preserves the time-resolution failure.
+    const roundingDistance = Math.min(
+      8 * Number.EPSILON * Math.max(Math.abs(segmentStart), Math.abs(gridOffset), Math.abs(boundary)),
+      options.step * 1e-9,
+    );
+    if (gridTime > time && gridTime < boundary && boundary - gridTime <= roundingDistance)
+      next = boundary;
     const h = next - time;
     if (!Number.isFinite(next) || h <= 0)
       return fail('grid', time, failed('time-resolution', 'Time cannot advance representably', []));

@@ -413,3 +413,152 @@ test('rectifier reverse leakage remains signed under an explicitly tighter curre
   near(reverse.observations.vout.value, -1e-8, 2e-12);
   assert.ok(reverse.diodes.D1.currentA < 0);
 });
+
+test('rounded nominal endpoints land on exact stop within the interval budget', () => {
+  const document = load('diode-rc-biased-sine');
+  for (const [stop, step] of [
+    [3e-5, 1e-6], [5e-5, 1e-6], [6e-5, 1e-6],
+    [9e-5, 1e-6], [1e-4, 1e-6], [1.8e-4, 1e-6],
+    [2e-4, 1e-6], [3e-5, 2e-6], [5e-5, 2e-6],
+    [6e-5, 2e-6], [9e-5, 2e-6], [1e-4, 2e-6],
+    [1.8e-4, 2e-6], [2e-4, 2e-6],
+  ]) {
+    const intervals = Math.round(stop / step);
+    const result = nonlinearTransient(document, { stop, step, maxIntervals: intervals });
+    assert.equal(result.status, 'ok', `${stop}/${step}: ${result.code}`);
+    assert.equal(result.samples.length, intervals + 1);
+    assert.equal(result.samples.at(-1).time, stop);
+    const last = result.samples.at(-1);
+    near(last.intervalSeconds, stop - result.samples.at(-2).time, 1e-20);
+  }
+});
+
+test('grid correction retains two nearby exact source events and their left/right states', () => {
+  const document = load('diode-rc-step');
+  document.experiment.sources[0].waveform.at = 10e-6;
+  document.circuit.components.push({ id: 'I2', type: 'I', p: 'out', n: '0' });
+  const second = 10e-6 + 1e-12;
+  document.experiment.sources.push({ id: 'I2', dc: 0,
+    waveform: { type: 'step', at: second, before: 0, after: 1e-6 } });
+  const result = nonlinearTransient(document, { stop: 2e-5, step: 1e-5 });
+  assert.equal(result.status, 'ok');
+  for (const event of [10e-6, second]) {
+    const pair = result.samples.filter(sample => sample.time === event);
+    assert.deepEqual(pair.map(sample => sample.side), ['left', 'right']);
+    near(pair[0].storage[0].value, pair[1].storage[0].value, 1e-15);
+  }
+  assert.notEqual(10e-6, second);
+  assert.equal(result.samples.at(-1).time, 2e-5);
+});
+
+test('low-resistance event Newton uses coupled A scales and scalar diode references', () => {
+  const base = load('diode-rc-step');
+  const solveScalar = resistance => root(v => (v - 1) / resistance + diode(v), 0, 1);
+  for (const resistance of [10, 1]) {
+    const document = copy(base);
+    document.circuit.components = document.circuit.components.filter(component => component.type !== 'C');
+    document.circuit.components.find(component => component.id === 'R1').value = resistance;
+    document.experiment.initial.values = [];
+    const result = nonlinearTransient(document, { stop: 20e-6, step: 10e-6 });
+    assert.equal(result.status, 'ok');
+    assert.deepEqual(result.samples.slice(0, 2).map(sample => sample.side), ['left', 'right']);
+    near(result.samples[1].observations.vout.value, solveScalar(resistance), 1e-9);
+    near(result.samples.at(-1).observations.vout.value, solveScalar(resistance), 1e-9);
+    assert.ok(result.samples[1].trace.length <= 10);
+  }
+  near(solveScalar(10), 0.6291468540195613, 5e-13);
+  near(solveScalar(1), 0.6844947991608532, 5e-13);
+});
+
+test('low-resistance capacitor step and shifted return agree with scalar BE law', () => {
+  for (const shifted of [false, true]) {
+    const document = load('diode-rc-step');
+    document.circuit.components.find(component => component.id === 'R1').value = 1;
+    if (shifted) {
+      document.circuit.nodes.push('return');
+      document.circuit.components.push({ id: 'Vshift', type: 'V', p: 'return', n: '0' });
+      for (const component of document.circuit.components) {
+        if (component.id !== 'Vshift' && component.n === '0') component.n = 'return';
+      }
+      document.circuit.observations[0].n = 'return';
+      document.experiment.sources.push({ id: 'Vshift', dc: 3,
+        waveform: { type: 'constant', value: 3 } });
+    }
+    const result = nonlinearTransient(document, { stop: 20e-6, step: 10e-6 });
+    assert.equal(result.status, 'ok');
+    const reference = root(v => 1e-6 * (v - 0.2) / 10e-6 + (v - 1) + diode(v), 0.2, 1);
+    near(reference, 0.6805966079591554, 5e-13);
+    near(result.samples[2].observations.vout.value, reference, 1e-9);
+    if (shifted) near(result.samples[2].unknowns['V(out)'].value,
+      result.samples[2].observations.vout.value + 3, 1e-10);
+  }
+});
+
+test('storage-current reconstruction carries arithmetic through KCL, power and energy', () => {
+  const document = load('diode-rc-step');
+  document.circuit.nodes = ['0', 'out'];
+  document.circuit.components = document.circuit.components.filter(component =>
+    component.type === 'C' || component.type === 'D');
+  document.circuit.components.push({ id: 'R1', type: 'R', p: 'out', n: '0', value: 1e6 });
+  document.circuit.observations = [{ id: 'vout', type: 'voltage', p: 'out', n: '0' }];
+  document.experiment.sources = [];
+  const reference = previous => root(v => 1e-6 * (v - previous) / 1e-9 + v / 1e6 + diode(v),
+    previous - 1e-8, previous);
+  const result = nonlinearTransient(document, { stop: 5e-9, step: 1e-9 });
+  assert.equal(result.status, 'ok');
+  let previous = 0.2;
+  for (const sample of result.samples.slice(1)) {
+    const expected = reference(previous);
+    near(sample.observations.vout.value, expected, 6e-17);
+    previous = expected;
+    const capacitor = sample.powers.find(power => power.id === 'C1');
+    assert.ok(capacitor.currentArithmeticAllowanceA > 0);
+    assert.ok(sample.groundKcl.arithmeticAllowance > 0);
+    assert.ok(sample.powerArithmeticAllowanceW > 0);
+    assert.ok(sample.energyArithmeticAllowanceJ > 0);
+    assert.ok(Math.abs(sample.powerBalanceW) <= sample.powerToleranceW);
+    assert.ok(Math.abs(sample.energyBalanceJ) <= sample.energyToleranceJ);
+  }
+  const first = result.samples[1];
+  assert.ok(Math.abs(first.powerBalanceW) > first.powerPhysicalAllowanceW);
+  assert.ok(first.powerArithmeticAllowanceW > Math.abs(first.powerBalanceW));
+  const tighter = nonlinearTransient(document, { stop: 5e-9, step: 1e-9,
+    tolerance: { relative: 1e-10, currentAbsolute: 1e-14, voltageAbsolute: 1e-12 } });
+  assert.equal(tighter.status, 'ok');
+  const ordinary = nonlinearTransient(load('diode-rc-step'), { stop: 20e-6, step: 10e-6 });
+  assert.equal(ordinary.status, 'ok');
+  assert.ok(ordinary.samples.slice(2).every(sample =>
+    Math.abs(sample.powerBalanceW) <= sample.powerToleranceW &&
+    Math.abs(sample.energyBalanceJ) <= sample.energyToleranceJ));
+  const nonfinite = copy(document);
+  nonfinite.circuit.components.find(component => component.id === 'R1').value = 1e-320;
+  const rejected = nonlinearTransient(nonfinite, { stop: 5e-9, step: 1e-9 });
+  assert.equal(rejected.status, 'failed');
+  assert.equal(rejected.code, 'numeric-range');
+  assert.equal(rejected.samples.length, 0);
+});
+
+test('failed frozen equilibrium preserves its original Newton corrections', async () => {
+  const { solveDiodeOperatingPoint } = await import('../dist/index.js');
+  const document = load('diode-rc-step');
+  document.circuit.nodes = ['0', 'out'];
+  document.circuit.components = document.circuit.components.filter(component =>
+    component.type === 'C' || component.type === 'D');
+  document.circuit.components.push({ id: 'I1', type: 'I', p: 'out', n: '0' });
+  document.circuit.observations = [];
+  document.experiment.sources = [{ id: 'I1', dc: 1e-6 }];
+  document.experiment.initial = { kind: 'equilibrium' };
+  const original = solveDiodeOperatingPoint(document);
+  assert.equal(original.status, 'failed');
+  assert.ok(original.trace.length > 0);
+  const transient = nonlinearTransient(document, { stop: 1e-6, step: 1e-6 });
+  assert.equal(transient.status, 'failed');
+  assert.equal(transient.stage, 'equilibrium');
+  assert.equal(transient.code, original.code);
+  assert.equal(transient.cause, original.message);
+  assert.deepEqual(transient.trace.map(({ storageRateCorrection, ...entry }) => {
+    assert.deepEqual(storageRateCorrection, []);
+    return entry;
+  }), original.trace);
+  assert.equal(transient.samples.length, 0);
+});
