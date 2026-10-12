@@ -37,7 +37,7 @@ The UX workspaces branch continues English (`en`) and Mongolian Cyrillic (`mn`) 
 | Load current | Ачааллын гүйдэл | External resistor current `p→q`, opposite injected port current |
 | Agreement criterion | Нийцлийн нөхцөл | Separate voltage/current absolute floors and relative terms |
 | Analyze workspace | Шинжлэх ажлын талбар | Circuit view and independently configurable result panels |
-| Transform workspace | Хувиргах ажлын талбар | DC Thévenin/Norton comparison and task-branch passive resistor methods |
+| Transform workspace | Хувиргах ажлын талбар | DC Thévenin/Norton comparison and passive resistor methods |
 | Retained terminals | Хадгалах туйлууд | Ordered boundary set `B` in a resistor response matrix |
 | Internal node | Дотоод зангилаа | Eliminated set `I`; a native preview keeps node `0` |
 | Conductance | Дамжуулалт | Siemens; reciprocal of resistance |
@@ -94,6 +94,6 @@ The translated filter guides keep native IDs such as `resistorVoltage`, SI coeff
 
 ## Phase 3A2 diode terminology
 
-The task-branch browser uses **диодын ажлын цэг** for operating point Q, **орон нутгийн дифференциал эсэргүүцэл** for `rd=dV/dI`, **диодын тодорхойломж** for the terminal I–V characteristic, and **ачааллын шулуун** for an externally proved resistor/source load line. `Rs` is **дотоод цуваа эсэргүүцэл**; it is distinct from the external resistor and from the bias ratio `V/I`. **Бага дохионы хариу** means the local incremental response around a specific DC bias, not the absolute nonlinear response. A **DC үүсгүүрийн мужийн тооцоо** samples source values, not physical time or certified hysteresis. Keep `Is`, `Rs`, `rd`, `Q`, exact device IDs, equations, SI units, JSON names, and CSV headers unchanged across languages. Failure details and progress labels must re-render when language changes while preserving pending drafts.
+The published browser uses **диодын ажлын цэг** for operating point Q, **орон нутгийн дифференциал эсэргүүцэл** for `rd=dV/dI`, **диодын тодорхойломж** for the terminal I–V characteristic, and **ачааллын шулуун** for an externally proved resistor/source load line. `Rs` is **дотоод цуваа эсэргүүцэл**; it is distinct from the external resistor and from the bias ratio `V/I`. **Бага дохионы хариу** means the local incremental response around a specific DC bias, not the absolute nonlinear response. A **DC үүсгүүрийн мужийн тооцоо** samples source values, not physical time or certified hysteresis. Keep `Is`, `Rs`, `rd`, `Q`, exact device IDs, equations, SI units, JSON names, and CSV headers unchanged across languages. Failure details and progress labels must re-render when language changes while preserving pending drafts.
 
 The reviewed previews say **Анхны хэвийлтийн үүсгүүр** for an original DC bias source and **Өсөлтийн үүсгүүр** for its zero-DC small-signal counterpart. The latter's AC value is RMS. **Лавлах зангилааны гишүүн** identifies a formal ground contribution shown for teaching but absent as an independent reduced-MNA row or voltage coordinate. A missing selected diode requests reselection; translation must not substitute another device's metrics. A plotting-range message states a display limitation rather than inventing a zero sample.

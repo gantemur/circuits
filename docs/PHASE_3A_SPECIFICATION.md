@@ -2,7 +2,7 @@
 
 ## 3A1 contract and boundary
 
-Phase 3A1 is a headless, browser-compatible TypeScript kernel for a memoryless diode, its DC operating point, and a local tangent circuit. Phase 3A2 may integrate this work into the browser. The released browser remains a linear v1 lab. This phase does not add nonlinear transients, charge storage inside a diode, breakdown, ideal-diode complementarity, temperature-dependent saturation-current laws, transistors, SPICE import, or graphical diode editing.
+Phase 3A1 is a headless, browser-compatible TypeScript kernel for a memoryless diode, its DC operating point, and a local tangent circuit. Phase 3A2 integrates it into the published browser lab. This phase does not add nonlinear transients, charge storage inside a diode, breakdown, ideal-diode complementarity, temperature-dependent saturation-current laws, transistors, SPICE import, or graphical diode editing.
 
 The existing v1 document/parser/serializer and linear analysis APIs retain their behavior. A separate strict document has `circuit.schemaVersion: 2`, `experiment.schemaVersion: 1`, all existing linear devices and experiment fields, and `D` branches. A diode has ordered `p` (anode) and `n` (cathode) terminals and an explicit `model` with `kind: "shockley-series"`, `saturationCurrentA > 0`, `idealityFactor > 0`, `seriesResistanceOhm >= 0`, and `temperatureK > 0`; all numbers must be finite. Unknown fields, models, versions, references, and duplicate IDs fail validation. Exact IDs are retained. The v1 browser importer continues to reject v2.
 
