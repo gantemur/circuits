@@ -5,6 +5,7 @@ import { assemble, transfer, transient, solveDC, solveFrequency, analyzePorts,
   parseDocument, serializeDocument, complex } from '../dist/index.js';
 import { createLab, exportNative, importNative, updateDocument } from '../dist/lab-test.js';
 import { createWorkspace, addPanel, suggestedLayout } from '../dist/workspace-test.js';
+import { guideNavigation } from '../dist/guide-navigation-test.js';
 import { schematic } from '../dist/schematic-test.js';
 import { lessons, referenceResponses, referenceStatus } from '../dist/study-guide-test.js';
 
@@ -99,8 +100,12 @@ test('RC3 transfer obeys independent connected-node equations and cutoff, not is
       cnear(rational(referenceResponses[id],C(0,2*Math.PI*f)),expected,2e-12);
     }
     near(mag(h(d,'out',1000)),Math.SQRT1_2,2e-12);
-    const atCorner=h(d,'out',1000),isolated=div(highPass?mul(mul(C(0,root),C(0,root)),C(0,root)):C(1),
-      mul(mul(add(C(1),C(0,root)),add(C(1),C(0,root))),add(C(1),C(0,root))));
+    // Use this fixture's actual z=sRC. The high-pass capacitor gives z=i/x3
+    // at 1 kHz, whereas the low-pass capacitor gives z=i*x3.
+    const atCorner=h(d,'out',1000);
+    const z=C(0,2*Math.PI*1000*tau);
+    const isolatedStage=div(highPass?z:C(1),add(C(1),z));
+    const isolated=mul(mul(isolatedStage,isolatedStage),isolatedStage);
     assert.ok(mag(sub(atCorner,isolated))>.1);
     const dc=good(solveDC(assemble(d.circuit),d.experiment));
     near(dc.observations.out.value.re,highPass?0:1,1e-12);
@@ -173,6 +178,78 @@ test('Butterworth continuous step formulas bound BE error and improve on half st
     }
     assert.ok(errors[0]<.04 && errors[1]<errors[0]*.55,`${id}: ${errors}`);
   }
+});
+
+test('active drawing states the edited VCVS law without changing unity Butterworth references',()=>{
+  const omega=2*Math.PI*1000;
+  for(const id of ['butterworth2-low-pass','butterworth2-high-pass']) {
+    const baseline=referenceResponses[id];
+    for(const gain of [1,1.2,0,-1]) {
+      const state=createLab(id);
+      if(gain!==1) updateDocument(state,d=>{component(d,'Follower').gain=gain;});
+      const drawing=schematic(state);
+      assert.equal(drawing.schematic,true);
+      assert.match(drawing.html,/V\(out\)−V\(0\) = K·\[V\(b\)−V\(0\)\]/);
+      assert.match(drawing.html,new RegExp(`K = ${gain} \\(Follower`));
+      const analysis=id==='butterworth2-low-pass'
+        ? good(solveDC(assemble(state.document.circuit),state.document.experiment))
+        : good(solveFrequency(assemble(state.document.circuit),state.document.experiment,complex(0,omega)));
+      cnear(analysis.observations.out.value,scale(analysis.observations.b.value,gain),2e-11);
+      if(id==='butterworth2-low-pass') {
+        near(analysis.observations.b.value.re,1,2e-11);
+        near(analysis.observations.out.value.re,gain,2e-11);
+      }
+      assert.equal(referenceStatus(state,id),gain===1?'baseline':'edited');
+      assert.equal(referenceResponses[id],baseline);
+      cnear(rational(baseline,C(0,omega)),C(0,id==='butterworth2-high-pass'?Math.SQRT1_2:-Math.SQRT1_2),2e-12);
+    }
+  }
+});
+
+test('active high-pass frequency lesson exposes independently predicted AC load and follower currents',()=>{
+  const id='butterworth2-high-pass',state=createLab(id),omega=2*Math.PI*1000;
+  const step=lessons[id];
+  assert.equal(step.en.steps[2].action,'frequency');
+  assert.equal(step.mn.steps[2].action,'frequency');
+  for(const language of ['en','mn']) {
+    const instructions=step[language].steps[2].text;
+    for(const term of ['1000 Hz','load','follower','out']) assert.ok(instructions.includes(term),`${language}: ${term}`);
+  }
+  const workspace=createWorkspace(state),frequency=workspace.panels.find(p=>p.type==='frequency');
+  const previousId=frequency.id;
+  frequency.inspectHz=1234;
+  frequency.output='load';
+  frequency.pending.inspectHz='not-a-frequency';
+  frequency.errors.inspectHz='finiteField';
+  assert.deepEqual(guideNavigation(workspace,state,'frequency'),{kind:'focus',panelId:previousId});
+  assert.equal(frequency.inspectHz,1234);
+  assert.equal(frequency.output,'load');
+  assert.equal(frequency.pending.inspectHz,'not-a-frequency');
+  assert.equal(frequency.errors.inspectHz,'finiteField');
+  assert.equal(workspace.panels.length,2);
+
+  const voltage=C(0,Math.SQRT1_2),rf=component(state.document,'Rf').value;
+  const rg=component(state.document,'Rg').value,c2=component(state.document,'C2').value;
+  // b's KCL gives Va=Vb*[1+1/(s*C2*Rg)]. At the unity baseline Vb=Vout.
+  const va=mul(voltage,add(C(1),div(C(1),C(0,omega*c2*rg))));
+  const feedbackCurrent=scale(sub(va,voltage),1/rf); // a -> out
+  const measured=[];
+  for(const loadResistance of [10000,1000]) {
+    const d=structuredClone(state.document);
+    component(d,'RL').value=loadResistance;
+    const ac=good(solveFrequency(assemble(d.circuit),d.experiment,complex(0,omega)));
+    const load=ac.observations.load.value;
+    const follower=ac.observations.follower.value; // out -> 0
+    cnear(ac.observations.out.value,voltage,2e-12);
+    cnear(load,scale(voltage,1/loadResistance),2e-12);
+    cnear(follower,sub(feedbackCurrent,load),2e-12);
+    near(mag(load),Math.SQRT1_2/loadResistance,2e-12);
+    measured.push({load,follower});
+  }
+  near(mag(measured[0].load)*1e6,70.71067811865476,2e-7);
+  near(mag(measured[1].load)*1e6,707.1067811865476,2e-6);
+  cnear(add(sub(measured[1].follower,measured[0].follower),
+    sub(measured[1].load,measured[0].load)),C(0),2e-12);
 });
 
 test('RLC measurement determines band-pass versus notch and respects identities',()=>{
@@ -294,11 +371,36 @@ test('new curated schematics show endpoint paths, feedback, measurement signs, a
     assert.match(html,/M405 55L535 55/);
     assert.match(html,/M535 55L535 120/);
     assert.match(html,/M380 145H475V184H508/);
-    assert.match(html,/V\(out\)=V\(b\)/);
+    const followerLabel=html.match(/<text x="(\d+)" y="(\d+)" class="component-label">Follower<\/text>/);
+    const loadValue=html.match(/<text x="(\d+)" y="(\d+)" text-anchor="middle" class="schematic-small">10000 Ω<\/text>/);
+    const law=html.match(/<text data-follower-law="equation" x="(\d+)" y="(\d+)"/);
+    const gain=html.match(/<text data-follower-law="gain" x="(\d+)" y="(\d+)"/);
+    const badge=html.match(/<rect class="output-badge" x="\d+" y="(\d+)"/);
+    assert.ok(followerLabel&&loadValue&&law&&gain&&badge);
+    // The old follower label and RL value had overlapping ink on the same row.
+    assert.ok(Math.abs(Number(followerLabel[2])-Number(loadValue[2]))>=25);
+    assert.ok(Number(law[2])>268+15); // below the lowest ground strokes
+    assert.ok(Number(gain[2])-Number(law[2])>=16);
+    assert.ok(Number(gain[2])<Number(badge[1])-20);
   }
   for(const id of ['rlc-band-pass','rlc-notch']) {
-    const html=schematic(createLab(id)).html;
-    assert.match(html,/schematic-output">\+/);
-    assert.match(html,/schematic-output">−/);
+    const state=createLab(id);
+    const marks={in:[90,143],a:[357,143],b:[602,143],'0':[620,246]};
+    for(const observation of state.document.circuit.observations.filter(o=>o.type==='voltage')) {
+      state.output=observation.id;
+      const html=schematic(state).html;
+      const positive=html.match(/<text data-measurement-sign="positive" x="(\d+)" y="(\d+)"[^>]*>\+<\/text>/);
+      const negative=html.match(/<text data-measurement-sign="negative" x="(\d+)" y="(\d+)"[^>]*>−<\/text>/);
+      const badge=html.match(/<rect class="output-badge" x="\d+" y="(\d+)"/);
+      assert.ok(positive&&negative&&badge,`${id}:${observation.id}`);
+      assert.deepEqual([Number(positive[1]),Number(positive[2])],marks[observation.p]);
+      assert.deepEqual([Number(negative[1]),Number(negative[2])],marks[observation.n]);
+      for(const mark of [positive,negative]) assert.ok(Number(mark[2])<Number(badge[1])-15);
+      if(observation.n==='0') assert.ok(Number(negative[1])>=612); // clear of ground strokes
+    }
+    state.output='inductorCurrent';
+    const currentDrawing=schematic(state).html;
+    assert.match(currentDrawing,/I\(a→b\) →/);
+    assert.doesNotMatch(currentDrawing,/data-measurement-sign=/);
   }
 });

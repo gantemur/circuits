@@ -68,17 +68,18 @@ function inductorHorizontal(state:LabState,id:string,x1:number,x2:number):string
   const x=(x1+x2)/2;
   return group(state,id,`<path class="symbol" d="M${x1} 120c0-25 15-25 15 0c0-25 15-25 15 0c0-25 15-25 15 0c0-25 15-25 15 0"/>`,x,75)+wire(x1+60,120,x2,120);
 }
-function source(state:LabState,id:string,x:number,kind:'V'|'VCVS'):string {
+function source(state:LabState,id:string,x:number,kind:'V'|'VCVS',labelX=x+58,labelY=175):string {
   const shape=kind==='V'?`<circle class="symbol" cx="${x}" cy="184" r="25"/><path class="wire" d="M${x-8} 176h16m-8-8v16M${x-8} 194h16"/>`:
     `<path class="symbol" d="M${x} 151l27 33l-27 33l-27-33Z"/><text x="${x}" y="189" text-anchor="middle" class="schematic-label">μ</text>`;
   const upper=kind==='V'?159:151,lower=kind==='V'?209:217;
-  return wire(x,120,x,upper)+group(state,id,shape,x+58,175)+wire(x,lower,x,256)+ground(x);
+  return wire(x,120,x,upper)+group(state,id,shape,labelX,labelY)+wire(x,lower,x,256)+ground(x);
 }
-function wrap(state:LabState,body:string,note:string):{html:string;note:string;schematic:boolean} {
+function wrap(state:LabState,body:string,note:string,height=305):{html:string;note:string;schematic:boolean} {
   const selected=state.document.circuit.observations.find(o=>o.id===state.output);
   const description=selected?.type==='voltage'?`V(${selected.p}) − V(${selected.n})`:
     selected?.type==='current'?`I(${selected.component})`:t('noOutputSelected');
-  const html=`<svg viewBox="0 0 690 305" role="img" aria-label="${t('diagramLabel')}"><rect width="690" height="305" fill="#fafcf9"/><text x="22" y="29" class="schematic-small">${t('terminalOrientation')}</text>${body}<rect x="330" y="275" width="340" height="25" rx="6" fill="#fff0e8"/><text x="500" y="292" text-anchor="middle" class="schematic-small schematic-output">${escapeHtml(t('outputBadge',{output:description}))}</text></svg>`;
+  const badgeY=height-30;
+  const html=`<svg viewBox="0 0 690 ${height}" role="img" aria-label="${t('diagramLabel')}"><rect width="690" height="${height}" fill="#fafcf9"/><text x="22" y="29" class="schematic-small">${t('terminalOrientation')}</text>${body}<rect class="output-badge" x="330" y="${badgeY}" width="340" height="25" rx="6" fill="#fff0e8"/><text x="500" y="${badgeY+17}" text-anchor="middle" class="schematic-small schematic-output">${escapeHtml(t('outputBadge',{output:description}))}</text></svg>`;
   return { html, note, schematic:true };
 }
 /** Four horizontal nodes joined by three real series elements; every shunt ends at node 0. */
@@ -103,6 +104,8 @@ function ladderSchematic(state:LabState,series:string[],shunts:string[],withSour
 /** The feedback element connects a to the *output* of the ideal follower. */
 function activeFilterSchematic(state:LabState,highPass:boolean):{html:string;note:string;schematic:boolean} {
   const input=70,a=225,b=380,out=535,load=630;
+  const follower=item(state,'Follower');
+  if(follower.type!=='VCVS') throw new Error('The matched active-filter preset requires a VCVS Follower.');
   const selected=state.document.circuit.observations.find(o=>o.id===state.output);
   const selectedNode=selected?.type==='voltage'&&selected.n==='0'?selected.p:'';
   const first=highPass?'C1':'R1',second=highPass?'C2':'R2';
@@ -115,27 +118,32 @@ function activeFilterSchematic(state:LabState,highPass:boolean):{html:string;not
   // Upper route deliberately passes above b; there is no connection at its crossing longitude.
   svg+=wire(a,120,a,55)+wire(a,55,345,55)+seriesComponent(state,feedback,345,405,55)+
     wire(405,55,out,55)+wire(out,55,out,120);
-  svg+=source(state,'Follower',out,'VCVS')+wire(out,120,load,120)+branchResistor(state,'RL',load);
+  // The follower label belongs left of its diamond, away from the RL value.
+  svg+=source(state,'Follower',out,'VCVS',470,210)+wire(out,120,load,120)+branchResistor(state,'RL',load);
   // The dashed sensing lead starts at b, then reaches the VCVS control input.
   // It is not a conductive connection to the output branch.
+  const outputVoltage=`V(${follower.p})−V(${follower.n})`;
+  const controlVoltage=`V(${follower.cp})−V(${follower.cn})`;
   svg+=`<path class="control-wire" d="M${b} 145H475V184H508"/>`+
-    `<text x="428" y="140" class="schematic-small">V(b)−V(0)</text>`+
-    `<text x="476" y="237" class="schematic-small">V(out)=V(b)</text>`;
+    `<text x="428" y="140" class="schematic-small">${escapeHtml(controlVoltage)}</text>`+
+    `<text data-follower-law="equation" x="345" y="290" text-anchor="middle" class="schematic-small">${escapeHtml(outputVoltage)} = K·[${escapeHtml(controlVoltage)}]</text>`+
+    `<text data-follower-law="gain" x="345" y="310" text-anchor="middle" class="schematic-small">${escapeHtml(t('followerGain',{gain:follower.gain}))}</text>`;
   svg+=dot(input,120)+dot(a,120)+dot(b,120)+dot(b,145)+dot(out,120)+dot(load,120);
-  return wrap(state,svg,t(highPass?'schematicButterHigh':'schematicButterLow'));
+  return wrap(state,svg,t(highPass?'schematicButterHigh':'schematicButterLow'),370);
 }
 function rlcMeasurementSchematic(state:LabState,notch:boolean):{html:string;note:string;schematic:boolean} {
   const r=notch?'Rn':'Rbp',l=notch?'Ln':'Lbp',c=notch?'Cn':'Cbp';
-  const positions:Record<string,{x:number;y:number}>={in:{x:78,y:120},a:{x:345,y:120},b:{x:590,y:120},'0':{x:590,y:256}};
+  // Marks sit beside their terminals. The ground mark stays above the badge.
+  const marks:Record<string,{x:number;y:number}>={in:{x:90,y:143},a:{x:357,y:143},b:{x:602,y:143},'0':{x:620,y:246}};
   const selected=state.document.circuit.observations.find(o=>o.id===state.output);
   let svg=node(78,'in',false)+node(345,'a',false)+node(590,'b',false)+
     wire(78,120,184,120)+resistor(state,r,184,254)+wire(254,120,345,120)+
     wire(345,120,405,120)+seriesComponent(state,l,405,485)+wire(485,120,590,120)+
     source(state,'Vin',78,'V')+capacitor(state,c,590)+dot(78,120)+dot(345,120)+dot(590,120);
   if(selected?.type==='voltage') {
-    const positive=positions[selected.p],negative=positions[selected.n];
-    if(positive&&negative) svg+=`<text x="${positive.x+12}" y="${positive.y+23}" class="schematic-output">+</text>`+
-      `<text x="${negative.x+12}" y="${negative.y+23}" class="schematic-output">−</text>`;
+    const positive=marks[selected.p],negative=marks[selected.n];
+    if(positive&&negative) svg+=`<text data-measurement-sign="positive" x="${positive.x}" y="${positive.y}" class="schematic-output">+</text>`+
+      `<text data-measurement-sign="negative" x="${negative.x}" y="${negative.y}" class="schematic-output">−</text>`;
   } else if(selected?.type==='current'&&selected.component===l) {
     svg+=`<text x="414" y="152" class="schematic-output">I(a→b) →</text>`;
   }
