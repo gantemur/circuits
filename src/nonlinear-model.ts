@@ -72,7 +72,10 @@ export function serializeNonlinearDocument(document: NonlinearDocument): string 
 }
 /** Only circuit and independent DC values determine this memoryless DC bias. */
 export function nonlinearBiasFingerprint(document: NonlinearDocument): string {
-  const validated = validateNonlinearDocument(document);
+  // Validate first: JSON normalization alone would silently erase unsupported
+  // fields or turn nonfinite numbers into null. Ownership uses this same
+  // serialized form, where an optional undefined property is absent.
+  const validated = ownedNonlinearDocument(document);
   const canonical = (value: unknown): string => {
     if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
     if (value !== null && typeof value === 'object') {

@@ -22,7 +22,10 @@ export interface DiodeSystem {
 }
 export interface NonlinearEvaluation {
   residual: number[]; jacobian: Matrix; diode: Record<string, DiodeEvaluation>;
-  terms: number[][];
+  terms: number[][]; physicalTerms: number[][];
+}
+export interface PhysicalResidual extends Residual {
+  physicalAllowance: number; arithmeticAllowance: number;
 }
 export interface OperatingPointOptions {
   maxIterations?: number; maxBacktracks?: number; initialGuess?: number[];
@@ -36,7 +39,7 @@ export interface DevicePower { id: string; voltageV: number; currentA: number; a
 export interface NonlinearSuccess {
   status: 'ok'; kind: 'nonlinear'; x: number[]; unknowns: Record<string, number>;
   observations: Record<string, { value: number; unit: 'V' | 'A' }>;
-  diodes: Record<string, DiodeEvaluation>; residuals: Residual[]; groundKcl: Residual;
+  diodes: Record<string, DiodeEvaluation>; residuals: PhysicalResidual[]; groundKcl: Residual;
   powers: DevicePower[]; powerBalanceW: number; powerToleranceW: number;
   trace: NewtonTrace[]; document: NonlinearDocument; biasFingerprint: string;
 }
@@ -102,8 +105,9 @@ export function assembleDiodeSystem(input: NonlinearDocument): DiodeSystem {
  * Kx-Bu in old rows, plus diode KCL currents and constitutive rows. J is
  * the exact derivative of that same residual. Every diode stamp
  * adds to matrix entries; p=n therefore cancels incidence rather than being
- * broken by assignment. `terms` retain noncancelled physical contributions
- * for a row-unit residual allowance after the solve.
+ * broken by assignment. `terms` retain expanded arithmetic operands for a
+ * roundoff allowance; `physicalTerms` use branch voltage/current quantities
+ * for a separate, unit-aware model residual allowance.
  */
 export function evaluateDiodeSystem(system: DiodeSystem, x: number[]): NonlinearEvaluation | null {
   const n = system.linear.unknowns.length;
@@ -150,34 +154,118 @@ export function evaluateDiodeSystem(system: DiodeSystem, x: number[]): Nonlinear
     terms[branch]!.push(x[branch]!, -evaluation.modelCurrentA);
     residual[branch] = x[branch]! - evaluation.modelCurrentA;
   }
-  if ([...residual, ...jacobian.flat(), ...terms.flat()].some(v => !Number.isFinite(v))) return null;
-  return { residual, jacobian, diode, terms };
+  const physicalTerms = physicalContributions(system, x, diode);
+  if ([...residual, ...jacobian.flat(), ...terms.flat(), ...physicalTerms.flat()].some(v => !Number.isFinite(v))) return null;
+  return { residual, jacobian, diode, terms, physicalTerms };
 }
 
-function settings(options: OperatingPointOptions, size: number): Required<Omit<OperatingPointOptions, 'initialGuess' | 'tolerance'>> &
+/**
+ * Reconstruct the noncancelled device contributions in each physical row.
+ * A resistor contributes (Vp-Vn)/R amperes to KCL, not G*Vp and -G*Vn
+ * separately. Likewise voltage constraints compare terminal and control
+ * differences in volts; a shift of all nodes cannot enlarge their scale.
+ */
+function physicalContributions(
+  system: DiodeSystem, x: number[], diode: Record<string, DiodeEvaluation>,
+): number[][] {
+  const rows: number[][] = system.rows.map(() => []);
+  const sourceValues = new Map(system.linear.inputs.map((input, index) => [input.id, system.dcInputs[index]!]));
+  const diodeRows = new Map(system.diodes.map((device, index) => [device.id, system.linear.unknowns.length + index]));
+  const nodeVoltage = (id: string): number => id === '0' ? 0 : x[system.linear.nodeIndex.get(id)!]!;
+  const branchVoltage = (p: string, n: string): number => nodeVoltage(p) - nodeVoltage(n);
+  const branchCurrent = (id: string): number => x[system.linear.branchIndex.get(id)!]!;
+  const sourceValue = (id: string): number => sourceValues.get(id)!;
+  const contributeCurrent = (p: string, n: string, current: number): void => {
+    if (p === n) return; // A same-node branch has no external KCL incidence.
+    const pi = system.linear.nodeIndex.get(p);
+    const ni = system.linear.nodeIndex.get(n);
+    if (pi !== undefined) rows[pi]!.push(current);
+    if (ni !== undefined) rows[ni]!.push(-current);
+  };
+  for (const device of system.document.circuit.components) {
+    if (device.type === 'D') {
+      const current = diode[device.id]!.currentA;
+      contributeCurrent(device.p, device.n, current);
+      rows[diodeRows.get(device.id)!]!.push(current, -diode[device.id]!.modelCurrentA);
+      continue;
+    }
+    let current = 0;
+    switch (device.type) {
+      case 'R': current = branchVoltage(device.p, device.n) / device.value; break;
+      case 'C': break; // A capacitor is open at DC.
+      case 'L': case 'V': case 'VCVS': case 'CCVS': current = branchCurrent(device.id); break;
+      case 'I': current = sourceValue(device.id); break;
+      case 'VCCS': current = device.gain * branchVoltage(device.cp, device.cn); break;
+      case 'CCCS': current = device.gain * branchCurrent(device.control); break;
+    }
+    contributeCurrent(device.p, device.n, current);
+    const row = system.linear.branchIndex.get(device.id);
+    if (row === undefined) continue;
+    const voltage = branchVoltage(device.p, device.n);
+    switch (device.type) {
+      case 'L': rows[row]!.push(-voltage); break;
+      case 'V': rows[row]!.push(voltage, -sourceValue(device.id)); break;
+      case 'VCVS': rows[row]!.push(voltage, -device.gain * branchVoltage(device.cp, device.cn)); break;
+      case 'CCVS': rows[row]!.push(voltage, -device.gain * branchCurrent(device.control)); break;
+    }
+  }
+  return rows;
+}
+
+function defaultCurrentScale(system: DiodeSystem): number {
+  // A fixed pre-search KCL scale: use declared DC voltage magnitudes across
+  // conductances and the largest prescribed current. This changes line-search
+  // weighting, never the physical acceptance tolerances. Ordinary 1 kΩ/1 V
+  // examples retain the former 1 mA scale.
+  const sourceValues = new Map(system.linear.inputs.map((input, index) => [input.id, system.dcInputs[index]!]));
+  const nominalVoltageV = Math.max(1, ...system.document.circuit.components
+    .filter(device => device.type === 'V')
+    .map(device => Math.abs(sourceValues.get(device.id)!)));
+  let scale = 1e-3;
+  for (const device of system.document.circuit.components) {
+    let candidate = 0;
+    if (device.type === 'R') candidate = nominalVoltageV / device.value;
+    if (device.type === 'I') candidate = Math.abs(sourceValues.get(device.id)!);
+    if (device.type === 'VCCS') candidate = Math.abs(device.gain) * nominalVoltageV;
+    if (Number.isFinite(candidate)) scale = Math.max(scale, candidate);
+  }
+  return scale;
+}
+
+function settings(options: OperatingPointOptions, system: DiodeSystem): Required<Omit<OperatingPointOptions, 'initialGuess' | 'tolerance'>> &
   { initialGuess: number[]; tolerance: Tolerances } {
   const maxIterations = options.maxIterations ?? 60;
   const maxBacktracks = options.maxBacktracks ?? 30;
-  const currentScaleA = options.currentScaleA ?? 1e-3;
+  const currentScaleA = options.currentScaleA ?? defaultCurrentScale(system);
   const voltageScaleV = options.voltageScaleV ?? 1;
   if (![maxIterations, maxBacktracks].every(v => Number.isSafeInteger(v) && v > 0) ||
     !Number.isFinite(currentScaleA) || currentScaleA <= 0 ||
     !Number.isFinite(voltageScaleV) || voltageScaleV <= 0)
     throw new RangeError('Iteration limits and physical merit scales must be finite and positive');
-  const initialGuess = options.initialGuess ?? Array<number>(size).fill(0);
-  if (!Array.isArray(initialGuess) || initialGuess.length !== size || initialGuess.some(v => !Number.isFinite(v)))
+  const initialGuess = options.initialGuess ?? Array<number>(system.unknowns.length).fill(0);
+  if (!Array.isArray(initialGuess) || initialGuess.length !== system.unknowns.length || initialGuess.some(v => !Number.isFinite(v)))
     throw new RangeError('Initial guess must have one finite coordinate per labeled unknown');
   return { maxIterations, maxBacktracks, currentScaleA, voltageScaleV,
     initialGuess: [...initialGuess], tolerance: tolerances(options.tolerance) };
 }
-function physicalRows(system: DiodeSystem, evaluation: NonlinearEvaluation, t: Tolerances): Residual[] {
+function physicalRows(system: DiodeSystem, evaluation: NonlinearEvaluation, t: Tolerances): PhysicalResidual[] {
   return system.rows.map((label, i) => {
     const value = evaluation.residual[i]!;
     const absolute = Math.abs(value);
-    const allowance = (label.unit === 'A' ? t.currentAbsolute : t.voltageAbsolute) +
-      t.relative * evaluation.terms[i]!.reduce((sum, term) => sum + Math.abs(term), 0);
+    const physicalMagnitude = evaluation.physicalTerms[i]!.reduce((sum, term) => sum + Math.abs(term), 0);
+    const physicalAllowance = (label.unit === 'A' ? t.currentAbsolute : t.voltageAbsolute) +
+      t.relative * physicalMagnitude;
+    // Binary64 addition/multiplication and branch-voltage subtraction incur
+    // O(eps) error per operation. Expanded operands bound cancellation in the
+    // actual Kx-Bu evaluation; the factor covers several operations per term.
+    // Both this allowance and the physical allowance have the row's A/V unit.
+    const operands = evaluation.terms[i]!;
+    const arithmeticAllowance = 8 * (operands.length + 1) * Number.EPSILON *
+      operands.reduce((sum, term) => sum + Math.abs(term), 0);
+    const allowance = physicalAllowance + arithmeticAllowance;
     return { label: label.id, unit: label.unit, value: complex(value), absolute,
-      tolerance: allowance, passed: Number.isFinite(absolute) && Number.isFinite(allowance) && absolute <= allowance };
+      tolerance: allowance, physicalAllowance, arithmeticAllowance,
+      passed: Number.isFinite(absolute) && Number.isFinite(allowance) && absolute <= allowance };
   });
 }
 function merit(system: DiodeSystem, evaluation: NonlinearEvaluation, currentScaleA: number, voltageScaleV: number): number {
@@ -263,7 +351,7 @@ function describe(system: DiodeSystem, x: number[], evaluation: NonlinearEvaluat
 export function solveDiodeOperatingPoint(input: NonlinearDocument, options: OperatingPointOptions = {}): NonlinearResult {
   validateNonlinearDocument(input);
   const system = assembleDiodeSystem(input);
-  const config = settings(options, system.unknowns.length);
+  const config = settings(options, system);
   let x = config.initialGuess;
   let evaluation = evaluateDiodeSystem(system, x);
   const trace: NewtonTrace[] = [];

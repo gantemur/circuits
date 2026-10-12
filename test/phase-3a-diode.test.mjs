@@ -342,3 +342,116 @@ test('damping, invalid data/options, unresolved circuits, and nonfinite range fa
   floating.experiment.sources = [];
   assert.equal(solveDiodeOperatingPoint(floating).status, 'failed');
 });
+
+test('default fixed current scale converges at ampere and milliampere levels', () => {
+  for (const [resistance, seriesResistance] of [[1000, 0], [100, 0], [10, 0], [1, 0], [10, 10], [1, 10]]) {
+    const document = fixture('resistor-diode');
+    document.circuit.components.find(c => c.id === 'R1').value = resistance;
+    document.circuit.components.find(c => c.id === 'D1').model.seriesResistanceOhm = seriesResistance;
+    const expected = scalarSeriesBias(1, resistance, 1e-12, kB * 300 / q, seriesResistance);
+    const point = success(solveDiodeOperatingPoint(document));
+    assert.ok(point.trace.length > 0 && point.trace.length < 60);
+    close(point.observations.vout.value, expected.terminalVoltage, 2e-9, `${resistance} Ω, Rs=${seriesResistance}`);
+    close(point.diodes.D1.currentA, expected.current, 2e-10, `${resistance} Ω, Rs=${seriesResistance}`);
+    assert.ok(point.residuals.every(row => row.passed));
+  }
+  const explicit = fixture('resistor-diode');
+  explicit.circuit.components.find(c => c.id === 'R1').value = 10;
+  const point = success(solveDiodeOperatingPoint(explicit, { currentScaleA: 0.1 }));
+  close(point.diodes.D1.currentA, scalarSeriesBias(1, 10, 1e-12, kB * 300 / q, 0).current, 2e-10);
+});
+
+test('branch-based residual allowances reject stale shifted-return warm starts', () => {
+  const rowAllowances = [];
+  for (const returnVoltage of [0, 12, 1000]) {
+    const document = fixture('resistor-diode');
+    document.circuit.nodes.push('return');
+    document.circuit.components.push({ id: 'Vref', type: 'V', p: 'return', n: '0' });
+    document.circuit.components.find(c => c.id === 'V1').n = 'return';
+    document.circuit.components.find(c => c.id === 'D1').n = 'return';
+    document.circuit.observations.find(o => o.id === 'vout').n = 'return';
+    document.experiment.sources.push({ id: 'Vref', dc: returnVoltage });
+    const old = success(solveDiodeOperatingPoint(document));
+    document.experiment.sources.find(s => s.id === 'V1').dc = 1.0000001;
+    const result = success(solveDiodeOperatingPoint(document, { initialGuess: old.x }));
+    assert.ok(result.trace.length > 0, `stale source constraint accepted at return=${returnVoltage} V`);
+    const expected = scalarSeriesBias(1.0000001, 1000, 1e-12, kB * 300 / q, 0);
+    close(result.observations.vout.value, expected.terminalVoltage, 2e-9);
+    close(result.diodes.D1.currentA, expected.current, 2e-12);
+    const sourceRow = result.residuals.find(row => row.label === 'law(V1)');
+    assert.ok(sourceRow.passed && sourceRow.physicalAllowance < 3e-8);
+    assert.ok(sourceRow.arithmeticAllowance < 1e-10);
+    rowAllowances.push([sourceRow.physicalAllowance,
+      result.residuals.find(row => row.label === 'KCL(out)').physicalAllowance]);
+    close(result.unknowns['V(in)'] - result.unknowns['V(return)'], 1.0000001, sourceRow.tolerance);
+  }
+  for (const allowances of rowAllowances.slice(1)) {
+    close(allowances[0], rowAllowances[0][0], 1e-13, 'source physical allowance');
+    close(allowances[1], rowAllowances[0][1], 1e-13, 'KCL physical allowance');
+  }
+});
+
+test('physical contributions use relative branch/control voltages for every DC row kind', () => {
+  const document = fixture('resistor-diode');
+  document.circuit.nodes.push('return', 'controlled', 'currentControlled');
+  document.circuit.components.find(c => c.id === 'V1').n = 'return';
+  document.circuit.components.find(c => c.id === 'D1').n = 'return';
+  document.circuit.components.push(
+    { id: 'Vref', type: 'V', p: 'return', n: '0' },
+    { id: 'E1', type: 'VCVS', p: 'controlled', n: 'return', cp: 'in', cn: 'return', gain: 2 },
+    { id: 'H1', type: 'CCVS', p: 'currentControlled', n: 'return', control: 'V1', gain: 10 },
+    { id: 'L1', type: 'L', p: 'controlled', n: 'out', value: 1e-3 },
+  );
+  document.circuit.observations.find(o => o.id === 'vout').n = 'return';
+  document.experiment.sources.push({ id: 'Vref', dc: 0 });
+  const termsAt = offset => {
+    document.experiment.sources.find(s => s.id === 'Vref').dc = offset;
+    const system = assembleDiodeSystem(document);
+    const coordinates = { 'V(return)': offset, 'V(in)': offset + 1,
+      'V(out)': offset + .5, 'V(controlled)': offset + 2,
+      'V(currentControlled)': offset + 3, 'I(V1)': .2, 'I(D1)': .001 };
+    const x = system.unknowns.map(label => coordinates[label.id] ?? 0);
+    const evaluation = evaluateDiodeSystem(system, x);
+    assert.ok(evaluation);
+    return Object.fromEntries(system.rows.map((row, i) => [row.id, evaluation.physicalTerms[i]]));
+  };
+  const base = termsAt(0), shifted = termsAt(1000);
+  for (const row of ['law(V1)', 'law(E1)', 'law(H1)', 'law(L1)', 'KCL(out)']) {
+    assert.equal(base[row].length, shifted[row].length);
+    base[row].forEach((term, i) => close(shifted[row][i], term, 1e-12, row));
+  }
+});
+
+test('bias fingerprint normalizes optional undefined labels only after strict validation', () => {
+  const document = fixture('resistor-diode');
+  document.circuit.label = undefined;
+  document.circuit.components.find(c => c.id === 'D1').label = undefined;
+  document.circuit.components.find(c => c.id === 'R1').label = undefined;
+  document.circuit.observations.find(o => o.id === 'vout').label = undefined;
+  const point = success(solveDiodeOperatingPoint(document));
+  assert.equal(createDiodeTangent(point, document).status, 'ok');
+  assert.equal(createDiodeTangent(point, parseNonlinearDocument(serializeNonlinearDocument(document))).status, 'ok');
+  const changedModel = copy(document);
+  changedModel.circuit.components.find(c => c.id === 'D1').model.temperatureK = 301;
+  assert.equal(createDiodeTangent(point, changedModel).code, 'stale-bias');
+  const changedTopology = copy(document);
+  changedTopology.circuit.components.find(c => c.id === 'R1').p = 'out';
+  assert.equal(createDiodeTangent(point, changedTopology).code, 'stale-bias');
+  const changedDC = copy(document);
+  changedDC.experiment.sources[0].dc += .01;
+  assert.equal(createDiodeTangent(point, changedDC).code, 'stale-bias');
+  const changedAC = copy(document);
+  changedAC.experiment.sources[0].ac = { re: 2, im: 0 };
+  assert.equal(createDiodeTangent(point, changedAC).status, 'ok');
+  const storageDocument = fixture('diode-rc-tangent');
+  const storagePoint = success(solveDiodeOperatingPoint(storageDocument));
+  storageDocument.experiment.sources[0].waveform.after = 2;
+  storageDocument.experiment.initial.values[0].value = 0.7;
+  assert.equal(createDiodeTangent(storagePoint, storageDocument).status, 'ok');
+  const unsupported = copy(document);
+  unsupported.circuit.components.find(c => c.id === 'D1').unexpected = undefined;
+  assert.equal(createDiodeTangent(point, unsupported).code, 'stale-bias');
+  const invalid = copy(document);
+  invalid.circuit.components.find(c => c.id === 'D1').model.temperatureK = NaN;
+  assert.equal(createDiodeTangent(point, invalid).code, 'stale-bias');
+});
