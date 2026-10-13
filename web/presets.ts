@@ -5,6 +5,10 @@ import diodeSingle from '../fixtures/nonlinear/resistor-diode.json';
 import diodeSeries from '../fixtures/nonlinear/resistor-diode-series.json';
 import diodePair from '../fixtures/nonlinear/antiparallel.json';
 import diodeRc from '../fixtures/nonlinear/diode-rc-tangent.json';
+import diodeRcStep from '../fixtures/nonlinear/diode-rc-step.json';
+import diodeRcSine from '../fixtures/nonlinear/diode-rc-biased-sine.json';
+import rectifier from '../fixtures/nonlinear/half-wave-rectifier.json';
+import rectifierRc from '../fixtures/nonlinear/half-wave-rectifier-rc.json';
 import rc from '../fixtures/rc.json';
 import divider from '../fixtures/divider.json';
 import highpass from '../fixtures/rc-high-pass.json';
@@ -46,6 +50,22 @@ for (const observation of seriesBrowser.circuit.observations) {
   if (observation.type === 'current' && observation.component === 'D1') observation.component = 'Dseries';
   if (observation.type === 'current' && observation.component === 'V1') observation.component = 'Vseries';
 }
+/** Browser copies use distinct exact IDs so two identical diode-RC topologies
+ * cannot select one another's guide or reset target after values are edited. */
+function namedTransientCopy(input: unknown, suffix: string): NonlinearDocument {
+  const document = structuredClone(input) as NonlinearDocument;
+  const names = new Map(document.circuit.components.map(component => [component.id, `${component.id}${suffix}`]));
+  for (const component of document.circuit.components) {
+    component.id = names.get(component.id)!;
+    if ('control' in component) component.control = names.get(component.control) ?? component.control;
+  }
+  for (const source of document.experiment.sources) source.id = names.get(source.id) ?? source.id;
+  for (const observation of document.circuit.observations)
+    if (observation.type === 'current') observation.component = names.get(observation.component) ?? observation.component;
+  if (document.experiment.initial.kind === 'storage')
+    for (const value of document.experiment.initial.values) value.id = names.get(value.id) ?? value.id;
+  return document;
+}
 export const presets: Preset[] = [
   { id: 'divider', titleKey: 'presetDividerTitle', subtitleKey: 'presetDividerSubtitle', document: divider as NativeDocument, defaultOutput: 'out' },
   { id: 'rc', titleKey: 'presetRcTitle', subtitleKey: 'presetRcSubtitle', document: rc as NativeDocument, defaultOutput: 'out' },
@@ -73,6 +93,10 @@ export const presets: Preset[] = [
   { id: 'diode-series', titleKey: 'presetDiodeSeriesTitle', subtitleKey: 'presetDiodeSeriesSubtitle', document: seriesBrowser, defaultOutput: 'vout' },
   { id: 'diode-pair', titleKey: 'presetDiodePairTitle', subtitleKey: 'presetDiodePairSubtitle', document: diodeBrowserCopy(diodePair), defaultOutput: 'vout' },
   { id: 'diode-rc', titleKey: 'presetDiodeRcTitle', subtitleKey: 'presetDiodeRcSubtitle', document: diodeBrowserCopy(diodeRc), defaultOutput: 'vout' },
+  { id: 'diode-rc-step', titleKey: 'presetDiodeStepTitle', subtitleKey: 'presetDiodeStepSubtitle', document: namedTransientCopy(diodeRcStep,'Step'), defaultOutput: 'vout' },
+  { id: 'diode-rc-biased-sine', titleKey: 'presetDiodeSineTitle', subtitleKey: 'presetDiodeSineSubtitle', document: namedTransientCopy(diodeRcSine,'Sine'), defaultOutput: 'vout' },
+  { id: 'half-wave-rectifier', titleKey: 'presetRectifierTitle', subtitleKey: 'presetRectifierSubtitle', document: namedTransientCopy(rectifier,'Rect'), defaultOutput: 'vout' },
+  { id: 'half-wave-rectifier-rc', titleKey: 'presetRectifierRcTitle', subtitleKey: 'presetRectifierRcSubtitle', document: namedTransientCopy(rectifierRc,'Smooth'), defaultOutput: 'vout' },
 ];
 
 export const copyDocument = copyBrowserDocument;

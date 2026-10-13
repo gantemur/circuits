@@ -24,8 +24,8 @@ const eta = kB * 300 / q;
 
 test('four diode browser copies route strict v2, retain IDs and drawings, and preserve v1', () => {
   const ids = ['diode-single', 'diode-series', 'diode-pair', 'diode-rc'];
-  assert.equal(presets.length,26);
-  assert.equal(new Set(presets.map(p=>p.id)).size,26);
+  assert.equal(presets.length,30);
+  assert.equal(new Set(presets.map(p=>p.id)).size,30);
   const state = createLab();
   assert.equal(state.presetId, 'divider');
   assert.equal(state.document.circuit.schemaVersion, 1);
@@ -137,7 +137,7 @@ test('panel DC, characteristic, tangent frequency, and unsupported dispatch use 
   assert.equal(first.incremental.tangent.document.circuit.schemaVersion, 1);
   assert.equal(first.incremental.tangent.document.experiment.sources[0].ac.re, .001);
   const transient = createPanel(state, 'later', 'transient');
-  assert.equal(calculator.calculate(transient, state).reason, 'unsupported-panel');
+  assert.equal(calculator.calculate(transient, state).type, 'nonlinear-transient');
   const before = first.incremental.bias.diodes.D1.currentA;
   assert.equal(updateDocument(state, document => { document.experiment.sources[0].dc = 2; }).ok, true);
   const changed = calculator.calculate(frequency, state);

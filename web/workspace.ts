@@ -26,6 +26,8 @@ export interface PanelConfig {
   portSourceResistance: number; portLoadResistance: number; portLoadOpen: boolean;
   diodeId: string; curveMinV: number; curveMaxV: number; curvePoints: number;
   sweepMin: number; sweepMax: number; sweepCount: number;
+  transientSampleIndex: number; transientOverlay: boolean;
+  transientEventsOpen: boolean; transientDiagnosticsOpen: boolean;
   collapsed: boolean; expanded: boolean; settingsOpen: boolean;
   pending: Record<string, string>; errors: Record<string, string>;
   selectionNeeded: string | null;
@@ -49,6 +51,7 @@ export type PanelResult =
   | { type: 'diode-characteristic'; diode: Diode; curve: (CharacteristicPoint | null)[];
       minimumV: number; maximumV: number; bias: NonlinearResult; loadLine: LoadLine | null }
   | { type: 'dc-sweep' }
+  | { type: 'nonlinear-transient' }
   | { type: 'nonlinear-failure'; reason: string };
 
 export interface PortSweepPoint {
@@ -57,6 +60,9 @@ export interface PortSweepPoint {
 }
 
 const defaultType = (preset: string | null): PanelType[] => preset?.endsWith('-impedance-ladder') ? ['port-frequency', 'equations'] :
+  preset === 'diode-rc-step' || preset === 'half-wave-rectifier-rc' ? ['transient', 'dc'] :
+  preset === 'diode-rc-biased-sine' ? ['transient', 'frequency'] :
+  preset === 'half-wave-rectifier' ? ['transient', 'diode-characteristic'] :
   preset === 'diode-single' || preset === 'diode-series' ? ['dc', 'diode-characteristic'] :
   preset === 'diode-pair' ? ['dc', 'dc-sweep'] : preset === 'diode-rc' ? ['dc', 'frequency'] :
   preset?.startsWith('port-') ? ['port-frequency', 'equations'] :
@@ -91,6 +97,8 @@ export function createPanel(state: LabState, id: string, type: PanelType): Panel
     curvePoints: 121,
     sweepMin: state.presetId === 'diode-pair' ? -2 : 0,
     sweepMax: 2, sweepCount: state.presetId === 'diode-pair' ? 81 : 51,
+    transientSampleIndex: 0, transientOverlay: false,
+    transientEventsOpen: false, transientDiagnosticsOpen: false,
     pending: {}, errors: {}, selectionNeeded: null };
 }
 export function createWorkspace(state: LabState): WorkspaceState {
@@ -151,8 +159,9 @@ const limits = (p: PanelConfig, state: LabState): string | null => {
   }
   if (p.type === 'transient') {
     if (!Number.isFinite(p.duration) || p.duration <= 0 || p.duration > 10) return 'settingDuration';
-    const events = state.document.experiment.sources.filter(s => s.waveform?.type === 'step' && s.waveform.at >= 0 && s.waveform.at <= p.duration).length;
-    if (!Number.isFinite(p.step) || p.step <= 0 || p.duration / p.step + events > 3000) return 'settingStep';
+    const events = new Set(state.document.experiment.sources.flatMap(s =>
+      s.waveform?.type === 'step' && s.waveform.at > 0 && s.waveform.at < p.duration ? [s.waveform.at] : [])).size;
+    if (!Number.isFinite(p.step) || p.step <= 0 || Math.ceil(p.duration / p.step) + events > 3000) return 'settingStep';
   }
   if (p.type === 'port' && (!Number.isFinite(p.load) || p.load <= 0)) return 'onePortInvalidLoad';
   if (p.type === 'port-frequency') {
@@ -260,7 +269,8 @@ export class PanelCalculator {
     return this.bias;
   }
   private nonlinear(panel: PanelConfig, state: LabState, document: NonlinearDocument): PanelResult {
-    if (panel.type === 'transient' || panel.type === 'port' || panel.type === 'port-frequency')
+    if (panel.type === 'transient') return { type: 'nonlinear-transient' };
+    if (panel.type === 'port' || panel.type === 'port-frequency')
       return { type: 'nonlinear-failure', reason: 'unsupported-panel' };
     if (panel.type === 'dc-sweep') return { type: 'dc-sweep' };
     if (panel.type === 'diode-characteristic') {

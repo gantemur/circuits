@@ -31,8 +31,12 @@ const defaults = (preset: string): Settings => {
   const newFilter = preset.startsWith('rc3-') || preset.startsWith('butterworth2-');
   const ladder = preset.endsWith('-impedance-ladder');
   const resonanceHz = 10000 / (2 * Math.PI);
-  const duration = preset === 'rc3-high-pass' ? .02 : newFilter || rlcMeasurement ? .002 :
-    preset === 'rlc' ? .003 : .005;
+  const nonlinearTransient = preset === 'diode-rc-step' ? { duration: .0005, step: .00001 } :
+    preset === 'diode-rc-biased-sine' ? { duration: .003, step: .000005 } :
+    preset === 'half-wave-rectifier' ? { duration: .04, step: .0001 } :
+    preset === 'half-wave-rectifier-rc' ? { duration: .06, step: .0001 } : null;
+  const duration = nonlinearTransient?.duration ?? (preset === 'rc3-high-pass' ? .02 : newFilter || rlcMeasurement ? .002 :
+    preset === 'rlc' ? .003 : .005);
   return {
     minHz: rlcMeasurement ? resonanceHz / 100 : newFilter ? 10 : 1,
     maxHz: rlcMeasurement ? resonanceHz * 100 : newFilter || ladder ? 1e5 :
@@ -41,7 +45,7 @@ const defaults = (preset: string): Settings => {
     inspectHz: rlcMeasurement ? resonanceHz : preset === 'rc' || preset === 'rc-high-pass'
       ? 1 / (2 * Math.PI * .001) : 1000,
     duration,
-    step: newFilter || rlcMeasurement ? duration / 1000 : preset === 'rlc' ? 1e-5 : 5e-5,
+    step: nonlinearTransient?.step ?? (newFilter || rlcMeasurement ? duration / 1000 : preset === 'rlc' ? 1e-5 : 5e-5),
   };
 };
 

@@ -186,13 +186,18 @@ function diodeSchematic(state:LabState,preset:string,tangent?:NativeDocument):{h
   };
   body+=branch(diodes[0]!,500);
   if(preset==='diode-pair')body+=wire(500,120,610,120)+dot(610,120)+branch(diodes[1]!,610);
-  if(preset==='diode-rc'&&capacitorDevice)body+=wire(500,120,610,120)+dot(610,120)+capacitor(state,capacitorDevice.id,610);
+  if((preset==='diode-rc'||preset==='diode-rc-step'||preset==='diode-rc-biased-sine')&&capacitorDevice)
+    body+=wire(500,120,610,120)+dot(610,120)+capacitor(state,capacitorDevice.id,610);
   const drawnSource=tangent?.experiment.sources.find(s=>s.id===drive.id)??
     state.document.experiment.sources.find(s=>s.id===drive.id);
   if(drawnSource){
     const unit=drive.type==='I'?'A':'V';
     const ac=drawnSource.ac??{re:0,im:0};
+    const waveform=drawnSource.waveform;
     const sourceText=tangent?`${t('diodeIncrementSource')} ${drive.id}: DC=${number(drawnSource.dc)} ${unit}`:
+      waveform?.type==='step'?`${drive.id}: ${number(waveform.before)} → ${number(waveform.after)} ${unit} at ${number(waveform.at)} s`:
+      waveform?.type==='sinusoid'?`${drive.id}: offset=${number(waveform.offset)} ${unit}; peak=${number(waveform.amplitudePeak)} ${unit}; f=${number(waveform.frequencyHz)} Hz`:
+      waveform?.type==='constant'?`${drive.id}: constant=${number(waveform.value)} ${unit}`:
       `${drive.id}: DC=${number(drawnSource.dc)} ${unit}`;
     body+=`<text x="22" y="286" class="schematic-small">${escapeHtml(sourceText)}</text>`;
     if(tangent)body+=`<text x="22" y="304" class="schematic-small">AC=${number(ac.re)}${ac.im<0?'':'+'}${number(ac.im)}j ${unit} RMS</text>`;
@@ -206,6 +211,33 @@ function diodeSchematic(state:LabState,preset:string,tangent?:NativeDocument):{h
     selected?.type==='current'?`δI(${selected.component})`:t('noOutputSelected');
   return wrap(state,body+descriptions,t(tangent?'diodeIncrementalDrawing':'diodeDrawing'),
     diodes.length>1?410:390,tangent?incrementalOutput:undefined);
+}
+/** Verified series rectifier: source → Rsource → anode D cathode → out,
+ * with actual Rload and optional Cload shunts from out to reference 0. */
+function rectifierSchematic(state:LabState):{html:string;note:string;schematic:boolean} {
+  const devices=state.document.circuit.components;
+  const drive=devices.find(c=>c.type==='V')!;
+  const sourceResistor=devices.find(c=>c.type==='R'&&c.p==='in')!;
+  const diode=devices.find((c):c is Diode=>c.type==='D')!;
+  const load=devices.find(c=>c.type==='R'&&c.p==='out')!;
+  const smoothing=devices.find(c=>c.type==='C');
+  const selected=state.document.circuit.observations.find(o=>o.id===state.output);
+  const outputSelected=selected?.type==='voltage'&&selected.p==='out'&&selected.n==='0';
+  const diodeSymbol=`<path class="symbol" d="M355 104L383 120L355 136Z M391 101V139"/>`;
+  const diodeGroup=group(state,diode.id,diodeSymbol,373,74);
+  let body=node(80,'in',false)+node(305,'a',false)+node(500,'out',outputSelected)+
+    dot(80,120)+source(state,drive.id,80,'V')+wire(80,120,170,120)+
+    resistor(state,sourceResistor.id,170,260)+wire(260,120,305,120)+dot(305,120)+
+    wire(305,120,355,120)+diodeGroup+wire(391,120,500,120)+dot(500,120)+
+    branchResistor(state,load.id,500);
+  if(smoothing) body+=wire(500,120,610,120)+dot(610,120)+capacitor(state,smoothing.id,610);
+  const sourceValue=state.document.experiment.sources.find(s=>s.id===drive.id);
+  const wave=sourceValue?.waveform;
+  const waveLabel=wave?.type==='sinusoid'?`${drive.id}: offset=${number(wave.offset)} V; peak=${number(wave.amplitudePeak)} V; f=${number(wave.frequencyHz)} Hz`:
+    sourceValue?`${drive.id}: DC=${number(sourceValue.dc)} V`:'';
+  body+=`<text x="22" y="290" class="schematic-small">${escapeHtml(waveLabel)}</text>`+
+    `<text x="22" y="310" class="schematic-small">${escapeHtml(diode.id)}: ${escapeHtml(valueLabel(diode))}; p=${escapeHtml(diode.p)} → n=${escapeHtml(diode.n)}</text>`;
+  return wrap(state,body,t('diodeDrawing'),390);
 }
 export function diodeTangentSchematic(state:LabState,tangent:NativeDocument):{html:string;note:string;schematic:boolean}|null {
   const preset=matchingPreset(state.document.circuit)?.id;
@@ -224,6 +256,8 @@ export function schematic(state:LabState):{html:string;note:string;schematic:boo
     html:`${drawing.html}<details class="schematic-topology"><summary>${t('topologyTable')}</summary>${topology}</details>`,
   });
   if(preset?.startsWith('diode-'))return withTopology(diodeSchematic(state,preset));
+  if(preset==='half-wave-rectifier'||preset==='half-wave-rectifier-rc')
+    return withTopology(rectifierSchematic(state));
   if(preset==='rc3-low-pass' || preset==='rc3-high-pass') {
     const low=preset==='rc3-low-pass';
     return withTopology(ladderSchematic(state,low?['R1','R2','R3']:['C1','C2','C3'],

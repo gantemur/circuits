@@ -97,3 +97,19 @@ The translated filter guides keep native IDs such as `resistorVoltage`, SI coeff
 The published browser uses **диодын ажлын цэг** for operating point Q, **орон нутгийн дифференциал эсэргүүцэл** for `rd=dV/dI`, **диодын тодорхойломж** for the terminal I–V characteristic, and **ачааллын шулуун** for an externally proved resistor/source load line. `Rs` is **дотоод цуваа эсэргүүцэл**; it is distinct from the external resistor and from the bias ratio `V/I`. **Бага дохионы хариу** means the local incremental response around a specific DC bias, not the absolute nonlinear response. A **DC үүсгүүрийн мужийн тооцоо** samples source values, not physical time or certified hysteresis. Keep `Is`, `Rs`, `rd`, `Q`, exact device IDs, equations, SI units, JSON names, and CSV headers unchanged across languages. Failure details and progress labels must re-render when language changes while preserving pending drafts.
 
 The reviewed previews say **Анхны хэвийлтийн үүсгүүр** for an original DC bias source and **Өсөлтийн үүсгүүр** for its zero-DC small-signal counterpart. The latter's AC value is RMS. **Лавлах зангилааны гишүүн** identifies a formal ground contribution shown for teaching but absent as an independent reduced-MNA row or voltage coordinate. A missing selected diode requests reselection; translation must not substitute another device's metrics. A plotting-range message states a display limitation rather than inventing a zero sample.
+
+## Phase 3A4 nonlinear transient terms
+
+| English | Монгол | Use |
+| --- | --- | --- |
+| Run transient | Шилжилтийн тооцоог эхлүүлэх | Explicit action; rendering never starts a solve |
+| Actual time source | Бодит хугацааны үүсгүүр | Waveform value driving the transient, distinct from declared DC and RMS AC |
+| Prescribed storage | Өгсөн хадгалалтын төлөв | Specified capacitor voltage or inductor current at start |
+| Compatible instantaneous rate | Нийцтэй агшин зуурын хурд | Initial/right-event storage rate, not an interval difference |
+| Accepted sample | Зөвшөөрсөн сорьц | Successful kernel state; failed iterates are never samples |
+| Left/right event values | Үйл явдлын зүүн/баруун утга | Separate values at the same exact source-step time |
+| Arithmetic allowance | Арифметикийн зөвшөөрөл | Estimated rounding budget, not a certified error bound |
+| Numerical failure | Тоон бодолтын алдаа | Stable stage/code and accepted prefix shown outside collapsed details |
+| Ripple | Долгиолол | Smoothed rectifier variation; displayed cycles do not prove periodic state |
+
+Keep exact IDs, SI units, equation symbols, native field names, CSV headers, side/status codes and decimal points unchanged. Translate status and failure summaries when language changes, including completed and obsolete runs. Sinusoidal `amplitudePeak` is **оргил далайц**; Frequency's AC phasor remains RMS. Backward Euler remains **Далд Эйлерийн арга (Backward Euler)** in explanatory text.

@@ -4,6 +4,9 @@ import { createLab, exportNative, importNative, updateDocument, } from './lab.js
 import { isNonlinearDocument } from './native-document.js';
 import { dcSweepCsv, nonlinearUnknownCount } from './dc-sweep.js';
 import { SweepLifecycle, sweepSignature } from './sweep-lifecycle.js';
+import { TransientRunLifecycle, augmentedTransientUnknowns, transientIntervalBound } from './transient-run.js';
+import { transientCsv, transientResultHtml } from './transient-presentation.js';
+import { workerSource } from './worker-source.js';
 import { currentDiodeContributions, currentDiodeResidualTerms,
   nonlinearEquationContent, selectedDiodeMetricHtml, tangentProvenanceHtml } from './diode-presentation.js';
 import { presets } from './presets.js';
@@ -64,6 +67,13 @@ const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'p
 const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort', 'port-frequency': 'panelPortFrequency',
   'diode-characteristic': 'panelDiodeCharacteristic', 'dc-sweep': 'panelDcSweep' };
 const sweeps = new SweepLifecycle();
+const transientRuns = new TransientRunLifecycle(() => {
+  if (typeof Worker === 'undefined' || typeof URL.createObjectURL !== 'function' || !workerSource)
+    throw new Error('Web Worker unavailable');
+  const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+  try { return { worker: new Worker(url), release: () => URL.revokeObjectURL(url) }; }
+  catch (error) { URL.revokeObjectURL(url); throw error; }
+}, () => { if (workspace.view === 'analyze') renderPanels(); });
 const sourceUnit = (id: string): 'V' | 'A' => state.document.circuit.components.find(c => c.id === id)?.type === 'I' ? 'A' : 'V';
 const componentUnit = (c: Component | Diode): string => c.type === 'R' || c.type === 'CCVS' ? 'Ω' : c.type === 'C' ? 'F' : c.type === 'L' ? 'H' : c.type === 'VCCS' ? 'S' : '';
 const nativeJson = (): HTMLTextAreaElement => byId('json-editor') as HTMLTextAreaElement;
@@ -118,7 +128,7 @@ function renderGuide(): void {
 function renderCircuitChoice(): void {
   const select = byId('circuit-select') as HTMLSelectElement;
   const group = (label: TranslationKey, ids: string[]) => `<optgroup label="${translate(label)}">${presets.filter(p=>ids.includes(p.id)).map(p=>`<option value="${e(p.id)}"${state.presetId === p.id ? ' selected' : ''}>${translate(p.titleKey)}</option>`).join('')}</optgroup>`;
-  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupPassiveFilters',['rc3-low-pass','rc3-high-pass','rlc-band-pass','rlc-notch'])}${group('presetGroupActiveFilters',['butterworth2-low-pass','butterworth2-high-pass'])}${group('presetGroupImpedance',['rc-impedance-ladder','rl-impedance-ladder'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}${group('presetGroupPort',['port-t','port-rc-section','port-rc-cascade'])}${group('presetGroupDiode',['diode-single','diode-series','diode-pair','diode-rc'])}`;
+  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupPassiveFilters',['rc3-low-pass','rc3-high-pass','rlc-band-pass','rlc-notch'])}${group('presetGroupActiveFilters',['butterworth2-low-pass','butterworth2-high-pass'])}${group('presetGroupImpedance',['rc-impedance-ladder','rl-impedance-ladder'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}${group('presetGroupPort',['port-t','port-rc-section','port-rc-cascade'])}${group('presetGroupDiode',['diode-single','diode-series','diode-pair','diode-rc','diode-rc-step','diode-rc-biased-sine','half-wave-rectifier','half-wave-rectifier-rc'])}`;
   const preset = presets.find(p => p.id === state.presetId);
   const modified = preset && JSON.stringify(state.document) !== JSON.stringify(preset.document);
   byId('circuit-status').textContent = state.presetId ? t(modified ? 'circuitModified' : 'circuitPreset') : t('circuitCustom');
@@ -420,9 +430,18 @@ function panelSummary(panel: PanelConfig): string {
 function renderPanel(panel: PanelConfig, index: number): string {
   let content = '';
   let result: PanelResult | null = null;
+  const nonlinearTime = panel.type === 'transient' && isNonlinearDocument(state.document);
   if (!panel.collapsed) {
-    result = calculator.calculate(panel,state);
-    content = panel.selectionNeeded ? `<p class="warning" role="status">${t('panelSelectionNeeded',{field:t(panel.selectionNeeded==='input'?'independentInput':panel.selectionNeeded==='output'?'measuredOutput':panel.selectionNeeded==='diode'?'diodeSelected':panel.selectionNeeded==='externalDrive'?'portExternal':'onePortPositive')})}</p>` : !result ? `<p class="warning">${t('resultNeedsValid')}</p>` :
+    result = nonlinearTime ? null : calculator.calculate(panel,state);
+    const timeBlocked = nonlinearTime ? panel.selectionNeeded ? t('panelSelectionNeeded',{field:t('measuredOutput')}) :
+      panel.pending.duration !== undefined || panel.pending.step !== undefined ? t('transientSettingsInvalid') :
+      augmentedTransientUnknowns(state.document as import('../src/nonlinear-model.js').NonlinearDocument) > 64 ? t('transientTooLarge') :
+      transientIntervalBound(state.document as import('../src/nonlinear-model.js').NonlinearDocument,panel.duration,panel.step) > 3000 ? t('transientIntervalLimit') : null : null;
+    content = nonlinearTime ? transientResultHtml(panel.id,state.document as import('../src/nonlinear-model.js').NonlinearDocument,
+      panel.output,panel.duration,panel.step,transientRuns.get(panel.id),panel.transientSampleIndex,
+      panel.transientOverlay,transientRuns.activePanelId !== null && transientRuns.activePanelId !== panel.id,
+      timeBlocked,panel.transientEventsOpen,panel.transientDiagnosticsOpen) :
+      panel.selectionNeeded ? `<p class="warning" role="status">${t('panelSelectionNeeded',{field:t(panel.selectionNeeded==='input'?'independentInput':panel.selectionNeeded==='output'?'measuredOutput':panel.selectionNeeded==='diode'?'diodeSelected':panel.selectionNeeded==='externalDrive'?'portExternal':'onePortPositive')})}</p>` : !result ? `<p class="warning">${t('resultNeedsValid')}</p>` :
       result.type==='dc' ? dcContent(result.assembly,result.dc) :
       result.type==='nonlinear-dc' ? nonlinearDcContent(panel,result) :
       result.type==='frequency' ? frequencyContent(panel,result) :
@@ -432,18 +451,30 @@ function renderPanel(panel: PanelConfig, index: number): string {
       result.type==='diode-characteristic' ? characteristicContent(panel,result) :
       result.type==='dc-sweep' ? sweepContent(panel) :
       result.type==='nonlinear-failure' ? `<div class="warning" role="status">${result.reason==='unsupported-panel'?t('diodeUnavailablePanel'):result.reason==='missing-diode'?t('diodeUnavailableModel'):t('diodeBiasFailure',{reason:diodeFailureReason(result.reason)})}</div>` :
-      result.type==='port' ? portContent(panel,result) : portFrequencyContent(panel,result);
+      result.type==='port' ? portContent(panel,result) : result.type==='port-frequency' ? portFrequencyContent(panel,result) : '';
   }
   const error = Object.keys(panel.errors).length ? `<p class="warning" role="status">${t('panelLastValid')}</p>` : '';
   const controls = (action:string,key:TranslationKey,symbol:string,disabled=false) => `<button type="button" class="panel-icon" data-panel-action="${action}" data-panel-id="${panel.id}" aria-label="${translate(key)}" title="${translate(key)}" ${disabled?'disabled':''}>${symbol}</button>`;
   const sweepComplete = panel.type==='dc-sweep' && sweeps.canExport(panel,state,workspace,!document.hidden);
-  const exportable = result?.type==='frequency' || result?.type==='transient' ||
+  const exportable = (nonlinearTime && transientRuns.canExport(panel,state,workspace,!document.hidden)) ||
+    result?.type==='frequency' || result?.type==='transient' ||
     result?.type==='port-frequency' || sweepComplete;
   return `<section class="panel analysis-panel ${panel.expanded?'expanded':''}" data-panel="${panel.id}" aria-label="${translate(panelKeys[panel.type])}"><div class="panel-head"><div class="panel-heading"><label for="${panel.id}-type">${t('panelType')}</label><select id="${panel.id}-type" data-panel-id="${panel.id}" data-panel-field="type">${panelTypes.map(type=>`<option value="${type}"${type===panel.type?' selected':''}>${translate(panelKeys[type])}</option>`).join('')}</select></div><div class="panel-tools">${controls('up','panelUp','↑',index===0)}${controls('down','panelDown','↓',index===workspace.panels.length-1)}${controls('wide',panel.expanded?'panelNormal':'panelFull','⤢')}${controls('collapse',panel.collapsed?'panelExpand':'panelCollapse',panel.collapsed?'▾':'▴')}${controls('remove','panelRemove','×')}</div></div><p class="panel-summary">${e(panelSummary(panel))}</p>${panel.collapsed ? '' : `<details class="panel-settings" data-panel-settings="${panel.id}" ${panel.settingsOpen||panel.selectionNeeded?'open':''}><summary>${t('panelSettings')}</summary>${panelSettings(panel)}</details>${error}<div class="panel-result">${content}</div>${exportable&&!panel.selectionNeeded ? `<button type="button" class="button quiet panel-export" data-panel-action="export" data-panel-id="${panel.id}">${t('exportCsv')}</button>` : ''}`}</section>`;
 }
 function renderPanels(): void {
   sweeps.reconcile(state,workspace,!document.hidden);
+  transientRuns.reconcile(state,workspace,!document.hidden);
   const grid=byId('analysis-grid');
+  // A disclosure's toggle event may still be queued when a sample selector
+  // changes. Read the live element before replacing it so the chosen sample
+  // stays visible even in that same interaction turn.
+  for (const details of Array.from(grid.querySelectorAll<HTMLDetailsElement>('[data-transient-details]'))) {
+    const id=details.closest<HTMLElement>('[data-panel]')?.dataset.panel;
+    const panel=workspace.panels.find(candidate=>candidate.id===id);
+    if (!panel) continue;
+    if (details.dataset.transientDetails==='events') panel.transientEventsOpen=details.open;
+    if (details.dataset.transientDetails==='diagnostics') panel.transientDiagnosticsOpen=details.open;
+  }
   grid.innerHTML=workspace.panels.length?workspace.panels.map(renderPanel).join(''):`<div class="panel"><p>${t('panelEmpty')}</p></div>`;
   const add=byId('add-analysis') as HTMLButtonElement;
   add.disabled=workspace.panels.length>=3; add.title=add.disabled?t('addLimit'):'';
@@ -460,6 +491,7 @@ async function startSweep(panel: PanelConfig): Promise<void> {
 }
 function renderAll(): void {
   sweeps.reconcile(state,workspace,!document.hidden);
+  transientRuns.reconcile(state,workspace,!document.hidden);
   renderStatic(); renderCircuitChoice(); renderView(); renderSchematic(); renderInspector(); renderSources();
   renderGuide();
   (byId('sources-details') as HTMLDetailsElement).open = sourceOpen;
@@ -469,6 +501,7 @@ function renderAll(): void {
 }
 document.addEventListener('visibilitychange',()=>{
   sweeps.reconcile(state,workspace,!document.hidden);
+  transientRuns.reconcile(state,workspace,!document.hidden);
   if (!document.hidden && workspace.view==='analyze') renderPanels();
 });
 function validatedChange(): void {
@@ -478,7 +511,8 @@ function validatedChange(): void {
 }
 function openView(view: WorkspaceView): void {
   if (workspace.view!=='editor') previousView=workspace.view;
-  workspace.view=view; sweeps.reconcile(state,workspace,!document.hidden); renderAll();
+  workspace.view=view; sweeps.reconcile(state,workspace,!document.hidden);
+  transientRuns.reconcile(state,workspace,!document.hidden); renderAll();
   const target = view==='editor' ? byId('return-workspace') : view==='analyze' ? byId('schematic-title') : byId('transform-method');
   target.setAttribute('tabindex','-1'); target.focus({preventScroll:true});
 }
@@ -547,7 +581,19 @@ document.addEventListener('input',event=>{
   if(target instanceof HTMLTextAreaElement&&target.id==='json-editor'){jsonDirty=true;jsonIssue=null;renderJson();return;}
   if(target instanceof HTMLInputElement&&target.dataset.panelField){
     const panel=workspace.panels.find(p=>p.id===target.dataset.panelId);
-    if(panel)panel.pending[target.dataset.panelField]=target.value;
+    if(panel){panel.pending[target.dataset.panelField]=target.value;
+      if(panel.type==='transient'&&isNonlinearDocument(state.document)) {
+        transientRuns.reconcile(state,workspace,!document.hidden);
+        // Only replace the result. Replacing the input during its own `input`
+        // event would suppress its later native change/blur commit.
+        const section=target.closest<HTMLElement>('[data-panel]');
+        const result=section?.querySelector<HTMLElement>('.panel-result');
+        if(result)result.innerHTML=transientResultHtml(panel.id,state.document,
+          panel.output,panel.duration,panel.step,transientRuns.get(panel.id),panel.transientSampleIndex,
+          panel.transientOverlay,transientRuns.activePanelId!==null&&transientRuns.activePanelId!==panel.id,
+          t('transientSettingsInvalid'),panel.transientEventsOpen,panel.transientDiagnosticsOpen);
+        section?.querySelector('.panel-export')?.remove();
+      }}
     return;
   }
   if(target instanceof HTMLInputElement&&target.dataset.kind)inputDrafts.set(`${target.dataset.kind}:${target.dataset.id??''}`,target.value);
@@ -565,12 +611,30 @@ document.addEventListener('toggle',event=>{
   const target=event.target;
   if(target instanceof HTMLDetailsElement&&target.id==='sources-details')sourceOpen=target.open;
   if(target instanceof HTMLDetailsElement&&target.id==='study-guide-details')guideOpen=target.open;
+  if(target instanceof HTMLDetailsElement&&target.dataset.transientDetails){
+    const id=target.closest<HTMLElement>('[data-panel]')?.dataset.panel;
+    const panel=workspace.panels.find(candidate=>candidate.id===id);
+    if(panel){
+      if(target.dataset.transientDetails==='events')panel.transientEventsOpen=target.open;
+      if(target.dataset.transientDetails==='diagnostics')panel.transientDiagnosticsOpen=target.open;
+    }
+  }
   if(target instanceof HTMLDetailsElement&&target.dataset.panelSettings){
     const panel=workspace.panels.find(p=>p.id===target.dataset.panelSettings);if(panel)panel.settingsOpen=target.open;
   }
 },true);
 document.addEventListener('change',async event=>{
   const target=event.target;
+  if(target instanceof HTMLSelectElement&&target.dataset.transientSample!==undefined){
+    const id=target.closest<HTMLElement>('[data-panel]')?.dataset.panel;
+    const panel=workspace.panels.find(p=>p.id===id);
+    if(panel){panel.transientSampleIndex=Number(target.value);renderPanels();}return;
+  }
+  if(target instanceof HTMLInputElement&&target.dataset.transientOverlay!==undefined){
+    const id=target.closest<HTMLElement>('[data-panel]')?.dataset.panel;
+    const panel=workspace.panels.find(p=>p.id===id);
+    if(panel){panel.transientOverlay=target.checked;renderPanels();}return;
+  }
   if(target instanceof HTMLSelectElement&&target.id==='transform-method'){
     transformMethod.method=target.value==='resistor'?'resistor':'dc';renderView();return;
   }
@@ -600,6 +664,11 @@ document.addEventListener('change',async event=>{
 });
 document.addEventListener('click',event=>{
   const target=event.target;if(!(target instanceof Element))return;
+  if(target.closest('[data-transient-edit]')){
+    sourceOpen=true;renderSources();
+    const sourceDetails=byId('sources-details') as HTMLDetailsElement;
+    sourceDetails.open=true;sourceDetails.scrollIntoView({block:'nearest'});return;
+  }
   const guideAction=target.closest<HTMLButtonElement>('[data-guide-action]');
   if(guideAction){openGuideAction(guideAction.dataset.guideAction as GuideAction);return;}
   if(target.closest('#guide-replace-cancel')){pendingGuideAction=null;renderGuide();return;}
@@ -644,11 +713,19 @@ document.addEventListener('click',event=>{
       }return;
     }
     if(action==='run-sweep'){void startSweep(panel);return;}
+    if(action==='run-transient'){
+      transientRuns.start(panel,state,workspace,!document.hidden);renderPanels();return;
+    }
+    if(action==='cancel-transient'){transientRuns.cancel(panel.id);renderPanels();return;}
     if(action==='cancel-sweep'){
       sweeps.cancel(panel.id);renderPanels();return;
     }
     if(action==='export'){
-      if(panel.type==='dc-sweep'){
+      if(panel.type==='transient'&&isNonlinearDocument(state.document)){
+        const view=transientRuns.get(panel.id);
+        if(view?.result&&transientRuns.canExport(panel,state,workspace,!document.hidden))
+          download(`circuits-transient-${panel.id}.csv`,transientCsv(view.result,panel.output),'text/csv');
+      }else if(panel.type==='dc-sweep'){
         const view=sweeps.get(panel.id);
         if(view?.result&&sweeps.canExport(panel,state,workspace,!document.hidden))
           download(`circuits-${panel.type}-${panel.id}.csv`,dcSweepCsv(view.result),'text/csv');

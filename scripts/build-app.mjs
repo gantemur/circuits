@@ -3,8 +3,16 @@ import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 
 await mkdir('dist', { recursive: true });
+const worker = await build({ entryPoints: ['web/nonlinear-worker.ts'], bundle: true,
+  platform: 'browser', format: 'iife', target: 'es2022', write: false, logLevel: 'silent' });
+const workerSource = worker.outputFiles[0].text;
 await build({ entryPoints: ['web/main.ts'], bundle: true, platform: 'browser', format: 'esm',
-  target: 'es2022', outfile: 'dist/app.js', sourcemap: true, logLevel: 'info' });
+  target: 'es2022', outfile: 'dist/app.js', sourcemap: true, logLevel: 'info',
+  plugins: [{ name: 'embedded-transient-worker', setup(bundle) {
+    bundle.onLoad({ filter: /worker-source\.ts$/ }, () => ({
+      contents: `export const workerSource = ${JSON.stringify(workerSource)};`, loader: 'js',
+    }));
+  } }] });
 // Same browser model, bundled without the DOM so Node integration tests exercise
 // the production analysis path rather than reimplementing calculations.
 await build({ entryPoints: ['web/lab.ts'], bundle: true, platform: 'neutral', format: 'esm',
@@ -41,6 +49,12 @@ await build({ entryPoints: ['web/dc-sweep.ts'], bundle: true, platform: 'neutral
   target: 'es2022', outfile: 'dist/dc-sweep-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['web/sweep-lifecycle.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/sweep-lifecycle-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/transient-run.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/transient-run-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['test/support/transient-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/transient-presentation-test.js', logLevel: 'silent' });
+await build({ entryPoints: ['web/nonlinear-worker.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/nonlinear-worker-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['test/support/diode-presentation-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/diode-presentation-test.js', logLevel: 'silent' });
 await build({ entryPoints: ['test/support/builder-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
