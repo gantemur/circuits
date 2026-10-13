@@ -63,13 +63,13 @@ export function transientResultHtml(panelId: string, document: NonlinearDocument
   const definitions = `<p>${t('transientInitial')}: ${e(initial)}</p><p>${t('transientWaveforms')}: ${e(document.experiment.sources.map(waveform).join('; '))}</p>
     <p><button type="button" class="button quiet" data-transient-edit>${t('transientEditSources')}</button></p>`;
   const running = view?.status === 'running';
-  const controls = `<div class="file-actions"><button type="button" class="button" data-panel-action="run-transient" data-panel-id="${e(panelId)}" ${blocked || running || otherRunning ? 'disabled' : ''}>${t('transientRun')}</button>${running ? `<button type="button" class="button quiet" data-panel-action="cancel-transient" data-panel-id="${e(panelId)}">${t('transientCancel')}</button>` : ''}</div>`;
+  const controls = `<div class="file-actions"><button type="button" class="button" data-panel-action="run-transient" data-panel-id="${e(panelId)}" data-transient-blocked="${!!blocked}" data-transient-other-running="${otherRunning}" ${blocked || running || otherRunning ? 'disabled' : ''}>${t('transientRun')}</button>${running ? `<button type="button" class="button quiet" data-panel-action="cancel-transient" data-panel-id="${e(panelId)}">${t('transientCancel')}</button>` : ''}</div>`;
   const state = !view ? t('transientIdle') : view.status === 'running' ? t('transientRunning') :
     view.status === 'complete' ? t('transientComplete') : view.status === 'cancelled' ? t('transientCancelled') :
     view.status === 'invalidated' ? t('transientInvalidated') : view.status === 'execution-unavailable' ? t('transientUnavailable') :
     view.status === 'execution-error' ? t('transientExecutionError',{reason:view.error ?? ''}) : '';
   const blockedText = blocked ? `<p class="warning" role="status">${e(blocked)}</p>` :
-    otherRunning ? `<p class="warning" role="status">${t('transientOtherRunning')}</p>` : '';
+    otherRunning ? `<p class="warning" role="status" data-transient-other-running-note>${t('transientOtherRunning')}</p>` : '';
   let html = `${intro}${definitions}${controls}${blockedText}${state ? `<p role="status">${e(state)}</p>` : ''}`;
   const result = view?.result;
   if (!result) return html;
@@ -78,7 +78,10 @@ export function transientResultHtml(panelId: string, document: NonlinearDocument
   }
   const samples = result.samples;
   if (!samples.length) return html + `<p class="warning">${t('transientNoPrefix')}</p>`;
-  const selected = samples[Math.max(0,Math.min(samples.length-1,selectedIndex))]!;
+  // The prior selection may outlive a longer run. The option and its details
+  // must refer to the same accepted sample in the new result.
+  const shownIndex = Math.max(0, Math.min(samples.length - 1, selectedIndex));
+  const selected = samples[shownIndex]!;
   const distinctTimes = new Set(samples.map(sample => sample.time));
   const points: PlotPoint[] = samples.map(sample => ({ x:sample.time,
     y:sample.observations[outputId]?.value ?? null, status:'ok' }));
@@ -105,7 +108,7 @@ export function transientResultHtml(panelId: string, document: NonlinearDocument
     eventSamples.map(sample => [n(sample.time),t(sample.side==='left'?'transientLeft':'transientRight'),n(sample.observations[outputId]?.value),
       ...document.experiment.sources.map(source => n(sample.sources[source.id]?.value))]))}</details>`;
   html += `<details class="explanation" data-transient-details="diagnostics" ${diagnosticsOpen?'open':''}><summary>${t('transientSampleDiagnostics')}</summary><label>${t('transientSample')}
-    <select data-transient-sample>${samples.map((sample,index) => `<option value="${index}" ${index===selectedIndex?'selected':''}>${n(sample.time)} s · ${t(sample.side==='left'?'transientLeft':sample.side==='right'?'transientRight':'transientRegular')} · #${index+1}</option>`).join('')}</select></label>
+    <select data-transient-sample>${samples.map((sample,index) => `<option value="${index}" ${index===shownIndex?'selected':''}>${n(sample.time)} s · ${t(sample.side==='left'?'transientLeft':sample.side==='right'?'transientRight':'transientRegular')} · #${index+1}</option>`).join('')}</select></label>
     <p>${t('transientInterval')}: ${n(selected.intervalSeconds)}; ${e(selected.currentConvention)}</p>
     ${transientSampleDetails(selected)}</details><p class="muted small">${t('transientNotCertified')}</p>`;
   return html;
@@ -122,4 +125,19 @@ export function transientCsv(result: NonlinearTransientResult, outputId: string)
     'failed',result.stage,result.code]));
   return [line(['observation_id','unit','time_s','side','interval_s','current_convention',
     'value','sample_status','failure_stage','failure_code']),...rows].join('\n')+'\n';
+}
+
+/**
+ * A focused time-field input retires the one active worker synchronously.
+ * Update only the other panels' stale Run controls, leaving the focused input
+ * in the DOM for its native change and blur events to commit pending text.
+ */
+export function releaseOtherTransientRunControls(root: ParentNode): void {
+  for (const button of Array.from(root.querySelectorAll<HTMLButtonElement>(
+      'button[data-panel-action="run-transient"][data-transient-other-running="true"]'))) {
+    button.disabled = button.dataset.transientBlocked === 'true';
+    button.dataset.transientOtherRunning = 'false';
+  }
+  for (const note of Array.from(root.querySelectorAll<HTMLElement>('[data-transient-other-running-note]')))
+    note.remove();
 }

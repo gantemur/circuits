@@ -5,7 +5,7 @@ import { isNonlinearDocument } from './native-document.js';
 import { dcSweepCsv, nonlinearUnknownCount } from './dc-sweep.js';
 import { SweepLifecycle, sweepSignature } from './sweep-lifecycle.js';
 import { TransientRunLifecycle, augmentedTransientUnknowns, transientIntervalBound } from './transient-run.js';
-import { transientCsv, transientResultHtml } from './transient-presentation.js';
+import { releaseOtherTransientRunControls, transientCsv, transientResultHtml } from './transient-presentation.js';
 import { workerSource } from './worker-source.js';
 import { currentDiodeContributions, currentDiodeResidualTerms,
   nonlinearEquationContent, selectedDiodeMetricHtml, tangentProvenanceHtml } from './diode-presentation.js';
@@ -583,6 +583,7 @@ document.addEventListener('input',event=>{
     const panel=workspace.panels.find(p=>p.id===target.dataset.panelId);
     if(panel){panel.pending[target.dataset.panelField]=target.value;
       if(panel.type==='transient'&&isNonlinearDocument(state.document)) {
+        const wasRunning = transientRuns.activePanelId !== null;
         transientRuns.reconcile(state,workspace,!document.hidden);
         // Only replace the result. Replacing the input during its own `input`
         // event would suppress its later native change/blur commit.
@@ -593,6 +594,8 @@ document.addEventListener('input',event=>{
           panel.transientOverlay,transientRuns.activePanelId!==null&&transientRuns.activePanelId!==panel.id,
           t('transientSettingsInvalid'),panel.transientEventsOpen,panel.transientDiagnosticsOpen);
         section?.querySelector('.panel-export')?.remove();
+        if (wasRunning && transientRuns.activePanelId === null)
+          releaseOtherTransientRunControls(byId('analysis-grid'));
       }}
     return;
   }

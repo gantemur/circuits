@@ -4,8 +4,10 @@ import { createLab, exportNative, importNative, updateDocument } from '../dist/l
 import { presets, matchingPreset } from '../dist/presets-test.js';
 import { createWorkspace, reconcilePanels, handlePanelFieldChange, changePanelType } from '../dist/workspace-test.js';
 import { TransientRunLifecycle, transientIntervalBound, augmentedTransientUnknowns } from '../dist/transient-run-test.js';
-import { transientResultHtml, transientSampleDetails, transientCsv, setLanguage } from '../dist/transient-presentation-test.js';
+import { transientResultHtml, transientSampleDetails, transientCsv,
+  releaseOtherTransientRunControls, setLanguage } from '../dist/transient-presentation-test.js';
 import { schematic } from '../dist/schematic-test.js';
+import { guideFor } from '../dist/study-guide-test.js';
 import { nonlinearTransient } from '../dist/index.js';
 
 const near = (a,b,t=1e-9) => assert.ok(Math.abs(a-b)<=t,`${a} != ${b}`);
@@ -272,6 +274,26 @@ test('browser v2 path keeps step, rectifier and smoothing equations and failure 
   assert.deepEqual(result.samples.map(s=>[s.time,s.side]),[[0,'left']]);
 });
 
+test('rectifier lesson includes the diode voltage between the source resistor and load', () => {
+  const state=createLab('half-wave-rectifier');
+  const sample=nonlinearTransient(state.document,{stop:.005,step:.0001}).samples.at(-1);
+  const vin=sample.sources.V1Rect.value;
+  const va=sample.unknowns['V(a)'].value;
+  const vout=sample.observations.vout.value;
+  const id=sample.observations.id.value;
+  near((vin-va)/100,id,1e-10);
+  near(vout/10000,id,1e-10);
+  near(va-vout,sample.diodes.D1Rect.terminalVoltageV,1e-10);
+  assert.ok(Math.abs(vin-vout)>Math.abs(vin-va));
+  for (const locale of ['en','mn']) {
+    setLanguage(locale);
+    const equation=guideFor('half-wave-rectifier').equation;
+    assert.match(equation,/\(Vin−Va\)\/Rsource=Id=Vout\/Rload/);
+    assert.match(equation,/Va−Vout=Vd/);
+  }
+  setLanguage('en');
+});
+
 test('accepted event samples, failure rows and exact IDs survive bilingual presentation and CSV', () => {
   const state=createLab('diode-rc-step');
   const component=state.document.circuit.components.find(c=>c.type==='D');
@@ -315,4 +337,60 @@ test('accepted event samples, failure rows and exact IDs survive bilingual prese
   }
   const exactCsv=transientCsv(exact,'v,"out"\nline');
   assert.match(exactCsv,/"v,""out""\nline","V"/);
+});
+
+test('a shortened rerun selects the same accepted sample in the dropdown and diagnostics', () => {
+  const state=createLab('diode-rc-step');
+  const long=nonlinearTransient(state.document,{stop:50e-6,step:10e-6});
+  assert.equal(long.status,'ok');
+  const lateIndex=long.samples.length-1;
+  const short=nonlinearTransient(state.document,{stop:10e-6,step:10e-6});
+  assert.equal(short.status,'ok');
+  assert.ok(lateIndex>=short.samples.length);
+  for(const locale of ['en','mn']){
+    setLanguage(locale);
+    const html=transientResultHtml('panel-1',state.document,'vout',10e-6,10e-6,
+      {panelId:'panel-1',status:'complete',result:short},lateIndex,false,false,null,false,true);
+    const selected=[...html.matchAll(/<option value="(\d+)" selected>/g)].map(match=>Number(match[1]));
+    assert.deepEqual(selected,[short.samples.length-1]);
+    assert.ok(html.includes(transientSampleDetails(short.samples.at(-1))));
+    assert.match(html,/data-transient-details="diagnostics" open/);
+  }
+  setLanguage('en');
+});
+
+test('retiring a worker on focused input releases only other panels blocked by that worker', () => {
+  const state=createLab('diode-rc-step');
+  const h=harness(state);
+  const second={...h.panel,id:'second',pending:{},errors:{}};
+  h.workspace.panels.push(second);
+  const active=h.lifecycle.start(h.panel,h.state,h.workspace,true);
+  assert.equal(active.status,'running');
+  assert.equal(h.lifecycle.activePanelId,h.panel.id);
+  const otherHtml=transientResultHtml(second.id,state.document,second.output,second.duration,
+    second.step,undefined,second.transientSampleIndex,false,true,null);
+  assert.match(otherHtml,/data-transient-other-running="true" disabled/);
+  assert.match(otherHtml,/data-transient-other-running-note/);
+
+  // The focused duration input is deliberately outside the only DOM subtree
+  // this production helper edits. An intrinsically blocked third Run stays off.
+  const focusedInput={value:'0.00002'};
+  const available={dataset:{transientBlocked:'false',transientOtherRunning:'true'},disabled:true};
+  const blocked={dataset:{transientBlocked:'true',transientOtherRunning:'true'},disabled:true};
+  const notes=[{removed:false,remove(){this.removed=true;}},
+    {removed:false,remove(){this.removed=true;}}];
+  const root={querySelectorAll(selector){
+    return selector.includes('button[')?[available,blocked]:notes;
+  }};
+  h.panel.pending.duration=focusedInput.value;
+  h.lifecycle.reconcile(h.state,h.workspace,true);
+  assert.equal(active.status,'invalidated');
+  assert.equal(h.lifecycle.activePanelId,null);
+  assert.equal(h.workers[0].worker.stopped,true);
+  releaseOtherTransientRunControls(root);
+  assert.equal(focusedInput.value,'0.00002');
+  assert.equal(available.disabled,false);
+  assert.equal(blocked.disabled,true);
+  assert.deepEqual(notes.map(note=>note.removed),[true,true]);
+  assert.equal(h.lifecycle.start(second,h.state,h.workspace,true)?.status,'running');
 });
