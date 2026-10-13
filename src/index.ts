@@ -12,3 +12,8 @@ export * from './one-port.js';
 export * from './port-analysis.js';
 export * from './resistor-transform.js';
 export * from './diode-transient.js';
+export * from './bjt-model.js';
+export * from './bjt-document.js';
+export * from './bjt-system.js';
+export * from './bjt-operating-point.js';
+export * from './bjt-tangent.js';

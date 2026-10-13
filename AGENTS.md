@@ -6,6 +6,8 @@ At the start of a task, read this file, `docs/DECISIONS.md`, and the specificati
 
 The current released milestone is **Phase 3A4 browser nonlinear transient teaching lab**, specified in `docs/PHASE_3A4_SPECIFICATION.md`, including the **Phase 3A3 headless nonlinear transient kernel** (`docs/PHASE_3A3_SPECIFICATION.md`). The Phase 3A1 kernel (`docs/PHASE_3A_SPECIFICATION.md`) and Phase 3A2 browser contract (`docs/PHASE_3A2_SPECIFICATION.md`) remain authoritative for diode DC and incremental frequency behavior. Earlier phase specifications and `docs/UX_SPECIFICATION.md` remain contracts for their released behavior. No subsequent development milestone is authorized by this release; follow the latest explicit task and inspect the actual repository before assuming code or build commands exist.
 
+The active task branch implements **Phase 3B1 headless Ebers–Moll BJT DC and local tangent analysis**, specified in `docs/PHASE_3B1_SPECIFICATION.md`. This is not a browser release: v3 remains rejected by the public UI, and BJT transient analysis is outside scope.
+
 ## Authority and scope
 
 Follow the user's latest explicit instruction. Within the authorized task, use this file for working rules, the active milestone for scope and acceptance, the conventions for signs and units, and the decisions log for settled choices.

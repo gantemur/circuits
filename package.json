@@ -17,7 +17,8 @@
     "demo:diode": "npm run build && node examples/diode-demo.mjs",
     "preview": "node scripts/serve.mjs",
     "dev": "npm run build:app && npm run preview",
-    "demo:diode-transient": "npm run build && node examples/diode-transient-demo.mjs"
+    "demo:diode-transient": "npm run build && node examples/diode-transient-demo.mjs",
+    "demo:bjt": "npm run build && node examples/bjt-demo.mjs"
   },
   "devDependencies": { "typescript": "5.9.3", "esbuild": "0.25.12" }
 }

@@ -1,0 +1,21 @@
+import { readFileSync } from 'node:fs';
+import { parseBjtDocument, solveBjtOperatingPoint, createBjtTangent, bjtTransfer, solveBjtFrequency, complex } from '../dist/index.js';
+
+const document = parseBjtDocument(readFileSync(new URL('../fixtures/bjt/common-emitter.json', import.meta.url), 'utf8'));
+const point = solveBjtOperatingPoint(document);
+if (point.status !== 'ok') throw new Error(JSON.stringify(point));
+console.log('Reciprocal memoryless NPN Ebers–Moll; all c,b,e currents enter Q.');
+console.log('Model:', document.circuit.components.find(d => d.type === 'Q').model);
+console.log('Bias node voltages / retained branch currents:', point.unknowns);
+console.log('Q1 terminal currents (A):', point.bjts.Q1.currentsA);
+console.log('Q1 absorbed power (W):', point.bjts.Q1.absorbedW);
+console.log('Network signed power balance (W):', point.powerBalanceW);
+console.log('Separate physical / arithmetic allowances (W):', point.powerPhysicalAllowanceW, point.powerArithmeticAllowanceW);
+const tangent = createBjtTangent(point, document);
+if (tangent.status !== 'ok') throw new Error(JSON.stringify(tangent));
+const gain = bjtTransfer(tangent, 'Vs', 'out', complex(0));
+const ac = solveBjtFrequency(tangent, complex(0, 2 * Math.PI * 1000));
+if (gain.status !== 'ok' || ac.status !== 'ok') throw new Error('Incremental solve failed');
+console.log('Local unit-input voltage gain:', gain.transfer);
+console.log('Configured 1 mV RMS input: collector increment (V RMS):', ac.observations.out.value);
+console.log('Independent CE reference: -47.6190476531 V/V. No intrinsic frequency roll-off or stability certification.');

@@ -1,0 +1,92 @@
+{
+  "circuit": {
+    "schemaVersion": 3,
+    "nodes": [
+      "0",
+      "c",
+      "b",
+      "e"
+    ],
+    "components": [
+      {
+        "id": "Q1",
+        "type": "Q",
+        "c": "c",
+        "b": "b",
+        "e": "e",
+        "model": {
+          "kind": "ebers-moll",
+          "polarity": "npn",
+          "transportSaturationCurrentA": 1e-12,
+          "betaForward": 100,
+          "betaReverse": 4,
+          "temperatureK": 290.11295303875204
+        }
+      },
+      {
+        "id": "Vc",
+        "type": "V",
+        "p": "c",
+        "n": "0"
+      },
+      {
+        "id": "Vb",
+        "type": "V",
+        "p": "b",
+        "n": "0"
+      },
+      {
+        "id": "Ve",
+        "type": "V",
+        "p": "e",
+        "n": "0"
+      }
+    ],
+    "observations": [
+      {
+        "id": "out",
+        "type": "voltage",
+        "p": "c",
+        "n": "0"
+      },
+      {
+        "id": "ic",
+        "type": "terminal-current",
+        "component": "Q1",
+        "terminal": "c"
+      },
+      {
+        "id": "ib",
+        "type": "terminal-current",
+        "component": "Q1",
+        "terminal": "b"
+      },
+      {
+        "id": "ie",
+        "type": "terminal-current",
+        "component": "Q1",
+        "terminal": "e"
+      }
+    ]
+  },
+  "experiment": {
+    "schemaVersion": 1,
+    "sources": [
+      {
+        "id": "Vc",
+        "dc": 0.05756462709985111
+      },
+      {
+        "id": "Vb",
+        "dc": 0.5180816459486602
+      },
+      {
+        "id": "Ve",
+        "dc": 0
+      }
+    ],
+    "initial": {
+      "kind": "equilibrium"
+    }
+  }
+}
