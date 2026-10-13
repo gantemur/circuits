@@ -58,12 +58,13 @@ export class BuilderUI {
     return path;
   }
   render(): void {
-    if (this.state().document.circuit.schemaVersion === 3 &&
-        (this.builder.unsupported || !this.builder.dirty || this.builder.baseDocument !== this.state().document)) {
+    if (syncCleanBuilder(this.builder, this.state())) this.clearNodeEdits();
+    // A stale editable draft remains visible with its conflict. Only the v3
+    // placeholder is unsupported; explicit New creates an editable v1 draft.
+    if (this.builder.unsupported) {
       this.root.innerHTML = `<p class="warning">${t('bjtFormUnavailable')}</p>`;
       return;
     }
-    if (syncCleanBuilder(this.builder, this.state())) this.clearNodeEdits();
     const d = this.builder.draft, nodes = d.circuit.nodes.map(n => ({ value: n, label: n }));
     const controls = d.circuit.components.filter(c => c.type === 'V' || c.type === 'VCVS' || c.type === 'CCVS').map(c => ({ value: c.id, label: c.id }));
     const componentOptions = d.circuit.components.map(c => ({ value: c.id, label: `${c.id} · ${c.type}` }));

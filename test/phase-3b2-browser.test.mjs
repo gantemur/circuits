@@ -130,3 +130,28 @@ test('explicit New creates a usable v1 draft from a v3 circuit; implicit empty p
   builder.draft.circuit.components.push({id:'R',type:'R',p:'a',n:'0',value:'1000'});
   assert.equal(applyBuilder(builder,state).ok,true);assert.equal(state.document.circuit.schemaVersion,1);
 });
+
+test('mixed diode inspector uses full accepted v3 bias and preserves failed-state labeling', async()=>{
+  const {mixedDiodeMetrics,bjtMetrics}=await import('../dist/bjt-presentation-test.js');
+  const state=createLab('bjt-ce'), calculator=new PanelCalculator();
+  const id='<em>D</em> & "exact"';
+  assert.equal(updateDocument(state,d=>{
+    d.circuit.components.push({id,type:'D',p:'b',n:'0',model:{kind:'shockley-series',saturationCurrentA:1e-12,idealityFactor:1,seriesResistanceOhm:10,temperatureK:290.11295303875204}});
+    d.circuit.observations.push({id:'diode',type:'current',component:id});
+  }).ok,true);
+  let bias=calculator.currentBjtBias(state);assert.equal(bias.status,'ok');
+  // Independent monotone series-law root at the coupled network's terminal V.
+  const diode=bias.diodes[id];let lo=0,hi=diode.terminalVoltageV;
+  for(let k=0;k<100;k++){const v=(lo+hi)/2;if(v+10e-12*Math.expm1(v/.025)>diode.terminalVoltageV)hi=v;else lo=v;}
+  near(diode.currentA,1e-12*Math.expm1((lo+hi)/2/.025),1e-12);
+  near(diode.differentialResistanceOhm,10+.025/(diode.currentA+1e-12),1e-5);
+  for(const lang of ['en','mn']){setLanguage(lang);const html=mixedDiodeMetrics(id,bias);assert.ok(html.includes(diode.currentA.toPrecision(8)));assert.ok(html.includes(diode.junctionVoltageV.toPrecision(8)));assert.doesNotMatch(html,/<em>/);}
+  const before=bias;
+  updateDocument(state,d=>{d.circuit.components.find(c=>c.type==='Q').model.betaForward=200;});
+  bias=calculator.currentBjtBias(state);assert.notEqual(bias.diodes[id].currentA,before.diodes[id].currentA);
+  updateDocument(state,d=>{d.circuit.components.find(c=>c.id===id).model.seriesResistanceOhm=100;});
+  assert.notEqual(calculator.currentBjtBias(state).diodes[id].currentA,bias.diodes[id].currentA);
+  const valid=exportNative(state);assert.equal(updateDocument(state,d=>{d.circuit.components.find(c=>c.id===id).model.saturationCurrentA=-1;}).ok,false);assert.equal(exportNative(state),valid);
+  for(const lang of ['en','mn']){setLanguage(lang);assert.doesNotMatch(bjtMetrics('Q1',null),/rd/);assert.ok(mixedDiodeMetrics(id,null).length);}
+  setLanguage('en');
+});

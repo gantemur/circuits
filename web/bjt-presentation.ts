@@ -9,7 +9,7 @@ import { diodeFailureReason } from './diagnostics.js';
 const n=(x:number)=>Number.isFinite(x)?x.toPrecision(8):'—';
 const table=(rows:(string|number)[][])=>`<div class="table-wrap"><table class="result-table"><tbody>${rows.map(row=>`<tr>${row.map(v=>`<td>${e(typeof v==='number'?n(v):v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 export function bjtMetrics(id:string,bias:BjtOperatingPointResult|null):string {
-  if(!bias||bias.status!=='ok')return `<p>${t('diodeDerivativeUnavailable')}</p>`;
+  if(!bias||bias.status!=='ok')return `<p>${t('bjtBiasUnavailable')}</p>`;
   const q=bias.bjts[id]; if(!q)return '';
   const v=q.terminalVoltagesV;
   const regions={ 'forward-active':'bjtForward', 'reverse-active':'bjtReverse', saturation:'bjtSaturation',cutoff:'bjtCutoff',boundary:'bjtBoundary' } as const;
@@ -21,10 +21,22 @@ export function bjtMetrics(id:string,bias:BjtOperatingPointResult|null):string {
     ${q.derivativeUnderflow.forward||q.derivativeUnderflow.reverse?`<p class="warning">${t('bjtUnderflow')}</p>`:''}
     <details><summary>${t('bjtDerivatives')}</summary><p>${t('bjtJacobianNote')}</p>${table([['∂i/∂V (S)','c','b','e'],...q.jacobianS.map((row,i)=>[['c','b','e'][i]!,...row])])}</details>`;
 }
+/** Inspect the accepted full mixed-network bias; never solve a Q-deleted proxy. */
+export function mixedDiodeMetrics(id: string, bias: BjtOperatingPointResult | null): string {
+  if (!bias || bias.status !== 'ok') return `<p>${t('diodeDerivativeUnavailable')}</p>`;
+  const diode = bias.diodes[id];
+  if (!diode) return `<p>${t('diodeDerivativeUnavailable')}</p>`;
+  return `<p>${t('bjtMixedDiodeNote')}</p>${table([
+    [t('diodeTerminalVoltage'), diode.terminalVoltageV, 'V'],
+    [t('diodeJunctionVoltage'), diode.junctionVoltageV, 'V'],
+    [t('diodeCurrent'), diode.currentA, 'A'],
+    [t('diodeResistance'), diode.differentialResistanceOhm ?? t('portUndefined'), 'Ω'],
+  ])}`;
+}
 export function bjtDcHtml(bias:BjtOperatingPointResult,equations=false):string {
   if(bias.status!=='ok')return `<div class="warning" role="status">${e(t('diodeBiasFailure',{reason:diodeFailureReason(bias.code)}))}</div><details><summary>${t('technicalDetails')}</summary><pre>${e(bias.message)}</pre></details>`;
   const equationsHtml=`<p>${t('bjtEquations')}</p><div class="law-box">uBE=σ(Vb−Ve), uBC=σ(Vb−Vc), VT=kB·T/q<br>F=IS·expm1(uBE/VT), R=IS·expm1(uBC/VT)<br>iC=σ[F−R−R/βR]<br>iB=σ[F/βF+R/βR]<br>iE=σ[R−F−F/βF]</div>`;
-  return `<p>${t('bjtConvention')}</p>${equations?equationsHtml:''}<div class="subheading">${t('nodeVoltages')}</div>${table(Object.entries(bias.unknowns).map(([id,v])=>[id,v,id.startsWith('V(')?'V':'A']))}${Object.keys(bias.bjts).map(id=>bjtMetrics(id,bias)).join('')}
+  return `<p>${t('bjtConvention')}</p>${equations?equationsHtml:''}<div class="subheading">${t('bjtUnknowns')}</div>${table(Object.entries(bias.unknowns).map(([id,v])=>[id,v,id.startsWith('V(')?'V':'A']))}${Object.keys(bias.bjts).map(id=>bjtMetrics(id,bias)).join('')}
     <details><summary>${t('panelExplanation')}</summary>${equations?'':equationsHtml}<p>${t('bjtDiagnostics')}</p>${table([
       ...bias.residuals.map(r=>[r.label,r.absolute,r.unit,r.physicalAllowance,r.arithmeticAllowance]),
       ['KCL(0)',bias.groundKcl.absolute,'A',bias.groundKcl.physicalAllowance,bias.groundKcl.arithmeticAllowance],

@@ -86,3 +86,30 @@ test('UI removes only the deleted node edit, and Discard restores clean synchron
   assert.deepEqual(ui.builder.draft.circuit.nodes, state.document.circuit.nodes);
   assert.match(root.innerHTML, /Builder matches the analyzed circuit/);
 });
+
+test('stale v1/v2 Form drafts stay visible on v3, across languages; New is explicit', () => {
+  for (const preset of ['divider', 'diode-single']) {
+    const state = createLab(preset), root = new FakeRoot();
+    const ui = new BuilderUI(root, () => state, () => {});
+    ui.render();
+    editNode(root, 1, 'kept exact <node>');
+    const draft = JSON.stringify(ui.builder.draft);
+    Object.assign(state, createLab('bjt-ce'));
+    const applied = exportNative(state);
+    for (const language of ['en', 'mn', 'en']) {
+      setLanguage(language); ui.render();
+      assert.equal(JSON.stringify(ui.builder.draft), draft);
+      assert.match(root.innerHTML, /kept exact &lt;node&gt;/);
+      assert.match(root.innerHTML, /builder-status/);
+      click(root, 'apply');
+      assert.equal(exportNative(state), applied);
+    }
+    ui.startNew();
+    assert.equal(ui.builder.draft.circuit.schemaVersion, 1);
+    assert.match(root.innerHTML, /builder-status/);
+    assert.equal(ui.builder.baseDocument, state.document);
+    click(root, 'discard');
+    assert.match(root.innerHTML, /Form/);
+    assert.doesNotMatch(root.innerHTML, /id="builder-node-/);
+  }
+});

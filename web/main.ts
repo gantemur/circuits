@@ -1,4 +1,4 @@
-import { bjtDcHtml, bjtMetrics } from './bjt-presentation.js';
+import { bjtDcHtml, bjtMetrics, mixedDiodeMetrics } from './bjt-presentation.js';
 import { assembleBjtSystem } from '../src/bjt-system.js';
 import { assemble, assembleDiodeSystem, complex, currentRow, inputValues, outputValue,
   type Assembly, type AnalysisResult } from '../src/index.js';
@@ -179,12 +179,15 @@ function renderInspector(): void {
     : assemble(currentDocument.circuit);
   const contributions = assembly?.contributions.filter(x => x.component === selected.id) ?? [];
   const bias = selected.type === 'D' ? calculator.currentBias(state) : null;
+  const mixedBias = selected.type === 'D' && isBjtDocument(currentDocument)
+    ? calculator.currentBjtBias(state) : null;
   const diodeRows = selected.type === 'D' && isNonlinearDocument(currentDocument) && bias?.status === 'ok'
     ? currentDiodeContributions(currentDocument, bias, selected.id) : [];
   const diodeResidualRows = selected.type === 'D' && isNonlinearDocument(currentDocument) && bias?.status === 'ok'
     ? currentDiodeResidualTerms(currentDocument, bias, selected.id) : [];
   const diodeResistance = selected.type === 'D' && bias?.status === 'ok'
-    ? bias.diodes[selected.id]?.differentialResistanceOhm : undefined;
+    ? bias.diodes[selected.id]?.differentialResistanceOhm
+    : mixedBias?.status === 'ok' ? mixedBias.diodes[selected.id]?.differentialResistanceOhm : undefined;
   const param = 'value' in selected ? field(t('value'),'component',selected.id,selected.value,componentUnit(selected),true) :
     'gain' in selected ? field(t('gain'),'component',selected.id,selected.gain,componentUnit(selected)) :
     selected.type === 'D' ? `<div class="controls-grid">${field(t('diodeIs'),'diode.saturationCurrentA',selected.id,selected.model.saturationCurrentA,'A',true)}${field(t('diodeIdeality'),'diode.idealityFactor',selected.id,selected.model.idealityFactor,'',true)}${field(t('diodeRs'),'diode.seriesResistanceOhm',selected.id,selected.model.seriesResistanceOhm,'Ω')}${field(t('diodeTemperature'),'diode.temperatureK',selected.id,selected.model.temperatureK,'K',true)}</div><p class="muted small">${t('diodeModelNote')}</p><p class="soft-note">${t('diodeResistance')}: ${diodeResistance === undefined ? t('diodeDerivativeUnavailable') : diodeResistance === null ? t('portUndefined') : `${fmt(diodeResistance)} Ω`} (${t('diodeReadOnly')})</p>`
@@ -192,9 +195,10 @@ function renderInspector(): void {
   const diodeLaw = selected.type === 'D' ? 'i = Is·expm1((V(p)−V(n)−Rs·i)/(n·kB·T/q))' : '';
   const diodeContributionTable = `<p class="soft-note">${t('diodeContributionIntro')}</p>${selected.p===selected.n?`<p>${t('diodeCoincident')}</p>`:''}<div class="table-wrap"><table class="result-table"><thead><tr><th>F ${t('row')}</th><th>${t('terminalLaw')}</th><th>${t('value')}</th></tr></thead><tbody>${diodeResidualRows.map(row=>`<tr><td>${e(row.row)}</td><td>${e(row.term)}</td><td>${fmt(row.valueA)} A</td></tr>`).join('')}</tbody></table></div><div class="table-wrap"><table class="result-table"><thead><tr><th>J ${t('row')}</th><th>${t('column')}</th><th>${t('value')}</th><th>${t('terminalLaw')}</th></tr></thead><tbody>${diodeRows.map(row=>`<tr><td>${e(row.row)}</td><td>${e(row.column)}</td><td>${fmt(row.coefficient)} ${row.units}</td><td>${t(`diodeTerm_${row.meaning}`)}${row.assembled?'':` · ${t('diodeReferenceTerm')}`}</td></tr>`).join('')}</tbody></table></div>`;
   const contributionContent = selected.type === 'D'
-    ? bias?.status === 'ok' ? diodeContributionTable : t('diodeDerivativeUnavailable')
+    ? isBjtDocument(currentDocument) ? mixedDiodeMetrics(selected.id, mixedBias)
+      : bias?.status === 'ok' ? diodeContributionTable : t('diodeDerivativeUnavailable')
     : contributions.length ? `<div class="table-wrap"><table class="result-table"><thead><tr><th>${t('matrix')}</th><th>${t('row')}</th><th>${t('column')}</th><th>${t('value')}</th></tr></thead><tbody>${contributions.map(c=>`<tr><td>${c.matrix}</td><td>${e(c.row)}</td><td>${e(c.column)}</td><td>${fmt(c.value)} ${e(c.units)}</td></tr>`).join('')}</tbody></table></div>` : t('noContribution');
-  byId('component-editor').innerHTML = `<div class="editor-card"><p class="editor-title">${e(selected.id)} · ${e(selected.type)}</p><p class="terminal-note">${e(t('orderedTerminals',{p:selected.p,n:selected.n}))}</p>${param}<div class="subheading">${t('kernelTerminalLaw')}</div><div class="law-box">${diodeLaw ? e(diodeLaw) : contributions.length ? e([...new Set(contributions.map(x => x.law))].join(' · ')) : t('noContribution')}</div><button type="button" id="view-contributions" class="button quiet" aria-expanded="${inspectorContribOpen}" aria-controls="inspector-contributions">${t('viewContributions')}</button><div id="inspector-contributions" ${inspectorContribOpen?'':'hidden'}>${contributionContent}</div></div>`;
+  byId('component-editor').innerHTML = `<div class="editor-card"><p class="editor-title">${e(selected.id)} · ${e(selected.type)}</p><p class="terminal-note">${e(t('orderedTerminals',{p:selected.p,n:selected.n}))}</p>${param}${selected.type === 'D' && isBjtDocument(currentDocument) ? mixedDiodeMetrics(selected.id, mixedBias) : ''}<div class="subheading">${t('kernelTerminalLaw')}</div><div class="law-box">${diodeLaw ? e(diodeLaw) : contributions.length ? e([...new Set(contributions.map(x => x.law))].join(' · ')) : t('noContribution')}</div><button type="button" id="view-contributions" class="button quiet" aria-expanded="${inspectorContribOpen}" aria-controls="inspector-contributions">${t('viewContributions')}</button><div id="inspector-contributions" ${inspectorContribOpen?'':'hidden'}>${contributionContent}</div></div>`;
 }
 function renderSchematic(): void {
   const view = schematic(state); byId('schematic').innerHTML = view.html;
