@@ -1,6 +1,6 @@
 import { dcOnePort, type OnePortResult, type OnePortSolve } from '../src/one-port.js';
 import type { LabState } from './lab.js';
-import { isNonlinearDocument } from './native-document.js';
+import { isLinearDocument } from './native-document.js';
 import { escapeHtml, schematic } from './schematic.js';
 import { statusSummary } from './diagnostics.js';
 import { t, translate, type TranslationKey } from './i18n.js';
@@ -83,12 +83,12 @@ export class OnePortUI {
   }
   render(): void {
     const state = this.getState(), native = state.document, nodes = native.circuit.nodes;
-    if (isNonlinearDocument(native)) {
-      this.root.innerHTML = `<div class="warning" role="status">${t('diodeUnavailableTransform')}</div>`;
+    if (!isLinearDocument(native)) {
+      this.root.innerHTML = `<div class="warning" role="status">${t(native.circuit.schemaVersion===3?'bjtUnavailable':'diodeUnavailableTransform')}</div>`;
       return;
     }
     if (!this.selectionInitialized) {
-      const probe = state.document.circuit.observations.find((o): o is Extract<typeof o, { type: 'voltage' }> => o.type === 'voltage' && o.p !== o.n);
+      const probe = native.circuit.observations.find((o): o is Extract<typeof o, { type: 'voltage' }> => o.type === 'voltage' && o.p !== o.n);
       this.p = probe?.p ?? nodes.find(n => n !== '0') ?? '0';
       this.q = probe?.n ?? (this.p === '0' ? nodes.find(n => n !== '0') ?? '0' : '0');
       this.selectionInitialized = true;

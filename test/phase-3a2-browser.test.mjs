@@ -24,8 +24,8 @@ const eta = kB * 300 / q;
 
 test('four diode browser copies route strict v2, retain IDs and drawings, and preserve v1', () => {
   const ids = ['diode-single', 'diode-series', 'diode-pair', 'diode-rc'];
-  assert.equal(presets.length,30);
-  assert.equal(new Set(presets.map(p=>p.id)).size,30);
+  assert.equal(presets.length,35);
+  assert.equal(new Set(presets.map(p=>p.id)).size,35);
   const state = createLab();
   assert.equal(state.presetId, 'divider');
   assert.equal(state.document.circuit.schemaVersion, 1);

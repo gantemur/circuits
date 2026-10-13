@@ -1,3 +1,8 @@
+import bjtCe from '../fixtures/bjt/common-emitter.json';
+import bjtFollower from '../fixtures/bjt/emitter-follower.json';
+import bjtSat from '../fixtures/bjt/saturation.json';
+import bjtCutoff from '../fixtures/bjt/cutoff.json';
+import type { BjtDocument } from '../src/bjt-document.js';
 import type { NativeDocument, Circuit } from '../src/model.js';
 import type { NonlinearDocument, NonlinearCircuit } from '../src/nonlinear-model.js';
 import { copyBrowserDocument, type BrowserDocument } from './native-document.js';
@@ -66,6 +71,14 @@ function namedTransientCopy(input: unknown, suffix: string): NonlinearDocument {
     for (const value of document.experiment.initial.values) value.id = names.get(value.id) ?? value.id;
   return document;
 }
+const pnp = structuredClone(bjtCe) as BjtDocument;
+for(const c of pnp.circuit.components)if(c.type==='Q')c.model.polarity='pnp';
+for(const source of pnp.experiment.sources) {source.dc=-source.dc; if(source.ac)source.ac={re:-source.ac.re,im:-source.ac.im};}
+const cutoff = structuredClone(bjtCutoff) as BjtDocument;
+// Distinct device IDs distinguish equal clamped topology and its lesson.
+for(const c of cutoff.circuit.components)c.id+='Off';
+for(const source of cutoff.experiment.sources)source.id+='Off';
+for(const o of cutoff.circuit.observations)if(o.type!=='voltage')o.component+='Off';
 export const presets: Preset[] = [
   { id: 'divider', titleKey: 'presetDividerTitle', subtitleKey: 'presetDividerSubtitle', document: divider as NativeDocument, defaultOutput: 'out' },
   { id: 'rc', titleKey: 'presetRcTitle', subtitleKey: 'presetRcSubtitle', document: rc as NativeDocument, defaultOutput: 'out' },
@@ -97,16 +110,21 @@ export const presets: Preset[] = [
   { id: 'diode-rc-biased-sine', titleKey: 'presetDiodeSineTitle', subtitleKey: 'presetDiodeSineSubtitle', document: namedTransientCopy(diodeRcSine,'Sine'), defaultOutput: 'vout' },
   { id: 'half-wave-rectifier', titleKey: 'presetRectifierTitle', subtitleKey: 'presetRectifierSubtitle', document: namedTransientCopy(rectifier,'Rect'), defaultOutput: 'vout' },
   { id: 'half-wave-rectifier-rc', titleKey: 'presetRectifierRcTitle', subtitleKey: 'presetRectifierRcSubtitle', document: namedTransientCopy(rectifierRc,'Smooth'), defaultOutput: 'vout' },
+  {id:'bjt-ce',titleKey:'bjtCe',subtitleKey:'bjtSubtitle',document:bjtCe as BjtDocument,defaultOutput:'out'},
+  {id:'bjt-follower',titleKey:'bjtFollower',subtitleKey:'bjtSubtitle',document:bjtFollower as BjtDocument,defaultOutput:'out'},
+  {id:'bjt-saturation',titleKey:'bjtSat',subtitleKey:'bjtSubtitle',document:bjtSat as BjtDocument,defaultOutput:'out'},
+  {id:'bjt-cutoff',titleKey:'bjtOff',subtitleKey:'bjtSubtitle',document:cutoff,defaultOutput:'out'},
+  {id:'bjt-pnp',titleKey:'bjtPnp',subtitleKey:'bjtSubtitle',document:pnp,defaultOutput:'out'},
 ];
 
 export const copyDocument = copyBrowserDocument;
-export function topologySignature(c: Circuit | NonlinearCircuit): string {
+export function topologySignature(c: Circuit | NonlinearCircuit | BjtDocument['circuit']): string {
   return JSON.stringify({ nodes: [...c.nodes].sort(),
-    components: c.components.map(d => ({ id: d.id, type: d.type, p: d.p, n: d.n,
+    components: c.components.map(d => ({ id: d.id, type: d.type, ...('c' in d ? {c:d.c,b:d.b,e:d.e,polarity:d.model.polarity} : {p:d.p,n:d.n}),
       ...('cp' in d ? { cp: d.cp, cn: d.cn } : {}),
       ...('control' in d ? { control: d.control } : {}) })).sort((a,b) => a.id.localeCompare(b.id)) });
 }
-export function matchingPreset(c: Circuit | NonlinearCircuit): Preset | undefined {
+export function matchingPreset(c: Circuit | NonlinearCircuit | BjtDocument['circuit']): Preset | undefined {
   const signature = topologySignature(c);
   return presets.find(p => topologySignature(p.document.circuit) === signature);
 }

@@ -69,3 +69,5 @@ await Promise.all([
     .replace('src="./app.js"', `src="./app.js?v=${version(app)}"`)),
   copyFile('web/style.css', 'dist/style.css'),
 ]);
+
+await build({ entryPoints: ['test/support/bjt-presentation-entry.ts'], bundle: true, platform: 'neutral', format: 'esm', target:'es2022', outfile:'dist/bjt-presentation-test.js', logLevel:'silent' });

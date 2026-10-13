@@ -57,7 +57,7 @@ The UX workspaces branch continues English (`en`) and Mongolian Cyrillic (`mn`) 
 | Loading comparison | Ачааллын харьцуулалт | Parameter prediction checked against a directly connected circuit |
 | Source resistance / load resistance | Үүсгүүрийн эсэргүүцэл / ачааллын эсэргүүцэл | Finite Rs and RL; open load is a separate choice |
 
-Component IDs, node IDs, user-provided labels, device codes, equations, and SI symbols remain unchanged in both languages. Native v1 and v2 JSON retain their declared English field names and finite JSON numbers. Frequency, transient, and diode-sweep CSV headers, statuses, decimal points, and numerical values are likewise locale-neutral so exports round-trip and compare identically across languages. The interface translates labels and diagnostic summaries; expandable **Technical details (English)** retains original kernel messages where useful.
+Component IDs, node IDs, user-provided labels, device codes, equations, and SI symbols remain unchanged in both languages. Native v1, v2 and v3 JSON retain their declared English field names and finite JSON numbers. Frequency, transient, and diode-sweep CSV headers, statuses, decimal points, and numerical values are likewise locale-neutral so exports round-trip and compare identically across languages. The interface translates labels and diagnostic summaries; expandable **Technical details (English)** retains original kernel messages where useful.
 
 An explicit language choice is stored under `circuits-unfolded-language` in browser localStorage. If storage is unavailable, the in-memory choice still works for the current visit. Without a saved choice, the first browser-preferred language selects Mongolian when its tag is `mn` or `mn-*`; English is the fallback.
 
@@ -113,3 +113,21 @@ The reviewed previews say **Анхны хэвийлтийн үүсгүүр** for
 | Ripple | Долгиолол | Smoothed rectifier variation; displayed cycles do not prove periodic state |
 
 Keep exact IDs, SI units, equation symbols, native field names, CSV headers, side/status codes and decimal points unchanged. Translate status and failure summaries when language changes, including completed and obsolete runs. Sinusoidal `amplitudePeak` is **оргил далайц**; Frequency's AC phasor remains RMS. Backward Euler remains **Далд Эйлерийн арга (Backward Euler)** in explanatory text.
+
+
+## Phase 3B2 transistor terminology
+
+| English | Монгол | Meaning |
+| --- | --- | --- |
+| Common-emitter amplifier | Ерөнхий эмиттертэй өсгөгч | Inverting voltage stage with actual source/load connections |
+| Emitter follower | Эмиттерийн дагагч | Loaded voltage follower; gain is calculated |
+| Collector / base / emitter | Коллектор / бааз / эмиттер | Exact terminal symbols c/b/e remain unchanged |
+| Forward / reverse active | Шууд / урвуу идэвхтэй | Junction-bias description, not a separate model |
+| Saturation | Ханалт | Both junctions forward biased; Vce is not forced to zero |
+| Cutoff (BJT) | Хаалт | Leakage remains; distinct from a filter's заагийн давтамж |
+| Transport saturation current | Зөөгдөлтийн ханалтын гүйдэл | Canonical IS, not a separately fitted junction current |
+| Forward / reverse current gain | Шууд / урвуу гүйдлийн өсгөлт | βF / βR |
+| Signed absorbed power | Тэмдэгтэй шингээсэн чадал | Entering-current convention |
+| Local terminal derivatives | Туйлын орон нутгийн уламжлалууд | All nine entries ∂i/∂V, in S |
+
+NPN/PNP, Ebers–Moll equations, native IDs/JSON and SI symbols are invariant. σ changes polarity; every numerical terminal current still enters the transistor. Exponentially tiny derivative underflow is explained separately from exact zero current. The bilingual guides label baseline references explicitly; edited responses always come from the kernel.

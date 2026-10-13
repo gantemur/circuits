@@ -1,3 +1,5 @@
+import { bjtPanel, browserBjtBias, type BjtPanelResult } from './bjt-analysis.js';
+import type { BjtOperatingPointResult } from '../src/bjt-operating-point.js';
 import { abs, assemble, complex, extractFirstOrder, polar, solveDC, solveFrequency, transfer, transient,
   type Assembly, type AnalysisResult, type FirstOrderTransfer, type NotSupported,
   type TransientResult, type Unit } from '../src/index.js';
@@ -7,7 +9,7 @@ import { createDiodeTangent, type TangentSuccess } from '../src/diode-tangent.js
 import type { Diode, NonlinearDocument } from '../src/nonlinear-model.js';
 import { diodeCharacteristic, eligibleLoadLine, type CharacteristicPoint, type LoadLine } from './diode-math.js';
 import { nonlinearUnknownCount } from './dc-sweep.js';
-import { isNonlinearDocument } from './native-document.js';
+import { isBjtDocument, isLinearDocument, isNonlinearDocument } from './native-document.js';
 import { dcOnePort, type OnePortResult } from '../src/one-port.js';
 import { analyzePorts, type PortAnalysisResult, type PortConfig, type PortLoad } from '../src/port-analysis.js';
 import type { LabState, SweepPoint } from './lab.js';
@@ -36,7 +38,7 @@ export interface WorkspaceState {
   view: WorkspaceView; editorView: EditorView; panels: PanelConfig[]; nextId: number; layoutIsSuggested: boolean;
   transform: { p: string; q: string; load: number; representation: 'thevenin' | 'norton'; showOriginal: boolean };
 }
-export type PanelResult =
+export type PanelResult = BjtPanelResult
   | { type: 'dc'; assembly: Assembly; dc: AnalysisResult }
   | { type: 'frequency'; assembly: Assembly; unit: `${Unit}/${Unit}`; sweep: SweepPoint[];
       ac: AnalysisResult; algebraic: FirstOrderTransfer | NotSupported;
@@ -59,7 +61,7 @@ export interface PortSweepPoint {
   magnitude: number | null; phaseDegrees: number | null; message: string;
 }
 
-const defaultType = (preset: string | null): PanelType[] => preset?.endsWith('-impedance-ladder') ? ['port-frequency', 'equations'] :
+const defaultType = (preset: string | null): PanelType[] => preset?.startsWith('bjt-') ? ['dc','frequency'] : preset?.endsWith('-impedance-ladder') ? ['port-frequency', 'equations'] :
   preset === 'diode-rc-step' || preset === 'half-wave-rectifier-rc' ? ['transient', 'dc'] :
   preset === 'diode-rc-biased-sine' ? ['transient', 'frequency'] :
   preset === 'half-wave-rectifier' ? ['transient', 'diode-characteristic'] :
@@ -247,6 +249,17 @@ export function handlePanelFieldChange(workspace: WorkspaceState, state: LabStat
   return true;
 }
 export class PanelCalculator {
+  private bjtDocument: LabState['document'] | null = null;
+  private bjtRevision = -1;
+  private bjtBias: BjtOperatingPointResult | null = null;
+  currentBjtBias(state:LabState):BjtOperatingPointResult | null {
+    if(!isBjtDocument(state.document))return null;
+    if(this.bjtDocument!==state.document || this.bjtRevision!==state.revision || !this.bjtBias) {
+      this.bjtDocument=state.document; this.bjtRevision=state.revision;
+      this.bjtBias=browserBjtBias(state.document);
+    }
+    return this.bjtBias;
+  }
   private cache = new Map<string, PanelResult>();
   private assemblyRevision = -1;
   private assembly: Assembly | null = null;
@@ -321,7 +334,7 @@ export class PanelCalculator {
   }
   private assemblyFor(state: LabState): Assembly {
     const document = state.document;
-    if (isNonlinearDocument(document)) throw new RangeError('Linear assembly requires a v1 circuit');
+    if (!isLinearDocument(document)) throw new RangeError('Linear assembly requires a v1 circuit');
     if (this.assemblyRevision !== state.revision || !this.assembly || this.document !== document) {
       this.assembly = assemble(document.circuit); this.assemblyRevision = state.revision;
       this.document = document;
@@ -330,6 +343,9 @@ export class PanelCalculator {
     return this.assembly;
   }
   calculate(panel: PanelConfig, state: LabState): PanelResult | null {
+    // Unsupported tools must not ask for references they cannot analyze.
+    if(isBjtDocument(state.document) && !['dc','frequency','equations'].includes(panel.type))
+      return {type:'bjt-unavailable',reason:'unsupported'};
     if (panel.selectionNeeded || limits(panel, state)) return null;
     if (this.document !== state.document || this.assemblyRevision !== state.revision) {
       this.cache.clear(); this.assembly = null; this.assemblyRevision = state.revision; this.document = state.document;
@@ -343,6 +359,13 @@ export class PanelCalculator {
       panel.sweepMin, panel.sweepMax, panel.sweepCount]);
     const cached = this.cache.get(key); if (cached) return cached;
     const document = state.document;
+    if (isBjtDocument(document)) {
+      const result:PanelResult=['dc','frequency','equations'].includes(panel.type)
+        ? bjtPanel(panel,document,this.currentBjtBias(state)!)
+        : {type:'bjt-unavailable',reason:'unsupported'};
+      this.cache.set(key,result);
+      return result;
+    }
     if (isNonlinearDocument(document)) {
       const result = this.nonlinear(panel, state, document);
       this.cache.set(key, result);

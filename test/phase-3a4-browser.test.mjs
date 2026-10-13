@@ -27,7 +27,7 @@ function harness(state = createLab('diode-rc-step')) {
 }
 
 test('four strict browser copies are distinct, suggested and match their own native round trips', () => {
-  assert.equal(presets.length,30);
+  assert.equal(presets.length,35);
   assert.equal(createLab().presetId,'divider');
   const cases = [
     ['diode-rc-step',.0005,.00001,'dc'],

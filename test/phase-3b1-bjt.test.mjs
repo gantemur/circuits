@@ -283,12 +283,6 @@ test('node ordering and shifted reference preserve the solved physical bias',()=
   const result=ok(solveBjtOperatingPoint(shifted));near(result.observations.out.value,2,2e-8);
   for(const t of ['c','b','e'])near(result.bjts.Q1.currentsA[t],original.bjts.Q1.currentsA[t],1e-10);
 });
-test('production browser importer still rejects v3 and preserves the released document',async()=>{
-  const {createLab,importNative}=await import('../dist/lab-test.js');
-  const lab=createLab(),before=clone(lab.document);
-  const result=importNative(lab,serializeBjtDocument(load('common-emitter')));
-  assert.equal(result.ok,false);assert.deepEqual(lab.document,before);
-});
 
 test('full tangent terminal derivatives remain active in saturation and reverse operation',()=>{
   for(const name of ['saturation','reverse-active','cutoff']) {

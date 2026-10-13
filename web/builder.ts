@@ -1,7 +1,7 @@
 import { type Component, type Observation,
   type Waveform, ValidationError, voltageBranch } from '../src/model.js';
 import type { Diode } from '../src/nonlinear-model.js';
-import { parseBrowserDocument, serializeBrowserDocument, type BrowserDocument } from './native-document.js';
+import { isBjtDocument, parseBrowserDocument, serializeBrowserDocument, type BrowserDocument } from './native-document.js';
 import { exportNative, importNative, type EditResult, type LabState } from './lab.js';
 
 type NumberText = string;
@@ -22,7 +22,7 @@ export interface BuilderDraft {
   experiment: { schemaVersion: 1; label?: string; sources: { id: string; dc: NumberText; ac?: { re: NumberText; im: NumberText }; waveform?: DraftWaveform }[];
     initial: { kind: 'equilibrium' } | { kind: 'storage'; values: { id: string; value: NumberText }[] } };
 }
-export interface BuilderState { draft: BuilderDraft; base: string; baseDocument: BrowserDocument; dirty: boolean; error: BuilderError | null }
+export interface BuilderState { unsupported: boolean; draft: BuilderDraft; base: string; baseDocument: BrowserDocument; dirty: boolean; error: BuilderError | null }
 export interface BuilderError { code: string; params: Readonly<Record<string, string | number>>; field?: string; raw?: string }
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const text = (value: number): string => String(value);
@@ -32,6 +32,10 @@ const waveformDraft = (w: Waveform): DraftWaveform => {
   return { type: 'sinusoid', offset: text(w.offset), amplitudePeak: text(w.amplitudePeak), frequencyHz: text(w.frequencyHz), phaseRadians: text(w.phaseRadians) };
 };
 export function draftFromDocument(document: BrowserDocument): BuilderDraft {
+  // V3 construction is deliberately unavailable in Form. This empty editor
+  // state is never an analysis proxy; the complete document stays in baseDocument.
+  if (isBjtDocument(document)) return { circuit: {schemaVersion:1,nodes:['0'],components:[],observations:[]},
+    experiment:{schemaVersion:1,sources:[],initial:{kind:'equilibrium'}} };
   const d = clone(document);
   return { circuit: { ...d.circuit, components: d.circuit.components.map(c => {
     if ('value' in c) return { ...c, value: text(c.value) };
@@ -50,12 +54,13 @@ export function draftFromDocument(document: BrowserDocument): BuilderDraft {
       : { kind: 'equilibrium' } } };
 }
 export function createBuilder(state: LabState): BuilderState {
-  return { draft: draftFromDocument(state.document), base: exportNative(state), baseDocument: state.document, dirty: false, error: null };
+  return { unsupported: isBjtDocument(state.document), draft: draftFromDocument(state.document), base: exportNative(state), baseDocument: state.document, dirty: false, error: null };
 }
 export function reloadBuilder(builder: BuilderState, state: LabState): void {
   Object.assign(builder, createBuilder(state));
 }
 export function newBuilder(builder: BuilderState, state: LabState): void {
+  builder.unsupported = false;
   builder.draft = { circuit: { schemaVersion: 1, nodes: ['0'], components: [], observations: [] },
     experiment: { schemaVersion: 1, sources: [], initial: { kind: 'equilibrium' } } };
   builder.base = exportNative(state); builder.baseDocument = state.document; builder.dirty = true; builder.error = null;
@@ -186,6 +191,7 @@ export function documentFromDraft(d: BuilderDraft): BrowserDocument {
   return parseBrowserDocument(JSON.stringify({ circuit, experiment }));
 }
 export function applyBuilder(builder: BuilderState, state: LabState): EditResult {
+  if (builder.unsupported) return {ok:false,errorCode:"invalid-document"};
   if (builderConflict(builder, state)) {
     builder.error = { code: 'builderConflict', params: {} }; return { ok: false, errorCode: 'builderConflict' };
   }

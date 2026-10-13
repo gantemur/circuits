@@ -64,3 +64,6 @@
 .legend .overlay-dashed{border-top:2px dashed #b95d35}
 .legend .overlay-dotted{border-top:2px dotted #425daa}
 .legend span{padding:.15rem .25rem}
+
+/* BJT labels retain readable size; narrow views scroll the connected diagram locally. */
+.bjt-diagram{overflow-x:auto;max-width:100%}.circuit-overview .schematic-panel #schematic .bjt-diagram svg{min-width:760px;max-height:none}.bjt-label{font-size:15px}

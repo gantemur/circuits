@@ -1,3 +1,5 @@
+import type { Bjt } from '../src/bjt-model.js';
+import { bjtSchematic } from './bjt-presentation.js';
 import type { Component } from '../src/model.js';
 import type { Diode } from '../src/nonlinear-model.js';
 import type { NativeDocument } from '../src/model.js';
@@ -9,14 +11,16 @@ import { resistorNetworkSvg, type Positions } from './network-diagram.js';
 export const escapeHtml = (value: unknown): string => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const number = (value: number): string => value !== 0 && (Math.abs(value) < .01 || Math.abs(value) >= 1e5)
   ? value.toExponential(3) : Number(value.toPrecision(5)).toString();
-function item(state: LabState, id: string): Component | Diode { return state.document.circuit.components.find(c => c.id === id)!; }
-function valueLabel(c: Component | Diode): string {
+function item(state: LabState, id: string): Component | Diode | Bjt { return state.document.circuit.components.find(c => c.id === id)!; }
+function valueLabel(c: Component | Diode | Bjt): string {
+  if (c.type === 'Q') return `${c.model.polarity.toUpperCase()}; Is=${c.model.transportSaturationCurrentA} A; βF=${c.model.betaForward}; βR=${c.model.betaReverse}; T=${c.model.temperatureK} K`;
   if (c.type === 'D') return `Is=${number(c.model.saturationCurrentA)} A, n=${number(c.model.idealityFactor)}, Rs=${number(c.model.seriesResistanceOhm)} Ω, T=${number(c.model.temperatureK)} K`;
   if ('value' in c) return `${number(c.value)} ${c.type === 'R' ? 'Ω' : c.type === 'C' ? 'F' : 'H'}`;
   if ('gain' in c) return `${number(c.gain)} ${c.type === 'VCCS' ? 'S' : c.type === 'CCVS' ? 'Ω' : ''}`.trim();
   return c.type === 'V' ? t('valueSource') : t('currentSource');
 }
-function exactValueLabel(c: Component | Diode): string {
+function exactValueLabel(c: Component | Diode | Bjt): string {
+  if (c.type === 'Q') return `${c.model.polarity.toUpperCase()}; Is=${c.model.transportSaturationCurrentA} A; βF=${c.model.betaForward}; βR=${c.model.betaReverse}; T=${c.model.temperatureK} K`;
   if (c.type === 'D') return `Is=${c.model.saturationCurrentA} A; n=${c.model.idealityFactor}; Rs=${c.model.seriesResistanceOhm} Ω; T=${c.model.temperatureK} K`;
   if ('value' in c) return `${c.value} ${c.type === 'R' ? 'Ω' : c.type === 'C' ? 'F' : 'H'}`;
   if ('gain' in c) return `${c.gain} ${c.type === 'VCCS' ? 'S' : c.type === 'CCVS' ? 'Ω' : ''}`.trim();
@@ -156,7 +160,7 @@ function rlcMeasurementSchematic(state:LabState,notch:boolean):{html:string;note
 /** Four verified diode layouts share a source–R–output path; optional shunts
  * are explicitly wired from the output node to reference node 0. */
 function diodeSchematic(state:LabState,preset:string,tangent?:NativeDocument):{html:string;note:string;schematic:boolean} {
-  const devices: (Component | Diode)[]=state.document.circuit.components;
+  const devices=state.document.circuit.components.flatMap(c => c.type === 'Q'?[]:[c]);
   const drive=devices.find(c=>c.type==='V')!;
   const resistorDevice=devices.find(c=>c.type==='R')!;
   const diodes=devices.filter((c):c is Diode=>'model' in c);
@@ -236,7 +240,7 @@ function rectifierSchematic(state:LabState):{html:string;note:string;schematic:b
   const waveLabel=wave?.type==='sinusoid'?`${drive.id}: offset=${number(wave.offset)} V; peak=${number(wave.amplitudePeak)} V; f=${number(wave.frequencyHz)} Hz`:
     sourceValue?`${drive.id}: DC=${number(sourceValue.dc)} V`:'';
   body+=`<text x="22" y="290" class="schematic-small">${escapeHtml(waveLabel)}</text>`+
-    `<text x="22" y="310" class="schematic-small">${escapeHtml(diode.id)}: ${escapeHtml(valueLabel(diode))}; p=${escapeHtml(diode.p)} → n=${escapeHtml(diode.n)}</text>`;
+    `<text x="22" y="310" class="schematic-small">${escapeHtml(diode.id)}: ${escapeHtml(valueLabel(diode))}; p=${escapeHtml('p' in diode ? diode.p : '')} → n=${escapeHtml('n' in diode ? diode.n : '')}</text>`;
   return wrap(state,body,t('diodeDrawing'),390);
 }
 export function diodeTangentSchematic(state:LabState,tangent:NativeDocument):{html:string;note:string;schematic:boolean}|null {
@@ -245,6 +249,7 @@ export function diodeTangentSchematic(state:LabState,tangent:NativeDocument):{ht
   return diodeSchematic(state,preset,tangent);
 }
 export function schematic(state:LabState):{html:string;note:string;schematic:boolean} {
+  if (state.document.circuit.schemaVersion===3) return bjtSchematic(state);
   // Preset identity alone survives value edits and imports. Confirm the actual
   // endpoint/ID topology before attaching a curated layout to a document.
   const preset=matchingPreset(state.document.circuit)?.id;
@@ -328,7 +333,7 @@ export function schematic(state:LabState):{html:string;note:string;schematic:boo
   };
   if (preset && layouts[preset]) {
     const circuit=state.document.circuit;
-    const network={nodes:circuit.nodes,edges:circuit.components.filter(c=>c.type==='R').map(c=>({id:c.id,p:c.p,n:c.n,resistance:'value' in c ? c.value : NaN}))};
+    const network={nodes:circuit.nodes,edges:circuit.components.flatMap(c=>c.type==='R'?[{id:c.id,p:c.p,n:c.n,resistance:c.value}]:[])};
     const svg=resistorNetworkSvg(network,{positions:layouts[preset],retained:circuit.nodes.filter(id=>id!=='0'),
       selectedComponent:state.selectedComponent,label:t('diagramLabel'),selectable:true});
     if (!svg) return {schematic:false,note:t('unknownTopologyHint'),html:`<div class="unknown-layout"><h3>${t('unknownTopologyTitle')}</h3>${topology}</div>`};
@@ -339,5 +344,5 @@ export function schematic(state:LabState):{html:string;note:string;schematic:boo
 }
 function topologyTable(state:LabState):string {
   const nodes=state.document.circuit.nodes,components=state.document.circuit.components;
-  return `<p class="muted small">${escapeHtml(t('nodesList',{nodes:nodes.map(n=>JSON.stringify(n)).join(', ')}))}</p><div class="table-wrap"><table class="result-table"><thead><tr><th>ID</th><th>Type</th><th>p</th><th>n</th><th>${t('parameter')}</th></tr></thead><tbody>${components.map(c=>`<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.type)}</td><td>${escapeHtml(c.p)}</td><td>${escapeHtml(c.n)}</td><td>${escapeHtml(exactValueLabel(c))}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<p class="muted small">${escapeHtml(t('nodesList',{nodes:nodes.map(n=>JSON.stringify(n)).join(', ')}))}</p><div class="table-wrap"><table class="result-table"><thead><tr><th>ID</th><th>Type</th><th>p</th><th>n</th><th>${t('parameter')}</th></tr></thead><tbody>${components.map(c=>`<tr><td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.type)}</td><td>${escapeHtml('p' in c?c.p:c.c)}</td><td>${escapeHtml('n' in c?c.n:`b=${c.b}; e=${c.e}`)}</td><td>${escapeHtml(exactValueLabel(c))}</td></tr>`).join('')}</tbody></table></div>`;
 }

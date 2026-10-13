@@ -1,5 +1,5 @@
 import { solveOperatingPoint } from '../src/diode-operating-point.js';
-import { copyBrowserDocument, type BrowserDocument } from './native-document.js';
+import { isBjtDocument, copyBrowserDocument, type BrowserDocument } from './native-document.js';
 
 export interface DcSweepPoint { sourceValue: number; output: number | null; status: string }
 export interface DcSweepResult { status: 'complete' | 'cancelled'; points: DcSweepPoint[];
@@ -19,6 +19,7 @@ export function nonlinearUnknownCount(document: BrowserDocument): number {
  */
 export async function runDcSweep(document: BrowserDocument, config: DcSweepConfig,
   isCurrent: () => boolean, onPoint: (point: DcSweepPoint, index: number) => void = () => {}): Promise<DcSweepResult> {
+  if (isBjtDocument(document)) throw new RangeError('BJT source sweep is unavailable');
   const source = document.circuit.components.find(c => c.id === config.sourceId);
   const observation = document.circuit.observations.find(o => o.id === config.observationId);
   if (!source || (source.type !== 'V' && source.type !== 'I') || !observation ||
@@ -38,6 +39,7 @@ export async function runDcSweep(document: BrowserDocument, config: DcSweepConfi
     const fraction = index / (config.count - 1);
     const sourceValue = (1 - fraction) * config.minimum + fraction * config.maximum;
     const sample = copyBrowserDocument(document);
+    if (isBjtDocument(sample)) throw new RangeError('BJT source sweep is unavailable');
     sample.experiment.sources.find(s => s.id === config.sourceId)!.dc = sourceValue;
     let point: DcSweepPoint;
     try {

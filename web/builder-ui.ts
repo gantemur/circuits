@@ -58,6 +58,11 @@ export class BuilderUI {
     return path;
   }
   render(): void {
+    if (this.state().document.circuit.schemaVersion === 3 &&
+        (this.builder.unsupported || !this.builder.dirty || this.builder.baseDocument !== this.state().document)) {
+      this.root.innerHTML = `<p class="warning">${t('bjtFormUnavailable')}</p>`;
+      return;
+    }
     if (syncCleanBuilder(this.builder, this.state())) this.clearNodeEdits();
     const d = this.builder.draft, nodes = d.circuit.nodes.map(n => ({ value: n, label: n }));
     const controls = d.circuit.components.filter(c => c.type === 'V' || c.type === 'VCVS' || c.type === 'CCVS').map(c => ({ value: c.id, label: c.id }));

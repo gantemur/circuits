@@ -2,7 +2,7 @@ import { resistorCandidateKey, resistorCandidates, transformResistors, type Resi
   type ResistorTransformResult } from '../src/resistor-transform.js';
 import type { ResistorNetwork } from '../src/kron.js';
 import type { LabState } from './lab.js';
-import { isNonlinearDocument } from './native-document.js';
+import { isLinearDocument } from './native-document.js';
 import { exportNative } from './lab.js';
 import { presets } from './presets.js';
 import { escapeHtml } from './schematic.js';
@@ -153,7 +153,7 @@ export class ResistorTransformUI {
   }
   private network(): ResistorNetwork {
     const circuit=this.getState().document.circuit;
-    return {nodes:circuit.nodes,edges:circuit.components.filter(c=>c.type==='R').map(c=>({id:c.id,p:c.p,n:c.n,resistance:'value' in c ? c.value : NaN}))};
+    return {nodes:circuit.nodes,edges:circuit.components.flatMap(c=>c.type==='R'?[{id:c.id,p:c.p,n:c.n,resistance:c.value}]:[])};
   }
   private currentPreview(): Preview | null {
     const preview=this.preview;
@@ -166,7 +166,7 @@ export class ResistorTransformUI {
   private createPreview(): void {
     this.invalidate();
     const state=this.getState(),native=state.document;
-    if (isNonlinearDocument(native)) { this.notice='diodeUnavailableTransform'; return; }
+    if (!isLinearDocument(native)) { this.notice=native.circuit.schemaVersion===3?'bjtUnavailable':'diodeUnavailableTransform'; return; }
     const candidate=resistorCandidates(this.network(),this.retained).find(c=>c.key===this.choiceKey&&c.selection.operation===this.operation);
     if (!candidate) { this.notice='resNoChoice'; return; }
     const result=transformResistors(native,this.retained,candidate.selection);
@@ -179,7 +179,7 @@ export class ResistorTransformUI {
   private tryApply(action:'use'|'return', confirmed=false): void {
     if (!this.actions) return;
     const state=this.getState(),native=state.document;
-    if (isNonlinearDocument(native)) { this.notice='diodeUnavailableTransform'; return; }
+    if (!isLinearDocument(native)) { this.notice=native.circuit.schemaVersion===3?'bjtUnavailable':'diodeUnavailableTransform'; return; }
     const preview=this.currentPreview();
     const applied=this.applied;
     if (action==='use' && !preview || action==='return' && (!applied || applied.revision!==state.revision || applied.transformedJson!==exportNative(state))) {
@@ -213,8 +213,8 @@ export class ResistorTransformUI {
   }
   render(): void {
     const state=this.getState(),circuit=state.document.circuit;
-    if (isNonlinearDocument(state.document)) {
-      this.root.innerHTML = `<div class="warning" role="status">${t('diodeUnavailableTransform')}</div>`;
+    if (!isLinearDocument(state.document)) {
+      this.root.innerHTML = `<div class="warning" role="status">${t(state.document.circuit.schemaVersion===3?'bjtUnavailable':'diodeUnavailableTransform')}</div>`;
       return;
     }
     if(!this.initialized){this.retained=this.defaultTerminals();this.initialized=true;}

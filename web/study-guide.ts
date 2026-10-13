@@ -1,3 +1,4 @@
+import { phase3b2Lessons } from './phase-3b2-guides.js';
 import { language } from './i18n.js';
 import { referenceResponses } from './reference-responses.js';
 import { presets } from './presets.js';
@@ -58,6 +59,7 @@ export const lessons: Readonly<Record<string,Bilingual>> = {
   ...phase2d2Lessons,
   ...phase3a2Lessons,
   ...phase3a4Lessons,
+  ...phase3b2Lessons,
 };
 export function guideFor(id: string | null): GuideLesson | null { return id ? lessons[id]?.[language()] ?? null : null; }
 export function referenceFor(id: string | null) { return id ? referenceResponses[id] ?? null : null; }

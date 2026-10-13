@@ -1,7 +1,9 @@
+import { bjtDcHtml, bjtMetrics } from './bjt-presentation.js';
+import { assembleBjtSystem } from '../src/bjt-system.js';
 import { assemble, assembleDiodeSystem, complex, currentRow, inputValues, outputValue,
   type Assembly, type AnalysisResult } from '../src/index.js';
 import { createLab, exportNative, importNative, updateDocument, } from './lab.js';
-import { isNonlinearDocument } from './native-document.js';
+import { isBjtDocument, isLinearDocument, isNonlinearDocument } from './native-document.js';
 import { dcSweepCsv, nonlinearUnknownCount } from './dc-sweep.js';
 import { SweepLifecycle, sweepSignature } from './sweep-lifecycle.js';
 import { TransientRunLifecycle, augmentedTransientUnknowns, transientIntervalBound } from './transient-run.js';
@@ -128,7 +130,7 @@ function renderGuide(): void {
 function renderCircuitChoice(): void {
   const select = byId('circuit-select') as HTMLSelectElement;
   const group = (label: TranslationKey, ids: string[]) => `<optgroup label="${translate(label)}">${presets.filter(p=>ids.includes(p.id)).map(p=>`<option value="${e(p.id)}"${state.presetId === p.id ? ' selected' : ''}>${translate(p.titleKey)}</option>`).join('')}</optgroup>`;
-  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupPassiveFilters',['rc3-low-pass','rc3-high-pass','rlc-band-pass','rlc-notch'])}${group('presetGroupActiveFilters',['butterworth2-low-pass','butterworth2-high-pass'])}${group('presetGroupImpedance',['rc-impedance-ladder','rl-impedance-ladder'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}${group('presetGroupPort',['port-t','port-rc-section','port-rc-cascade'])}${group('presetGroupDiode',['diode-single','diode-series','diode-pair','diode-rc','diode-rc-step','diode-rc-biased-sine','half-wave-rectifier','half-wave-rectifier-rc'])}`;
+  select.innerHTML = `${!state.presetId ? `<option value="custom" selected>${t('circuitCustom')} · ${e(state.document.circuit.label ?? '')}</option>` : ''}${group('bjtGroup',['bjt-ce','bjt-follower','bjt-saturation','bjt-cutoff','bjt-pnp'])}${group('presetGroupBasics',['divider'])}${group('presetGroupDynamic',['rc','rc-high-pass','rc-loaded','rc-cascade','rl','rlc'])}${group('presetGroupActive',['vcvs'])}${group('presetGroupPassiveFilters',['rc3-low-pass','rc3-high-pass','rlc-band-pass','rlc-notch'])}${group('presetGroupActiveFilters',['butterworth2-low-pass','butterworth2-high-pass'])}${group('presetGroupImpedance',['rc-impedance-ladder','rl-impedance-ladder'])}${group('presetGroupResistor',['res-series','res-star','res-bridge'])}${group('presetGroupPort',['port-t','port-rc-section','port-rc-cascade'])}${group('presetGroupDiode',['diode-single','diode-series','diode-pair','diode-rc','diode-rc-step','diode-rc-biased-sine','half-wave-rectifier','half-wave-rectifier-rc'])}`;
   const preset = presets.find(p => p.id === state.presetId);
   const modified = preset && JSON.stringify(state.document) !== JSON.stringify(preset.document);
   byId('circuit-status').textContent = state.presetId ? t(modified ? 'circuitModified' : 'circuitPreset') : t('circuitCustom');
@@ -151,6 +153,10 @@ function waveformFields(s: SourceValue): string {
   return `${field(t('timeValue'),'waveform.value',s.id,w?.type === 'constant' ? w.value : s.dc,sourceUnit(s.id))}<p class="muted small">${t('timeSeparate')}</p>`;
 }
 function renderSources(): void {
+  if(isBjtDocument(state.document)) {
+    byId('source-editor').innerHTML=state.document.experiment.sources.map(s=>`<div class="source-block"><h3>${e(t('sourceHeading',{id:s.id,unit:sourceUnit(s.id)}))}</h3><div class="field-row three">${field(t('dcValue'),'source.dc',s.id,s.dc,sourceUnit(s.id))}${field(t('acReal'),'source.ac.re',s.id,s.ac?.re??0,`${sourceUnit(s.id)} RMS`)}${field(t('acImaginary'),'source.ac.im',s.id,s.ac?.im??0,`${sourceUnit(s.id)} RMS`)}</div></div>`).join('')+`<p class="soft-note">${t('bjtUnavailable')}</p>`;
+    return;
+  }
   const blocks = state.document.experiment.sources.map(s => `<div class="source-block"><h3>${e(t('sourceHeading',{id:s.id,unit:sourceUnit(s.id)}))}</h3><div class="field-row three">${field(t('dcValue'),'source.dc',s.id,s.dc,sourceUnit(s.id))}${field(t('acReal'),'source.ac.re',s.id,s.ac?.re ?? 0,`${sourceUnit(s.id)} RMS`)}${field(t('acImaginary'),'source.ac.im',s.id,s.ac?.im ?? 0,`${sourceUnit(s.id)} RMS`)}</div>${selectField(t('transientWaveform'),'waveform.type',s.id,[{value:'constant',label:t('constant')},{value:'step',label:t('scheduledStep')},{value:'sinusoid',label:t('sinusoid')}],s.waveform?.type ?? 'constant')}${waveformFields(s)}</div>`).join('');
   const initial = state.document.experiment.initial;
   const stored = state.document.circuit.components.filter(c => c.type === 'C' || c.type === 'L');
@@ -162,8 +168,12 @@ function renderInspector(): void {
   byId('component-list').innerHTML = `<div class="component-list">${c.map(d => `<button type="button" class="component-pill${state.selectedComponent === d.id ? ' active' : ''}" data-component="${e(d.id)}" aria-pressed="${state.selectedComponent === d.id}">${e(d.id)} <span class="muted">${e(d.type)}</span></button>`).join('')}</div>`;
   const selected = c.find(d => d.id === state.selectedComponent);
   if (!selected) { byId('component-editor').innerHTML = `<p class="muted small">${t('inspectHint')}</p>`; return; }
+  if(selected.type==='Q') {
+    byId('component-editor').innerHTML=`<div class="editor-card"><h3>${e(selected.id)} · ${selected.model.polarity.toUpperCase()}</h3><p>c=${e(selected.c)}; b=${e(selected.b)}; e=${e(selected.e)}</p><p>${t('bjtConvention')}</p><div class="controls-grid">${field(t('bjtIs'),'bjt.transportSaturationCurrentA',selected.id,selected.model.transportSaturationCurrentA,'A',true)}${field(t('bjtBetaF'),'bjt.betaForward',selected.id,selected.model.betaForward,'',true)}${field(t('bjtBetaR'),'bjt.betaReverse',selected.id,selected.model.betaReverse,'',true)}${field(t('diodeTemperature'),'bjt.temperatureK',selected.id,selected.model.temperatureK,'K',true)}</div>${bjtMetrics(selected.id,calculator.currentBjtBias(state))}</div>`;
+    return;
+  }
   const currentDocument = state.document;
-  const assembly = isNonlinearDocument(currentDocument)
+  const assembly = isBjtDocument(currentDocument) ? nonlinearUnknownCount(currentDocument)<=64 ? assembleBjtSystem(currentDocument).core.linear : null : isNonlinearDocument(currentDocument)
     ? nonlinearUnknownCount(currentDocument) <= 64
       ? assembleDiodeSystem(currentDocument).linear : null
     : assemble(currentDocument.circuit);
@@ -195,7 +205,7 @@ function table(items: { label:string; value:number; unit:string }[]): string {
   return `<div class="table-wrap"><table class="result-table"><thead><tr><th>${t('quantity')}</th><th>${t('selectedValue')}</th></tr></thead><tbody>${items.map(item => `<tr><td>${e(item.label)}</td><td>${fmt(item.value)} ${e(item.unit)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function dcContent(assembly: Assembly, dc: AnalysisResult): string {
-  if (state.document.circuit.schemaVersion === 2) return `<p class="warning">${t('diodeUnavailableTransform')}</p>`;
+  if (!isLinearDocument(state.document)) return `<p class="warning">${t('diodeUnavailableTransform')}</p>`;
   if (dc.status !== 'ok') return `<div class="warning" role="status">${statusSummary(dc.status)}</div>`;
   const nodes = assembly.unknowns.filter(x => x.id.startsWith('V(')).map(x => ({label:x.id,value:dc.unknowns[x.id]!.value.re,unit:'V'}));
   const u = inputValues(assembly,state.document.experiment,'dc');
@@ -262,13 +272,13 @@ function frequencyContent(panel: PanelConfig, result: Extract<PanelResult,{type:
   const acInputs = state.document.experiment.sources.map(s => `${s.id}=${fmt(s.ac?.re ?? 0)}${(s.ac?.im ?? 0) < 0 ? '' : '+'}${fmt(s.ac?.im ?? 0)}j ${sourceUnit(s.id)} RMS`).join('; ');
   const ac = result.ac, observation = ac.status === 'ok' ? ac.observations[panel.output] : undefined;
   const acText = observation ? `${fmt(observation.value.re)}${observation.value.im < 0 ? '' : '+'}${fmt(observation.value.im)}j ${observation.unit} RMS` : statusSummary(ac.status);
-  const alg = result.algebraic.status === 'ok' ? `<strong>${t('algebraicTitle')}</strong> · ${e(t('algebraicFormula',{n0:fmt(result.algebraic.numerator[0]),n1:fmt(result.algebraic.numerator[1]),d0:fmt(result.algebraic.denominator[0]),d1:fmt(result.algebraic.denominator[1]),unit:result.unit,root:fmt(result.algebraic.denominatorRoot)}))}` :
+  const alg = 'bjt' in result ? e(t('bjtFrequencyNote')) : result.algebraic.status === 'ok' ? `<strong>${t('algebraicTitle')}</strong> · ${e(t('algebraicFormula',{n0:fmt(result.algebraic.numerator[0]),n1:fmt(result.algebraic.numerator[1]),d0:fmt(result.algebraic.denominator[0]),d1:fmt(result.algebraic.denominator[1]),unit:result.unit,root:fmt(result.algebraic.denominatorRoot)}))}` :
     e(t('algebraicUnavailable',{reason:algebraicSummary(result.algebraic.reason)}));
   const incremental=result.incremental;
   const tangentDrawing=incremental?diodeTangentSchematic(state,incremental.tangent.document):null;
   const provenance=incremental&&isNonlinearDocument(state.document)
     ? tangentProvenanceHtml(state.document,incremental.tangent.document,incremental.bias) : '';
-  return `<p class="analysis-note">${incremental?t('diodeSmallSignalIntro'):e(t('transferIntro',{input:panel.input,output:panel.output,unit:result.unit}))}</p><div class="plot-grid">${plot(mag,{title:t('magnitude'),xLabel:t('frequencyAxis'),yLabel:t('magnitudeWithUnit',{unit:dim ? 'dB' : result.unit}),xLog:true})}${plot(phase,{title:t('phase'),xLabel:t('frequencyAxis'),yLabel:t('phaseWithUnit'),xLog:true,color:'orange'})}</div>${failed.length ? `<p class="warning">${t('failedFrequency',{count:failed.length,reason:statusSummary(failed[0]!.status)})}</p>` : ''}${zero.length ? `<p class="warning">${t('zeroFrequency',{count:zero.length})}</p>` : ''}<details class="explanation"><summary>${t('panelExplanation')}</summary>${incremental?`<p>${t('diodeConfiguredAc')}</p>`:''}<p>${e(t('acSummary',{frequency:fmt(panel.inspectHz),sources:acInputs || t('noSourcesShort'),output:acText}))}</p><p class="soft-note">${alg}</p>${incremental?`<details><summary>${t('diodeTangentPreview')}</summary>${provenance}${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${e(JSON.stringify(incremental.tangent.document.circuit,null,2))}</pre>`}</details>`:''}</details>`;
+  return `<p class="analysis-note">${'bjt' in result?t('bjtFrequencyNote'):incremental?t('diodeSmallSignalIntro'):e(t('transferIntro',{input:panel.input,output:panel.output,unit:result.unit}))}</p><div class="plot-grid">${plot(mag,{title:t('magnitude'),xLabel:t('frequencyAxis'),yLabel:t('magnitudeWithUnit',{unit:dim ? 'dB' : result.unit}),xLog:true})}${plot(phase,{title:t('phase'),xLabel:t('frequencyAxis'),yLabel:t('phaseWithUnit'),xLog:true,color:'orange'})}</div>${failed.length ? `<p class="warning">${t('failedFrequency',{count:failed.length,reason:statusSummary(failed[0]!.status)})}</p>` : ''}${zero.length ? `<p class="warning">${t('zeroFrequency',{count:zero.length})}</p>` : ''}<details class="explanation"><summary>${t('panelExplanation')}</summary>${incremental?`<p>${t('diodeConfiguredAc')}</p>`:''}<p>${e(t('acSummary',{frequency:fmt(panel.inspectHz),sources:acInputs || t('noSourcesShort'),output:acText}))}</p><p class="soft-note">${alg}</p>${incremental?`<details><summary>${t('diodeTangentPreview')}</summary>${provenance}${tangentDrawing?`<div class="schematic-svg">${tangentDrawing.html}</div>`:`<pre class="table-wrap">${e(JSON.stringify(incremental.tangent.document.circuit,null,2))}</pre>`}</details>`:''}</details>`;
 }
 function transientContent(panel: PanelConfig, result: Extract<PanelResult,{type:'transient'}>): string {
   const time = result.time, output = result.assembly.outputs.find(o => o.id === panel.output)!;
@@ -437,12 +447,14 @@ function renderPanel(panel: PanelConfig, index: number): string {
       panel.pending.duration !== undefined || panel.pending.step !== undefined ? t('transientSettingsInvalid') :
       augmentedTransientUnknowns(state.document as import('../src/nonlinear-model.js').NonlinearDocument) > 64 ? t('transientTooLarge') :
       transientIntervalBound(state.document as import('../src/nonlinear-model.js').NonlinearDocument,panel.duration,panel.step) > 3000 ? t('transientIntervalLimit') : null : null;
-    content = nonlinearTime ? transientResultHtml(panel.id,state.document as import('../src/nonlinear-model.js').NonlinearDocument,
+    content = isBjtDocument(state.document) && !['dc','frequency','equations'].includes(panel.type) ? `<p class="warning" role="status">${t('bjtUnavailable')}</p>` : nonlinearTime ? transientResultHtml(panel.id,state.document as import('../src/nonlinear-model.js').NonlinearDocument,
       panel.output,panel.duration,panel.step,transientRuns.get(panel.id),panel.transientSampleIndex,
       panel.transientOverlay,transientRuns.activePanelId !== null && transientRuns.activePanelId !== panel.id,
       timeBlocked,panel.transientEventsOpen,panel.transientDiagnosticsOpen) :
       panel.selectionNeeded ? `<p class="warning" role="status">${t('panelSelectionNeeded',{field:t(panel.selectionNeeded==='input'?'independentInput':panel.selectionNeeded==='output'?'measuredOutput':panel.selectionNeeded==='diode'?'diodeSelected':panel.selectionNeeded==='externalDrive'?'portExternal':'onePortPositive')})}</p>` : !result ? `<p class="warning">${t('resultNeedsValid')}</p>` :
       result.type==='dc' ? dcContent(result.assembly,result.dc) :
+      result.type==='bjt-dc'||result.type==='bjt-equations' ? bjtDcHtml(result.bias,result.type==='bjt-equations') :
+      result.type==='bjt-unavailable' ? `<p class="warning">${result.reason==='unsupported'?t('bjtUnavailable'):e(t('diodeBiasFailure',{reason:diodeFailureReason(result.reason)}))}</p>` :
       result.type==='nonlinear-dc' ? nonlinearDcContent(panel,result) :
       result.type==='frequency' ? frequencyContent(panel,result) :
       result.type==='transient' ? transientContent(panel,result) :
@@ -504,9 +516,9 @@ document.addEventListener('visibilitychange',()=>{
   transientRuns.reconcile(state,workspace,!document.hidden);
   if (!document.hidden && workspace.view==='analyze') renderPanels();
 });
-function validatedChange(): void {
+function validatedChange(preserveInspectorDrafts=false): void {
   const focused = (document.activeElement as HTMLElement | null)?.id;
-  inputDrafts.clear(); inputIssues.clear(); reconcilePanels(workspace,state); renderAll();
+  if(!preserveInspectorDrafts){inputDrafts.clear(); inputIssues.clear();} reconcilePanels(workspace,state); renderAll();
   if (focused) document.getElementById(focused)?.focus({preventScroll:true});
 }
 function openView(view: WorkspaceView): void {
@@ -551,6 +563,11 @@ function editField(target: HTMLInputElement | HTMLSelectElement): void {
     if(kind==='component'){
       const c=d.circuit.components.find(c=>c.id===id);if(!c)throw new Error('Unknown component');
       if('value' in c)c.value=value;else if('gain' in c)c.gain=value;
+    } else if(kind.startsWith('bjt.')) {
+      const c=d.circuit.components.find(c=>c.id===id);
+      const parameter=kind.slice(4);
+      if(!c||c.type!=='Q'||!['transportSaturationCurrentA','betaForward','betaReverse','temperatureK'].includes(parameter))throw new Error('Invalid Q parameter');
+      Object.assign(c.model,{[parameter]:value});
     } else if(kind.startsWith('diode.')) {
       const c=d.circuit.components.find(c=>c.id===id);
       if(!c||c.type!=='D')throw new Error('Unknown diode');
@@ -574,7 +591,8 @@ function editField(target: HTMLInputElement | HTMLSelectElement): void {
     }
   });
   if(!result.ok){inputIssues.set(key,'documentRejected');inputDrafts.set(key,target.value);renderAll();return;}
-  validatedChange();
+  inputDrafts.delete(key); inputIssues.delete(key);
+  validatedChange(true);
 }
 document.addEventListener('input',event=>{
   const target=event.target;
@@ -605,6 +623,11 @@ document.addEventListener('input',event=>{
 // pending value is already recorded by `input`; commit it when focus leaves.
 document.addEventListener('focusout', event => {
   const target = event.target;
+  if (target instanceof HTMLInputElement && target.dataset.kind &&
+      inputDrafts.has(`${target.dataset.kind}:${target.dataset.id??''}`)) {
+    editField(target);
+    return;
+  }
   if (!(target instanceof HTMLInputElement) || !target.dataset.panelField) return;
   const panel = workspace.panels.find(candidate => candidate.id === target.dataset.panelId);
   if (!panel || panel.pending[target.dataset.panelField] === undefined) return;
