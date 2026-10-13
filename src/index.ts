@@ -22,3 +22,6 @@ export * from './rational-function.js';
 export * from './rc-synthesis.js';
 export * from './synthesis-netlist.js';
 export * from './synthesis-verification.js';
+export * from './foster-decomposition.js';
+export * from './foster-netlist.js';
+export * from './foster-synthesis.js';

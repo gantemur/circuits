@@ -199,6 +199,37 @@ The result has three independent statuses:
 - `native`: `generated` with strictly validated, round-tripped source-free v1 `document`, ordered `{p:'port',q:'0'}` and physical element records; otherwise `unavailable` with reason. Each element records normalized and SI rational values, binary64 value, exact rounding discrepancy and relative-error estimate. All capacitor initial values are zero. Exact traces and certificates are outside native JSON.
 - `verification`: `passed`, `unresolved`, or `mismatch`, with partial/completed samples. Each completed sample includes s in 1/s, measured Z in ohms and Y in siemens, normalized comparisons, both full MNA solutions/diagnostics, and RMS power checks where applicable. A native circuit is numerically verified only when mathematics is certified, native generation succeeds and verification passes.
 
-Default limits: raw degree 16, reduced numerator/denominator degree 8, 1024 characters/string, 32768 total input characters, decimal exponent magnitude 2048, intermediate integers8192 bits, and 1000000 charged operations. Overrides may only lower these bounds. `ExactBudget`, exact rational and polynomial primitives are exported for teaching/tests; low-level helpers require normalized rational operands and ascending polynomial arrays. `generateRcNetlist` expects a certified positive alternating ladder, and `verifyRcRealization` expects its source-free RC v1 document with `port`/`0`, canonical exact impedance target and positive reference scales. The high-level entry is the checked public request boundary. Expected high-level failures use typed results; unexpected internal invariant failures remain exceptions.
+Default limits: raw degree 16, reduced numerator/denominator degree 8, 1024 characters/string, 32768 total input characters, decimal exponent magnitude 2048, intermediate integers 8192 bits, and 1000000 charged operations. Overrides may only lower these bounds. `ExactBudget`, exact rational and polynomial primitives are exported for teaching/tests; low-level helpers require normalized rational operands and ascending polynomial arrays. `generateRcNetlist` expects a certified positive alternating ladder, and `verifyRcRealization` expects its source-free RC v1 document with `port`/`0`, canonical exact impedance target and positive reference scales. The high-level entry is the checked public request boundary. Expected high-level failures use typed results; unexpected internal invariant failures remain exceptions.
 
 See [the specification](PHASE_5A1_SPECIFICATION.md) for the theorem, trace and limitations. Run `npm run demo:rc-synthesis`. This adds no native fields, browser workspace, Foster algorithm, root finder, or changes to existing solvers.
+
+## Phase 5A2: exact RC Foster I / II (headless, task branch)
+
+`synthesizeRcFoster(request, optionalLowerBudgets)` is separate from the accepted `synthesizeRc` Cauer API. Two strict forms prevent confusion between impedance residues and admittance branch coefficients:
+
+```js
+const fosterI = synthesizeRcFoster({
+  method: 'foster-I', quantity: 'impedance',
+  referenceResistanceOhm: '1000', referenceAngularFrequencyPerSecond: '1000',
+  decomposition: { rInfinity: '1', kZero: '3/2',
+    terms: [{ pole: '2', residue: '1/2' }] },
+  target: { numerator: ['3', '4', '1'], denominator: ['0', '2', '1'] },
+});
+const fosterII = synthesizeRcFoster({
+  method: 'foster-II', quantity: 'admittance',
+  referenceResistanceOhm: '1000', referenceAngularFrequencyPerSecond: '1000',
+  decomposition: { gZero: '0', cInfinity: '0',
+    terms: [{ pole: '1', coefficient: '1/2' }, { pole: '3', coefficient: '1/2' }] },
+  target: { numerator: ['0', '2', '1'], denominator: ['3', '4', '1'] },
+});
+```
+
+`target` is optional and belongs to the request's quantity. Its exact identity must pass before certification. A valid target-only request with `decomposition` omitted returns `decomposition-unavailable`: polynomial factorization, especially irrational poles, is not attempted. Unknown fields or malformed representations return `invalid-input`. Endpoint values must be nonnegative; every finite rate and coefficient must be strictly positive. Negative entries are rejected even if duplicates would cancel them. Exact duplicates combine and retain source indices; nearly equal rates remain separate.
+
+The three output stages follow Phase 5A1:
+
+- `mathematical`: `certified`, `boundary`, `invalid-decomposition`, `invalid-input`, `decomposition-unavailable`, or `resource-limit`. A certificate contains canonical decomposition, `poleGroups`, exact `sections`, `reconstructed` in the request domain, `impedanceTarget`, `targetEvidence`, and separately labeled `limits` and `impedanceLimits`. Sections retain their connection, normalized R/C values, exact contribution/cumulative function, identity and native component IDs when available. Zero impedance/admittance produces short/open with no native stand-in.
+- `native`: the existing generated/unavailable result, including source-free v1 document, `port`/`0`, physical element values, discrepancies and zero capacitor initial values. Foster I is a series chain of sections, Foster II a parallel collection of branches.
+- `verification`: the unchanged physical check result with seven Z/Y sample pairs, full solver diagnostics and RMS-only signed-power evidence. The native realization is verified only when all three stages succeed. Numerical limits do not revoke exact certificates.
+
+All Phase 5A1 ceilings/tolerances remain unchanged. Raw finite terms are additionally capped at `rawDegree` (default 16); reconstructed numerator/denominator degree is at most 8. Budget failures name the stage. Low-level `parseFoster`, `fosterSections`, `generateFosterNetlist`, `convertRcElement` and `validateRcNetwork` are exposed for teaching/testing, with their documented validated-input preconditions; use the high-level entry for untrusted requests. Run `npm run demo:foster` to compare the three physical realizations. See [the Foster specification](PHASE_5A2_SPECIFICATION.md).
