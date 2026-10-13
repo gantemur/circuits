@@ -1,7 +1,7 @@
 import type { ExactLimit } from '../src/rational-function.js';
 import { synthesisWorkerSource } from './synthesis-worker-source.js';
-import { SynthesisSession, synthesisMethods, synthesisJson, synthesisCsv, adoptSynthesis, synthesisPortHandoff,
-  type SynthesisMethod,type SynthesisView,type SynthesisDraft } from './synthesis-state.js';
+import { SynthesisSession, synthesisAdoptionContext, synthesisAdoptionCurrent, synthesisMethods, synthesisJson, synthesisCsv, adoptSynthesis, synthesisPortHandoff,
+  type SynthesisAdoptionContext,type SynthesisMethod,type SynthesisView,type SynthesisDraft } from './synthesis-state.js';
 import { st,type SynthesisText } from './synthesis-copy.js';
 import { synthesisDiagram } from './synthesis-diagram.js';
 import { escapeHtml } from './schematic.js';
@@ -62,15 +62,17 @@ export function synthesisResultHtml(view:SynthesisView,current:boolean):string {
   if(r.verification.samples.length){
     html+=`<h4>${e(st('samples'))}</h4><div class="synthesis-scroll"><table><thead><tr><th>s (1/s)</th><th>Z (Ω)</th><th>Y (S)</th><th>${e(st('difference'))} Z; Y</th></tr></thead><tbody>${r.verification.samples.map(s=>`<tr><td>${e(cx(s.sPerSecond))}</td><td>${e(cx(s.impedanceOhm))}</td><td>${e(cx(s.admittanceSiemens))}</td><td>${e(fmt(s.normalizedImpedance.difference))} / ${e(fmt(s.normalizedImpedance.limit))}; ${e(fmt(s.normalizedAdmittance.difference))} / ${e(fmt(s.normalizedAdmittance.limit))}</td></tr>`).join('')}</tbody></table></div>
       <p>${e(st('power'))}: ${r.verification.samples.flatMap(s=>s.power).filter(p=>p.passed).length}/${r.verification.samples.flatMap(s=>s.power).length}</p>
-      <button class="button quiet" data-syn-csv="${view.method}" ${!current?'disabled':''}>${e(st('csv'))}</button>`;
+`;
   }
+  html+=`<button class="button quiet" data-syn-csv="${view.method}" ${!current?'disabled':''}>${e(st('csv'))}</button>`;
   const diagnostics={mathematical:m,native:r.native.status==='unavailable'?r.native:null,verification:r.verification};
   return html+`<details><summary>${e(st('details'))}</summary><pre>${e(JSON.stringify(diagnostics,null,2))}</pre></details></article>`;
 }
-interface Actions {hasDrafts:()=>boolean;changed:()=>void;openAnalyze:(id:string)=>void;download:(name:string,text:string,type:string)=>void}
+interface Actions {hasPendingEdits?:()=>boolean;hasDrafts:()=>boolean;changed:()=>void;openAnalyze:(id:string)=>void;download:(name:string,text:string,type:string)=>void}
 export class SynthesisUI {
   readonly session:SynthesisSession;
-  private confirmation:{method:SynthesisMethod;token:number}|null=null;
+  private confirmation:SynthesisAdoptionContext|null=null;
+  private adoptionNotice:'obsoleteConfirmation'|'pendingEdits'|null=null;
   private adopted:{snapshot:string;frequencyHz:number}|null=null;
   constructor(private root:HTMLElement,private state:()=>LabState,private workspace:WorkspaceState,private actions:Actions){
     this.session=new SynthesisSession(()=>{
@@ -97,7 +99,7 @@ export class SynthesisUI {
       if(target.closest('#synthesis-run')){this.confirmation=null;this.session.start();return;}
       if(target.closest('#synthesis-cancel')){this.session.cancel();return;}
       const apply=target.closest<HTMLElement>('[data-syn-apply]');if(apply){this.apply(apply.dataset.synApply as SynthesisMethod);return;}
-      if(target.closest('#synthesis-confirm')&&this.confirmation){const c=this.confirmation;if(this.session.current(c.method)?.token===c.token)this.apply(c.method,true);return;}
+      if(target.closest('#synthesis-confirm')&&this.confirmation){this.apply(this.confirmation.method,true);return;}
       if(target.closest('#synthesis-no')){this.confirmation=null;this.renderResults();return;}
       const json=target.closest<HTMLElement>('[data-syn-json]');if(json){const method=json.dataset.synJson as SynthesisMethod;const value=synthesisJson(this.session,method);if(value)this.actions.download(`synthesis-${method}.json`,value,'application/json');return;}
       const csv=target.closest<HTMLElement>('[data-syn-csv]');if(csv){const method=csv.dataset.synCsv as SynthesisMethod;const value=synthesisCsv(this.session,method);if(value)this.actions.download(`synthesis-${method}.csv`,value,'text/csv');return;}
@@ -110,8 +112,16 @@ export class SynthesisUI {
   }
   leave():void{this.session.cancel();}
   private apply(method:SynthesisMethod,confirmed=false):void{
-    const result=adoptSynthesis(this.session,method,this.state(),this.actions.hasDrafts(),confirmed);
-    if(result.status==='confirmation-required')this.confirmation={method,token:this.session.current(method)!.token};
+    // Inspector/source edits belong to the current document. Unlike independent
+    // Form/JSON drafts they cannot safely be carried into a different topology.
+    if(this.actions.hasPendingEdits?.()){
+      this.confirmation=null;this.adoptionNotice='pendingEdits';this.renderResults();return;
+    }
+    this.adoptionNotice=null;
+    const context=confirmed?this.confirmation??undefined:undefined;
+    const result=adoptSynthesis(this.session,method,this.state(),this.actions.hasDrafts(),confirmed,context);
+    if(result.status==='stale'){this.confirmation=null;this.adoptionNotice='obsoleteConfirmation';}
+    if(result.status==='confirmation-required')this.confirmation=synthesisAdoptionContext(this.session,method,this.state());
     if(result.status==='applied'){this.confirmation=null;this.adopted={snapshot:result.snapshot,frequencyHz:result.frequencyHz};this.actions.changed();}
     this.renderResults();
   }
@@ -133,12 +143,16 @@ export class SynthesisUI {
   }
   private renderResults():void{
     const state=this.root.querySelector('#synthesis-state'),results=this.root.querySelector('#synthesis-results'),adopt=this.root.querySelector('#synthesis-adoption');if(!state||!results||!adopt)return;
+    if(this.confirmation&&!synthesisAdoptionCurrent(this.confirmation,this.session,this.state())){
+      this.confirmation=null;this.adoptionNotice='obsoleteConfirmation';
+    }
     const status=this.session.status;
     state.innerHTML=`<p>${e(st(status==='execution-unavailable'?'unavailable':status==='execution-error'?'execution':status))}</p>${this.session.error?`<details><summary>${e(st('details'))}</summary><pre>${e(this.session.error)}</pre></details>`:''}${this.session.lastAccepted?`<details><summary>${e(st('accepted'))}</summary><code>${e(expression(this.session.lastAccepted))}</code></details>`:''}`;
     (this.root.querySelector('#synthesis-run') as HTMLButtonElement).disabled=status==='running'||!this.session.selected.length;
     (this.root.querySelector('#synthesis-cancel') as HTMLButtonElement).disabled=status!=='running';
     results.innerHTML=[...this.session.views.values()].filter(v=>v.result).map(v=>synthesisResultHtml(v,!!this.session.current(v.method))).join('')||`<p>${e(st('empty'))}</p>`;
     adopt.innerHTML=this.confirmation?`<div class="warning"><p>${e(st('confirm'))}</p><button class="button" id="synthesis-confirm">${e(st('yes'))}</button><button class="button quiet" id="synthesis-no">${e(st('no'))}</button></div>`:'';
+    if(this.adoptionNotice)adopt.innerHTML+=`<p class="warning" role="status">${e(st(this.adoptionNotice))}</p>`;
     if(this.adopted){
       const current=exportNative(this.state())===this.adopted.snapshot;
       const full=this.workspace.panels.length>=3;

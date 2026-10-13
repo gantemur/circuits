@@ -66,6 +66,7 @@ const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => sta
   openAnalyze: () => openView('analyze'),
 });
 const synthesisUI = new SynthesisUI(byId('synthesize-view'), () => state, workspace, {
+  hasPendingEdits: () => inputDrafts.size>0,
   hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty,
   changed: () => validatedChange(),
   openAnalyze: id => { openView('analyze'); document.querySelector<HTMLElement>(`[data-panel="${id}"]`)?.scrollIntoView({block:'start'}); },

@@ -105,8 +105,24 @@ export function synthesisJson(session:SynthesisSession,method:SynthesisMethod,fo
   if(forApply&&result.verification.status!=='passed')return null;
   return serializeDocument(result.native.document);
 }
-export function adoptSynthesis(session:SynthesisSession,method:SynthesisMethod,state:LabState,hasDrafts:boolean,confirmed=false):
+/** A confirmation authorizes one result against one applied-document context.
+ * Identity and revision reject a change-and-restore, even when JSON is equal. */
+export interface SynthesisAdoptionContext {
+  method: SynthesisMethod; token: number; document: LabState['document'];
+  revision: number; native: string;
+}
+export function synthesisAdoptionContext(session:SynthesisSession,method:SynthesisMethod,state:LabState):SynthesisAdoptionContext|null {
+  const view=session.current(method);
+  if(!view)return null;
+  return {method,token:view.token,document:state.document,revision:state.revision,native:exportNative(state)};
+}
+export function synthesisAdoptionCurrent(context:SynthesisAdoptionContext,session:SynthesisSession,state:LabState):boolean {
+  return context.document===state.document && context.revision===state.revision &&
+    context.native===exportNative(state) && session.current(context.method)?.token===context.token;
+}
+export function adoptSynthesis(session:SynthesisSession,method:SynthesisMethod,state:LabState,hasDrafts:boolean,confirmed=false,context?:SynthesisAdoptionContext):
   {status:'stale'|'confirmation-required'}|{status:'applied';snapshot:string;frequencyHz:number} {
+  if(context&&(context.method!==method||!synthesisAdoptionCurrent(context,session,state)))return {status:'stale'};
   const json=synthesisJson(session,method,true);
   if(!json)return {status:'stale'};
   if(hasDrafts&&!confirmed)return {status:'confirmation-required'};
@@ -130,8 +146,28 @@ export function synthesisPortHandoff(workspace:WorkspaceState,state:LabState,sna
   workspace.layoutIsSuggested=false;
   return panel.id;
 }
+/** Each row carries all three overall statuses. A metadata-only row represents
+ * zero accepted samples without inventing a measurement. Samples remain a
+ * finite experiment record, never an all-frequency accuracy certificate. */
 export function synthesisCsv(session:SynthesisSession,method:SynthesisMethod):string|null {
-  const result=session.current(method)?.result;if(!result?.verification.samples.length)return null;
-  return ['s_real_per_s,s_imag_per_s,Z_real_ohm,Z_imag_ohm,Y_real_S,Y_imag_S,Z_normalized_difference,Y_normalized_difference',
-    ...result.verification.samples.map(s=>[s.sPerSecond.re,s.sPerSecond.im,s.impedanceOhm.re,s.impedanceOhm.im,s.admittanceSiemens.re,s.admittanceSiemens.im,s.normalizedImpedance.difference,s.normalizedAdmittance.difference].join(','))].join('\n');
+  const result=session.current(method)?.result;
+  if(!result)return null;
+  const cell=(value:string|number|boolean):string=>{
+    const text=String(value);
+    return /[",\r\n]/.test(text)?`"${text.replaceAll('"','""')}"`:text;
+  };
+  const row=(values:(string|number|boolean)[]):string=>values.map(cell).join(',');
+  const headers=['s_real_per_s','s_imag_per_s','Z_real_ohm','Z_imag_ohm','Y_real_S','Y_imag_S',
+    'Z_normalized_difference','Y_normalized_difference','Z_normalized_limit','Y_normalized_limit',
+    'Z_comparison_passed','Y_comparison_passed','method','mathematical_status','native_status',
+    'verification_status','verification_reason','experiment_kind','sample_index','record_type'];
+  const metadata=[method,result.mathematical.status,result.native.status,result.verification.status,result.verification.reason??''];
+  const rows=result.verification.samples.map((sample,index)=>row([
+    sample.sPerSecond.re,sample.sPerSecond.im,sample.impedanceOhm.re,sample.impedanceOhm.im,
+    sample.admittanceSiemens.re,sample.admittanceSiemens.im,
+    sample.normalizedImpedance.difference,sample.normalizedAdmittance.difference,
+    sample.normalizedImpedance.limit,sample.normalizedAdmittance.limit,
+    sample.normalizedImpedance.passed,sample.normalizedAdmittance.passed,...metadata,sample.kind,index,'sample']));
+  if(!rows.length)rows.push(row([...Array<string>(12).fill(''),...metadata,'','','metadata']));
+  return [row(headers),...rows].join('\n');
 }
