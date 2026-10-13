@@ -175,3 +175,30 @@ The kernel targets small dense networks. Numerical rank diagnostics are not a co
 `createBjtTangent(point,current)` requires the same strict circuit/model/DC fingerprint and rechecks the recorded point and Jacobian under the default row/regularity checks. A deliberately loose custom DC solution may consequently be unavailable as a tangent. It returns an owned headless descriptor with E, J, B, labeled coordinates and outputs `{id,unit,C0,C1,D0}` meaning `δy=(C0+s C1)δx+D0δu`. Q terminal derivatives and diode-current coordinates are retained; capacitor currents use C1. This is not a native-v1 equivalent circuit. All external loading, controls, storage and source coordinates remain.
 
 `solveBjtFrequency(tangent,s,options)` solves configured RMS AC increments; `bjtTransfer(tangent,inputId,observationId,s,options)` zeroes other independent increments and returns a unit-input derivative with explicit ratio units. For hertz use `s=complex(0,2*Math.PI*f)`. Both reconstruct ground KCL, check original row units, and return finite observations or a failure. A post-construction DC/model/document edit returns `unavailable/stale-bias`; a valid AC-only edit changes increments without rebiasing. Recreate the tangent for a new operating point. Returned matrices are inspectable data and should not be manually edited. Failures at creation also include `unverified-bias` and `numeric-range`; frequency solves retain linear failure diagnostics. No general pole/zero, intrinsic high-frequency, or stability claim follows from sampled response.
+
+## Phase 5A1: exact RC Cauer synthesis (headless, task branch)
+
+`synthesizeRc(input, optionalLowerBudgets)` accepts a strict synthesis request, separate from every native schema:
+
+```js
+const result = synthesizeRc({
+  quantity: 'impedance', // or 'admittance', reciprocated before extraction
+  method: 'cauer-infinity',
+  numerator: ['3', '4', '1'], // ascending powers of z=s/omegaRef
+  denominator: ['0', '2', '1'],
+  referenceResistanceOhm: '1000',
+  referenceAngularFrequencyPerSecond: '1000',
+});
+```
+
+Coefficients/scales must be exact strings: integer, signed fraction, decimal or bounded scientific notation. Whitespace and unknown fields are rejected. `Z=Rref*F(z)` or `Y=G(z)/Rref`. A zero numerator gives an exact short (impedance) or open (admittance); it yields no fake native element.
+
+The result has three independent statuses:
+
+- `mathematical`: `certified` with canonical target, monic canceled factor, exact elements, trace, reconstructed target, and exact DC/infinity limits; `not-rc` with the failed sign/degree stage; `boundary`; or `invalid-input`/`resource-limit` with reason/stage.
+- `native`: `generated` with strictly validated, round-tripped source-free v1 `document`, ordered `{p:'port',q:'0'}` and physical element records; otherwise `unavailable` with reason. Each element records normalized and SI rational values, binary64 value, exact rounding discrepancy and relative-error estimate. All capacitor initial values are zero. Exact traces and certificates are outside native JSON.
+- `verification`: `passed`, `unresolved`, or `mismatch`, with partial/completed samples. Each completed sample includes s in 1/s, measured Z in ohms and Y in siemens, normalized comparisons, both full MNA solutions/diagnostics, and RMS power checks where applicable. A native circuit is numerically verified only when mathematics is certified, native generation succeeds and verification passes.
+
+Default limits: raw degree 16, reduced numerator/denominator degree 8, 1024 characters/string, 32768 total input characters, decimal exponent magnitude 2048, intermediate integers8192 bits, and 1000000 charged operations. Overrides may only lower these bounds. `ExactBudget`, exact rational and polynomial primitives are exported for teaching/tests; low-level helpers require normalized rational operands and ascending polynomial arrays. `generateRcNetlist` expects a certified positive alternating ladder, and `verifyRcRealization` expects its source-free RC v1 document with `port`/`0`, canonical exact impedance target and positive reference scales. The high-level entry is the checked public request boundary. Expected high-level failures use typed results; unexpected internal invariant failures remain exceptions.
+
+See [the specification](PHASE_5A1_SPECIFICATION.md) for the theorem, trace and limitations. Run `npm run demo:rc-synthesis`. This adds no native fields, browser workspace, Foster algorithm, root finder, or changes to existing solvers.

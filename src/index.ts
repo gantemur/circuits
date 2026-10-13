@@ -17,3 +17,8 @@ export * from './bjt-document.js';
 export * from './bjt-system.js';
 export * from './bjt-operating-point.js';
 export * from './bjt-tangent.js';
+export * from './exact-rational.js';
+export * from './rational-function.js';
+export * from './rc-synthesis.js';
+export * from './synthesis-netlist.js';
+export * from './synthesis-verification.js';

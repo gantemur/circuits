@@ -91,3 +91,11 @@ European rectangular resistor symbols are the default for future schematics. Jun
 ## Reference baseline
 
 These conventions were checked against the author's supplied 508-page book assembly, especially Appendix C, Sections C.1–C.4, and the current master plan's notation conventions. Reference access and version tracking are described in `REFERENCE_WORKFLOW.md`.
+
+## Exact RC synthesis coordinates (Phase 5A1)
+
+Synthesis coefficients are exact rationals in dimensionless `z=s/omegaRef`. With positive reference scales in ohms and rad/s, impedance is `Z(s)=Rref F(z)` and admittance is `Y(s)=G(z)/Rref`; synthesis of admittance uses `F=1/G`. A normalized series resistance r becomes `Rref*r` ohms; a normalized shunt capacitance c becomes `c/(Rref*omegaRef)` farads. Exact coefficients and traces do not alter native document schemas.
+
+The Cauer-at-infinity certificate applies to rational Stieltjes RC impedances, not all positive-real functions. Cancel exact polynomial common factors; do not merge nearby poles or approximately canceled features. Exact zero impedance and zero admittance are short/open boundary results, respectively. DC/infinity limits are algebraic limits with pole order/coefficient where appropriate.
+
+Physical verification retains `V=Vp−Vq`, positive entering port current, q→p current injection and negated p→q clamp current. Imaginary-axis RMS absorbed power is `V*conj(I)`: resistor terms are `|VR|²/R` W and capacitor terms `−omega*C*|VC|²` var. Right-half-plane complex s checks use `K+sE` but make no sinusoidal-power claim. Exact reconstruction is distinct from binary64 circuit-response evidence and from model accuracy. See [the Phase 5A1 contract](PHASE_5A1_SPECIFICATION.md).
