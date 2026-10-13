@@ -6,11 +6,17 @@ await mkdir('dist', { recursive: true });
 const worker = await build({ entryPoints: ['web/nonlinear-worker.ts'], bundle: true,
   platform: 'browser', format: 'iife', target: 'es2022', write: false, logLevel: 'silent' });
 const workerSource = worker.outputFiles[0].text;
+const synthesisWorker = await build({ entryPoints: ['web/synthesis-worker.ts'], bundle: true,
+  platform: 'browser', format: 'iife', target: 'es2022', write: false, logLevel: 'silent' });
+const synthesisWorkerSource = synthesisWorker.outputFiles[0].text;
 await build({ entryPoints: ['web/main.ts'], bundle: true, platform: 'browser', format: 'esm',
   target: 'es2022', outfile: 'dist/app.js', sourcemap: true, logLevel: 'info',
-  plugins: [{ name: 'embedded-transient-worker', setup(bundle) {
-    bundle.onLoad({ filter: /worker-source\.ts$/ }, () => ({
+  plugins: [{ name: 'embedded-lab-workers', setup(bundle) {
+    bundle.onLoad({ filter: /(?:^|\/)worker-source\.ts$/ }, () => ({
       contents: `export const workerSource = ${JSON.stringify(workerSource)};`, loader: 'js',
+    }));
+    bundle.onLoad({ filter: /synthesis-worker-source\.ts$/ }, () => ({
+      contents: `export const synthesisWorkerSource = ${JSON.stringify(synthesisWorkerSource)};`, loader: 'js',
     }));
   } }] });
 // Same browser model, bundled without the DOM so Node integration tests exercise
@@ -71,3 +77,6 @@ await Promise.all([
 ]);
 
 await build({ entryPoints: ['test/support/bjt-presentation-entry.ts'], bundle: true, platform: 'neutral', format: 'esm', target:'es2022', outfile:'dist/bjt-presentation-test.js', logLevel:'silent' });
+
+await build({ entryPoints: ['test/support/synthesis-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/synthesis-test.js', logLevel: 'silent' });

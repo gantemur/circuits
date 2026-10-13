@@ -131,3 +131,22 @@ Keep exact IDs, SI units, equation symbols, native field names, CSV headers, sid
 | Local terminal derivatives | Туйлын орон нутгийн уламжлалууд | All nine entries ∂i/∂V, in S |
 
 NPN/PNP, Ebers–Moll equations, native IDs/JSON and SI symbols are invariant. σ changes polarity; every numerical terminal current still enters the transistor. Exponentially tiny derivative underflow is explained separately from exact zero current. The bilingual guides label baseline references explicitly; edited responses always come from the kernel.
+
+## Phase 5A3 synthesis terminology (task branch)
+
+The focused catalog is `web/synthesis-copy.ts`; the shared navigation label remains in `web/i18n.ts`. Exact rational strings, scientific IDs, units and formula constants never depend on language. Raw kernel diagnostics and certificate fields remain inside explicitly labeled English technical disclosures; status summaries, actions, limits and construction-step explanations are translated at render time.
+
+| English | Mongolian | Meaning |
+| --- | --- | --- |
+| Synthesize | Нийлэгжүүлэх | Construct a circuit from its prescribed terminal response |
+| Driving-point impedance | Оролтын импеданс | Port voltage divided by positive entering-port current |
+| Admittance | Адмиттанс | Reciprocal of impedance |
+| Exact rational number | Яг рационал тоо | Fraction represented exactly, not a binary64 approximation |
+| Cauer extraction | Кауэрын задаргаа | Alternating series R and shunt C extraction |
+| Foster decomposition | Фостерын задаргаа | Exact supplied pole/section coefficients |
+| Exact identity | Яг адилтгал | Polynomial reconstruction, distinct from sampled evidence |
+| Numerically unresolved | Тоон шалгалт шийдэгдээгүй | A numerical diagnostic did not establish agreement |
+| Pole order | Туйлын эрэмбэ | Endpoint asymptotic order, not a matrix pivot |
+| Rounding discrepancy | Тоймлолтын зөрүү | Exact SI rational versus its finite native value |
+
+Foster II coefficients refer to the positive `a*z/(z+p)` branch coefficients, not ordinary partial-fraction residues. The two finite-term labels explicitly distinguish impedance residue from admittance branch coefficient, while preserving the positive pole-rate convention.

@@ -1,5 +1,6 @@
 /** UI-only copy. Native documents, numerical results, and CSV stay locale-neutral. */
 export const en = {
+  workspaceSynthesize: "Synthesize",
   bjtGroup: "Transistors — Ebers–Moll",
   bjtCe: "NPN common-emitter amplifier",
   bjtFollower: "NPN emitter follower",
@@ -460,6 +461,7 @@ export const en = {
 } as const;
 
 export const mn = {
+  workspaceSynthesize: "Нийлэгжүүлэх",
   bjtGroup: "Транзистор — Эберс–Молл",
   bjtCe: "NPN ерөнхий эмиттертэй өсгөгч",
   bjtFollower: "NPN эмиттерийн дагагч",

@@ -1,3 +1,4 @@
+import { SynthesisUI } from './synthesis-ui.js';
 import { bjtDcHtml, bjtMetrics, mixedDiodeMetrics } from './bjt-presentation.js';
 import { assembleBjtSystem } from '../src/bjt-system.js';
 import { assemble, assembleDiodeSystem, complex, currentRow, inputValues, outputValue,
@@ -64,6 +65,12 @@ const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => sta
   loadExample: id => loadPreset(id),
   openAnalyze: () => openView('analyze'),
 });
+const synthesisUI = new SynthesisUI(byId('synthesize-view'), () => state, workspace, {
+  hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty,
+  changed: () => validatedChange(),
+  openAnalyze: id => { openView('analyze'); document.querySelector<HTMLElement>(`[data-panel="${id}"]`)?.scrollIntoView({block:'start'}); },
+  download,
+});
 const transformMethod: { method: 'dc' | 'resistor' } = { method: 'dc' };
 const panelTypes: PanelType[] = ['dc', 'frequency', 'transient', 'equations', 'port', 'port-frequency', 'diode-characteristic', 'dc-sweep'];
 const panelKeys: Record<PanelType, TranslationKey> = { dc: 'panelDc', frequency: 'panelFrequency', transient: 'panelTransient', equations: 'panelEquations', port: 'panelPort', 'port-frequency': 'panelPortFrequency',
@@ -98,7 +105,8 @@ function renderJson(): void {
   byId('json-error').textContent = conflict ? t('jsonConflict') : jsonIssue ? documentIssueText(jsonIssue, 'json') : '';
 }
 function renderView(): void {
-  for (const name of ['analyze', 'transform', 'editor'] as const) byId(`${name}-view`).hidden = workspace.view !== name;
+  if(workspace.view==='synthesize') synthesisUI.render();
+  for (const name of ['analyze', 'transform', 'synthesize', 'editor'] as const) byId(`${name}-view`).hidden = workspace.view !== name;
   byId('workspace-nav').hidden = workspace.view === 'editor';
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-view]'))) {
     button.setAttribute('aria-current', String(button.dataset.view === workspace.view));
@@ -115,7 +123,7 @@ function renderView(): void {
 }
 function renderGuide(): void {
   const root=byId('study-guide');
-  root.hidden=workspace.view==='editor';
+  root.hidden=workspace.view==='editor'||workspace.view==='synthesize';
   if(root.hidden)return;
   const origin=resistorUI.guideOrigin();
   const id=origin??state.presetId;
@@ -516,6 +524,7 @@ function renderAll(): void {
   byId('import-error').textContent=importIssue?documentIssueText(importIssue,'import'):'';
 }
 document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)synthesisUI.leave();
   sweeps.reconcile(state,workspace,!document.hidden);
   transientRuns.reconcile(state,workspace,!document.hidden);
   if (!document.hidden && workspace.view==='analyze') renderPanels();
@@ -526,10 +535,11 @@ function validatedChange(preserveInspectorDrafts=false): void {
   if (focused) document.getElementById(focused)?.focus({preventScroll:true});
 }
 function openView(view: WorkspaceView): void {
+  if(view!=='synthesize') synthesisUI.leave();
   if (workspace.view!=='editor') previousView=workspace.view;
   workspace.view=view; sweeps.reconcile(state,workspace,!document.hidden);
   transientRuns.reconcile(state,workspace,!document.hidden); renderAll();
-  const target = view==='editor' ? byId('return-workspace') : view==='analyze' ? byId('schematic-title') : byId('transform-method');
+  const target = view==='editor' ? byId('return-workspace') : view==='analyze' ? byId('schematic-title') : view==='synthesize' ? byId('synthesis-title') : byId('transform-method');
   target.setAttribute('tabindex','-1'); target.focus({preventScroll:true});
 }
 function loadPreset(id: string): void {

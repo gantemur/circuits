@@ -67,3 +67,25 @@
 
 /* BJT labels retain readable size; narrow views scroll the connected diagram locally. */
 .bjt-diagram{overflow-x:auto;max-width:100%}.circuit-overview .schematic-panel #schematic .bjt-diagram svg{min-width:760px;max-height:none}.bjt-label{font-size:15px}
+
+/* Synthesis is independent of the applied circuit. Wide math and drawings
+   scroll locally; controls and evidence cards remain usable at 320 px. */
+#synthesize-view { min-width: 0; }
+.synthesis-controls label { display: block; margin: .7rem 0; }
+.synthesis-controls input[type=text], .synthesis-controls textarea, .synthesis-controls select { width: 100%; min-width: 0; box-sizing: border-box; }
+.synthesis-controls input[type=checkbox] { width: auto; }
+.synthesis-controls fieldset { min-width: 0; }
+.synthesis-controls label.inline { display: inline-block; margin-right: 1rem; }
+.synthesis-decompositions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.synthesis-results { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; align-items: start; }
+.synthesis-card { min-width: 0; overflow-wrap: anywhere; }
+.synthesis-card pre { max-height: 24rem; overflow: auto; white-space: pre; }
+.synthesis-scroll { overflow-x: auto; max-width: 100%; }
+.synthesis-scroll table { white-space: nowrap; width: 100%; }
+.synthesis-svg { display: block; max-width: none; }
+.synthesis-svg path,.synthesis-svg rect { stroke: var(--ink,#12262b); stroke-width: 2; fill: none; }
+.synthesis-svg circle { fill: var(--ink,#12262b); }
+.synthesis-svg text { font-size: 14px; fill: var(--ink,#12262b); stroke: none; text-anchor: middle; }
+#synthesis-expression,.synthesis-formula { overflow-wrap: anywhere; }
+@media(max-width:1100px) { .synthesis-results { grid-template-columns: minmax(0,1fr); } }
+@media(max-width:600px) { .synthesis-decompositions { grid-template-columns: minmax(0,1fr); } .workspace-nav { flex-wrap:wrap; } }
