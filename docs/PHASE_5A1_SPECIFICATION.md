@@ -1,5 +1,7 @@
 # Phase 5A1 — exact rational RC Cauer synthesis
 
+**Release status:** Published with Phases 5A1–5A3 from accepted `55ba7cb77a88153fff706f18a62d3625848ca73b`. See the controlled publication record in [DECISIONS.md](DECISIONS.md). Task-stage instructions and verification records below are historical.
+
 This headless task starts from released `30c2857`. It changes no existing solver, native schema, nonlinear model or browser behavior. Foster synthesis and a Synthesize workspace are excluded.
 
 ## Input and theorem

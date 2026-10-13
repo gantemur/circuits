@@ -1,5 +1,7 @@
 # Phase 5A3 — browser RC synthesis laboratory
 
+**Release status:** Published with Phases 5A1–5A3 from accepted `55ba7cb77a88153fff706f18a62d3625848ca73b`. See the controlled publication record in [DECISIONS.md](DECISIONS.md). Task-stage instructions and verification records below are historical.
+
 Starts from accepted headless commit `59b4df7`; released main remains `30c2857`. Add a bilingual Synthesize workspace without changing kernel mathematics, schemas or numerical tolerances. No merge/deployment or LC/RL/general RLC work.
 
 ## State and execution

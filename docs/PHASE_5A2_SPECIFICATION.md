@@ -1,5 +1,7 @@
 # Phase 5A2 — exact rational RC Foster synthesis
 
+**Release status:** Published with Phases 5A1–5A3 from accepted `55ba7cb77a88153fff706f18a62d3625848ca73b`. See the controlled publication record in [DECISIONS.md](DECISIONS.md). Task-stage instructions and verification records below are historical.
+
 This headless task starts from accepted Phase 5A1 `ac6b6d2`. No existing arithmetic, solver tolerance, native schema or browser behavior is changed. No merge, publication, root finding, algebraic-number approximation or Synthesize UI is authorized.
 
 ## Strict request
