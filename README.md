@@ -163,3 +163,9 @@ No account, runtime server, or external AI API is required to use the built app.
 ## Licensing
 
 Original repository code and documentation are released under the [MIT license](LICENSE). The companion book, privately supplied references, and third-party device models are outside that grant. Future imported models must carry their own provenance and license information.
+
+**Phase 6A3a is a headless task-branch implementation:** the
+[portable project core](docs/PROJECT_FORMAT.md) pairs unchanged native scientific
+JSON with a strictly checked drawing. It supplies pure validation, reconstruction,
+export and saved-content comparison; browser Save/Open and persistent geometry
+controls are not yet implemented. The published application is unchanged.

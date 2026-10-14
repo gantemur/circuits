@@ -176,3 +176,18 @@ backward-Euler expectations test the generated topology through the unchanged
 kernel. Other cases test ownership, neutral geometry, invalid text, exact IDs,
 unsupported inputs, drawing warnings and bounds. Real Chrome evidence is recorded
 separately in DECISIONS; handler tests do not establish pointer/file-picker behavior.
+
+## Reading the Phase 6A3a portable project core
+
+Start with [PROJECT_FORMAT.md](PROJECT_FORMAT.md) and `web/project-types.ts`.
+`project-validation.ts` checks bounded JSON records, reconstructs wires with safe
+Maps, proves the native-node partition bijection, then runs the existing native
+candidate comparison. No coordinates enter connectivity. `project-format.ts`
+projects a completed graph into the file DTO without Apply and provides the
+separate saved-content key. Native values come from the existing adapter, never
+from placement records. The neutral test entry imports no browser UI.
+
+Read `test/support/project-fixtures.mjs` for independently declared terminal groups
+and placements; `test/project.test.mjs` checks retained physical anchors/geometry,
+corruption outcomes, repeated cycles, and independent divider/RC/RLC/bridge values.
+Source-free Cauer/Foster examples use the accepted generators and distinct layouts.

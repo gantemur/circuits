@@ -86,3 +86,7 @@ await build({ entryPoints: ['test/support/wiring-entry.ts'], bundle: true, platf
 
 await build({ entryPoints: ['test/support/wiring-ui-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/wiring-ui-test.js', logLevel: 'silent' });
+
+// Portable project core remains DOM-free and is not imported by the application.
+await build({ entryPoints: ['test/support/project-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/project-test.js', logLevel: 'silent' });

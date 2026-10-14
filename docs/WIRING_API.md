@@ -126,3 +126,13 @@ now compares `wiringMeaning` before and after, correcting Phase 6A1's conservati
 classification of wire subdivision. Representation-only edits remain dirty and
 undoable, even when the native meaning is unchanged. Public kernel/native schemas
 and numerical behavior are unchanged.
+
+## Phase 6A3a portable project core
+
+The headless APIs in `web/project-format.ts` validate, reconstruct, export and
+compare version-1 circuit-and-drawing envelopes. See [PROJECT_FORMAT.md](PROJECT_FORMAT.md)
+for exact fields, limits, diagnostics, topology bijection and future Open ownership.
+Native v1/v2/v3 formats and browser controls are unchanged. Export does not Apply;
+use the draft-aware export with all pending-text and gesture state. Invalid drawing
+results retain a successfully validated native document for a future explicit
+native-only recovery choice, never automatic repair.

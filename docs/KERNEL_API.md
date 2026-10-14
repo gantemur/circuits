@@ -241,3 +241,10 @@ It converts explicit ideal-wire graphs into the same strictly validated native v
 R/C/L/V/I documents. It does not change kernel exports, native schemas or numerical
 methods. See [WIRING_API.md](WIRING_API.md) for transaction, completion, history and
 ownership contracts; geometric drafts never become scientific JSON metadata.
+
+## Portable project data (Phase 6A3a, headless)
+
+[PROJECT_FORMAT.md](PROJECT_FORMAT.md) documents the separate portable project
+validator and graph reconstruction APIs in `web/project-format.ts`. These are
+editor data infrastructure, not part of the scientific kernel entry. Existing
+strict native scientific parsers and public analysis APIs remain unchanged.
