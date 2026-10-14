@@ -70,3 +70,30 @@ The third navigation item now leads to exact RC construction, not a placeholder.
 Explicit Run owns one dedicated embedded worker, sequentially executing selected methods. Cancel, edits, leaving the workspace and hiding the page terminate it and retire unfinished replies. Completed results distinguish exact certification, strict native generation and independent numerical verification. Method-specific edits stale that method's result; target or scale edits stale all. Old results cannot Apply or export. Compact generator drawings are limited to six components; unsupported arrangements retain the complete topology table.
 
 Apply requires all three evidence layers to succeed. Existing Form/JSON drafts require a confirmation and remain editable with stale-base warnings. Numerically unresolved certificates permit clearly warned native JSON inspection only. An explicit subsequent action adds a one-port frequency panel at `(port, 0)` and the verified reference frequency, or explicitly replaces the selected panel at the three-panel limit. Synthesis does not silently repurpose other panel settings or introduce a fictitious independent source. There is no Return operation in this milestone. Results are side by side on large displays and stacked on mobile; wide diagrams and numerical tables scroll locally.
+
+## Phase 6A2 review branch: Graphical editing
+
+[Phase 6A2](PHASE_6A2_SPECIFICATION.md) adds Graphical inside Edit circuit beside
+Form and JSON. All three retain independent drafts, invalid text and stale-base
+warnings; navigation and language switching apply nothing. Clean graphical work
+may follow a new applied document; geometry, pending text and unfinished wires
+count as dirty work. Apply validates against the live identity/revision/snapshot,
+uses the existing shared native import once, and checkpoints without discarding
+layout/history. A geometry-only Apply retains scientific identity and does not
+notify analysis consumers. Transform and Synthesize include Graphical in their
+existing draft confirmations.
+
+R/C/L/V/I palette and property controls cover exact IDs/labels, SI values,
+quarter-turn placement, DC/RMS AC/time sources, storage and observations. Endpoint
+lists provide keyboard alternatives to SVG clicks. Wiring requires explicit
+endpoints and a surviving-name choice for a merge; crossings never connect by
+geometry. Separate, split, attach, open/disconnect, naming/reference, copy/delete
+and history use the headless transactions. Unfinished wires cancel independently.
+Restore uncommitted text affects only Graphical text; Discard reloads Graphical.
+
+SVG has local scrolling, fit/pan/zoom and screen-CTM pointer conversion. Warnings
+and the exact table accompany ambiguous provisional layouts. Limits are 40
+components, 240 vertices, 320 edges, and 64 bends per route. Unsupported v1
+controlled sources and v2/v3 are preserved intact. Native export contains no
+layout, and there is no layout persistence. This section describes the review
+branch, not publication; older release evidence above remains historical.

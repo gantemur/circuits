@@ -112,3 +112,17 @@ contract against the shared authoritative state, never an obsolete copied wrappe
 Deferred: DOM integration, rendering/collision certification, localization of UI,
 sidecar persistence, mirroring, multi-terminal device support and graphical cleanup
 of obsolete free anchors. Native formats and production browser behavior are unchanged.
+
+## Phase 6A2 integration additions
+
+The browser uses `WiringSession` against a live `LabState` getter, rather than
+passing a copied authority to `applyWiring`. `checkpointWiring` records the actual
+applied identity, revision and snapshot after the shared validated transition.
+The existing headless Apply API remains available.
+
+`batch` groups non-nested operations into one atomic history entry (used for
+properties); `edit-label` edits optional device labels. Scientific classification
+now compares `wiringMeaning` before and after, correcting Phase 6A1's conservative
+classification of wire subdivision. Representation-only edits remain dirty and
+undoable, even when the native meaning is unchanged. Public kernel/native schemas
+and numerical behavior are unchanged.

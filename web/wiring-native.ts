@@ -132,3 +132,30 @@ export function nativeCandidate(graph: WiringGraph): { status: 'ok'; document: N
     return { status: 'invalid', diagnostics: [issue] };
   }
 }
+
+/** Stable electrical content, ignoring drawing subdivisions and object key order.
+ * For incomplete drafts retain exact text and completion rather than claiming a
+ * valid circuit. Nets are resolved from wires, never from drawing coordinates. */
+export function wiringMeaning(graph: WiringGraph): string {
+  const candidate = nativeCandidate(graph);
+  if (candidate.status === 'ok') return documentMeaning(candidate.document);
+  const names = netNames(graph);
+  const devices = graph.devices.map(device => ({ ...device,
+    terminals: device.terminals.map(terminal => ({ role: terminal.role,
+      node: names.get(terminal.vertex), completion: required(graph.vertices, terminal.vertex).kind === 'terminal'
+        ? (required(graph.vertices, terminal.vertex) as Extract<WiringGraph['vertices'][number], {kind:'terminal'}>).completion : 'invalid' })) }));
+  const observations = graph.observations.map(observation => observation.type === 'voltage'
+    ? { ...observation, p: names.get(observation.p), n: names.get(observation.n) } : observation);
+  return documentMeaning({ nodes: graph.names.map(anchor => anchor.name), devices, observations,
+    sources: graph.sources, storage: graph.storage, initial: graph.initial,
+    circuitLabel: graph.circuitLabel, experimentLabel: graph.experimentLabel });
+}
+export function documentMeaning(value: unknown): string {
+  function ordered(item: unknown): unknown {
+    if (Array.isArray(item)) return item.map(ordered);
+    if (item && typeof item === 'object') return Object.fromEntries(Object.entries(item)
+      .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, child]) => [key, ordered(child)]));
+    return item;
+  }
+  return JSON.stringify(ordered(value));
+}

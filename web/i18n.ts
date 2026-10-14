@@ -1,5 +1,6 @@
 /** UI-only copy. Native documents, numerical results, and CSV stay locale-neutral. */
 export const en = {
+  editorGraphical: "Graphical",
   workspaceSynthesize: "Synthesize",
   bjtGroup: "Transistors — Ebers–Moll",
   bjtCe: "NPN common-emitter amplifier",
@@ -61,7 +62,7 @@ export const en = {
   adjustKicker: '02 / ADJUST', components: 'Components', exciteKicker: '03 / EXCITE', sourceStart: 'Source & start',
   keepKicker: '04 / KEEP', nativeFiles: 'Native files', nativeHint: 'Version 1 JSON keeps the circuit and experiment together.',
   importJson: 'Import JSON', exportJson: 'Export JSON', editCircuitJson: 'Edit circuit JSON', jsonEditorLabel: 'Native circuit document',
-  jsonEditorHint: 'Presets are starting points. Enter a supported strict v1 linear, v2 diode or v3 Ebers–Moll circuit here and apply it to update the analyses. A graphical wiring editor is future work.',
+  jsonEditorHint: 'Presets are starting points. Enter a supported strict v1 linear, v2 diode or v3 Ebers–Moll circuit here and apply it to update the analyses. Graphical supports v1 R/C/L/V/I circuits; Form and JSON retain independent drafts.',
   applyJson: 'Apply JSON', restoreJson: 'Restore current circuit', jsonRejected: 'JSON not applied: {reason} The current circuit is unchanged; correct the draft and try again.',
   jsonConflict: 'The circuit changed after this JSON draft began. Restore the current circuit or copy your text elsewhere before applying.',
   builderTitle: 'Build / edit circuit', builderHint: 'Start a new draft or copy the current circuit. Only Apply changes the analyzed circuit. JSON and builder drafts are independent; reload either draft to use the latest circuit.',
@@ -339,7 +340,7 @@ export const en = {
   presetGroupBasics: 'Basics', presetGroupDynamic: 'Filters and dynamics', presetGroupActive: 'Controlled sources',
   presetGroupPassiveFilters: 'Passive filters', presetGroupActiveFilters: 'Active filters', presetGroupImpedance: 'Impedance ladders',
   circuitPreset: 'Example', editCircuit: 'Edit circuit', newCircuit: 'New', returnWorkspace: 'Return to workspace',
-  editorForm: 'Form', editorJson: 'JSON', editorIntro: 'Form and JSON have separate drafts. Leaving this screen preserves both; Apply changes the validated circuit.',
+  editorForm: 'Form', editorJson: 'JSON', editorIntro: 'Graphical, Form and JSON have independent drafts. Leaving this screen preserves them; Apply changes the validated circuit.',
   sourceControls: 'Sources & initial conditions', sourceControlsHint: 'Shared source and initial definitions belong to the native experiment.',
   inspectComponent: 'Component inspector', inspectHint: 'Choose a component in the diagram or list.',
   viewContributions: 'View equation contributions',
@@ -392,7 +393,7 @@ export const en = {
   resUse: 'Use transformed circuit', resReturn: 'Return to original circuit', resOpenAnalyze: 'Open Analyze',
   resUsed: 'The verified transformed circuit is now analyzed.', resReturned: 'The original circuit is restored.',
   resStale: 'This preview no longer matches the applied circuit or selections. Preview again.',
-  resDraftConflict: 'The Form or JSON editor has an unapplied draft. Changing the analyzed circuit will keep the draft and mark its conflict; it will not discard the draft.',
+  resDraftConflict: 'The Graphical, Form or JSON editor has an unapplied draft. Changing the analyzed circuit will keep the draft and mark its conflict; it will not discard the draft.',
   resConfirm: 'Keep draft and change circuit', resCancel: 'Cancel',
   resBlocked: 'This whole network cannot be reduced as resistors: {devices}. Open a supported example:',
   resSourceSetting: 'source setting', resOpenExample: 'Open {name}',
@@ -461,6 +462,7 @@ export const en = {
 } as const;
 
 export const mn = {
+  editorGraphical: "Зургаар",
   workspaceSynthesize: "Нийлэгжүүлэх",
   bjtGroup: "Транзистор — Эберс–Молл",
   bjtCe: "NPN ерөнхий эмиттертэй өсгөгч",
@@ -522,7 +524,7 @@ export const mn = {
   adjustKicker: '02 / ТОХИРУУЛАХ', components: 'Элементүүд', exciteKicker: '03 / ӨДӨӨХ', sourceStart: 'Үүсгүүр ба эхлэл',
   keepKicker: '04 / ХАДГАЛАХ', nativeFiles: 'Үндсэн файлууд', nativeHint: '1-р хувилбарын JSON нь хэлхээ ба туршилтыг хамтад нь хадгална.',
   importJson: 'JSON импортлох', exportJson: 'JSON экспортлох', editCircuitJson: 'Хэлхээний JSON-ийг засах', jsonEditorLabel: 'Хэлхээний үндсэн баримт',
-  jsonEditorHint: 'Бэлэн жишээнүүд нь эхлэх цэг юм. Дэмжигдэх хатуу v1 шугаман, v2 диодтой эсвэл v3 Эберс–Молл хэлхээг энд оруулаад хэрэглэвэл шинжилгээ шинэчлэгдэнэ. Утсаар холбож зурах засварлагчийг цаашид хийнэ.',
+  jsonEditorHint: 'Бэлэн жишээнүүд нь эхлэх цэг юм. Дэмжигдэх хатуу v1 шугаман, v2 диодтой эсвэл v3 Эберс–Молл хэлхээг энд оруулаад хэрэглэвэл шинжилгээ шинэчлэгдэнэ. Зургаар горим v1 R/C/L/V/I хэлхээг дэмжинэ; Маягт ба JSON тусдаа ноорогтой.',
   applyJson: 'JSON-ийг хэрэглэх', restoreJson: 'Одоогийн хэлхээг сэргээх', jsonRejected: 'JSON-ийг хэрэглэсэнгүй: {reason} Одоогийн хэлхээ өөрчлөгдөөгүй; бичвэрээ засаад дахин оролдоно уу.',
   jsonConflict: 'Энэ JSON нооргийг эхлүүлснээс хойш хэлхээ өөрчлөгдсөн. Хэрэглэхээсээ өмнө одоогийн хэлхээг сэргээх эсвэл бичвэрээ өөр газар хуулна уу.',
   builderTitle: 'Хэлхээ бүтээх / засах', builderHint: 'Шинэ ноорог эхлүүлэх эсвэл одоогийн хэлхээг хуулна уу. Зөвхөн «Хэлхээг хэрэглэх» товч шинжилж буй хэлхээг өөрчилнө. JSON ба маягтын ноорог тусдаа; хамгийн шинэ хэлхээг авахын тулд нооргоо сэргээнэ үү.',
@@ -800,7 +802,7 @@ export const mn = {
   presetGroupBasics: 'Суурь', presetGroupDynamic: 'Шүүлтүүр ба шилжилт', presetGroupActive: 'Удирдлагатай үүсгүүр',
   presetGroupPassiveFilters: 'Идэвхгүй шүүлтүүрүүд', presetGroupActiveFilters: 'Идэвхтэй шүүлтүүрүүд', presetGroupImpedance: 'Импедансын шаталсан сүлжээ',
   circuitPreset: 'Жишээ', editCircuit: 'Хэлхээг засах', newCircuit: 'Шинэ', returnWorkspace: 'Ажлын талбар руу буцах',
-  editorForm: 'Маягт', editorJson: 'JSON', editorIntro: 'Маягт ба JSON тусдаа ноорогтой. Энэ дэлгэцээс гарахад хоёулаа хадгалагдана; зөвхөн Хэрэглэх нь шинжилж буй хэлхээг өөрчилнө.',
+  editorForm: 'Маягт', editorJson: 'JSON', editorIntro: 'Зургаар, Маягт ба JSON тусдаа ноорогтой. Энэ дэлгэцээс гарахад бүгд хадгалагдана; зөвхөн Хэрэглэх нь шинжилж буй хэлхээг өөрчилнө.',
   sourceControls: 'Үүсгүүр ба анхны нөхцөл', sourceControlsHint: 'Үүсгүүр ба анхны нөхцөл нь үндсэн туршилтын нийтлэг тодорхойлолт.',
   inspectComponent: 'Элемент харах', inspectHint: 'Зураг эсвэл жагсаалтаас элемент сонгоно уу.',
   viewContributions: 'Тэгшитгэл дэх хувь нэмрийг харах',
@@ -853,7 +855,7 @@ export const mn = {
   resUse: 'Хувиргасан хэлхээг хэрэглэх', resReturn: 'Анхны хэлхээнд буцах', resOpenAnalyze: 'Шинжилгээ рүү очих',
   resUsed: 'Шалгасан хувиргасан хэлхээг одоо шинжилж байна.', resReturned: 'Анхны хэлхээг сэргээв.',
   resStale: 'Урьдчилсан үр дүн одоогийн хэлхээ эсвэл сонголттой нийцэхгүй. Дахин урьдчилан харна уу.',
-  resDraftConflict: 'Форм эсвэл JSON засварлагчид хэрэгжүүлээгүй ноорог байна. Шинжилж буй хэлхээг солиход ноорог хадгалагдаж, зөрчил тэмдэглэгдэнэ; ноорог устахгүй.',
+  resDraftConflict: 'Зургаар, Маягт эсвэл JSON засварлагчид хэрэгжүүлээгүй ноорог байна. Шинжилж буй хэлхээг солиход ноорог хадгалагдаж, зөрчил тэмдэглэгдэнэ; ноорог устахгүй.',
   resConfirm: 'Нооргийг хадгалж хэлхээг солих', resCancel: 'Болих',
   resBlocked: 'Энэ бүтэн сүлжээг эсэргүүцэл болгон бууруулж болохгүй: {devices}. Тохирох жишээ нээх:',
   resSourceSetting: 'үүсгүүрийн тохиргоо', resOpenExample: '{name} жишээг нээх',

@@ -764,3 +764,132 @@ collection-scoped history costs and the requirement that a future browser adapte
 Apply against the actual shared authority. No numerical correctness defect was
 found or repaired. Independent controller review of this contract precedes any
 Phase 6A2 browser integration. No merge or deployment was performed.
+
+## Phase 6A2 — bilingual graphical browser editor (task branch; not published)
+
+Implemented from accepted Phase 6A1 `0a9ac3ee0654d72bbfbca97b1b56e4ea40d436b5`
+on `codex/phase-6a2-svg-circuit-editor`. Released main remains
+`3c52eff2c7cc7f8c827d7eb13a13975d0f82542c`. This record does not supersede
+historical release/browser evidence above and does not claim deployment.
+
+### Contract and implementation choices
+
+Graphical is the third Edit circuit mode. It owns separate geometry/history,
+pending property text and unfinished wiring; Form/JSON remain independent.
+R/C/L/V/I properties include IDs/labels, DC/optional RMS AC/waveforms, storage and
+voltage/current observations. Endpoint controls offer keyboard wiring, explicit
+merge-name selection, reference/name changes, split/attach/join/separate,
+open/disconnect and copy/delete. SVG selection/movement uses the actual screen
+CTM. Provisional wires are outside the committed graph until finished; navigation
+preserves them and Cancel/Escape discards them without creating a native node.
+
+The authorized Phase 6A1 classification correction compares native scientific
+meaning, not graphical vertex counts. Wire subdivision, redundant connections,
+cycle-edge removal and movement/rotation/bends can remain electrically neutral;
+real net merges/splits, values and source changes are scientific. Geometry is still
+unapplied work. `WiringSession.apply` checks the live document identity, revision
+and serialized snapshot, validates strictly, invokes the existing shared import
+once for changed meaning and checkpoints the actual result. An unchanged document
+retains identity/revision and does not notify analysis consumers. There is no
+copied-authority Apply or second scientific commit. Panel references reconcile via
+the existing path; pending inspector/source text blocks replacement.
+
+Pending net/route text follows stable handles; explicit Restore uncommitted text
+recovers it without replacing the committed draft. Compound property commits are
+atomic. Dirty graphical work participates in Transform/Synthesize adoption guards.
+Conservative drawing warnings cover crossings, overlaps beyond a shared endpoint,
+obscured vertices and wire-through-symbol geometry. The exact topology table is
+always available. No geometric overlap creates connectivity. Native schemas,
+scientific kernel, tolerances and the 364 baseline test expectations are unchanged.
+
+### Automated evidence
+
+An isolated archive plus task-file overlay (without ignored local files) passed
+clean `npm ci`, full `npm test` (**382/382**), focused graphical tests (**55/55**),
+`npm run typecheck`, kernel/application/site builds and all six numerical demos
+(`demo`, `demo:diode`, `demo:diode-transient`, `demo:bjt`, `demo:rc-synthesis`,
+`demo:foster`). `git diff --check` passed. The pre-existing esbuild allow-scripts
+notice is informational; installation/build succeeded.
+
+The 18 new tests include a minimal DOM adapter invoking the production
+input/change/click handlers. Blank-draft divider, RC and bridge construction is
+checked independently through the existing kernel: 8 V and −4 mA source current;
+reference-shift 4 V/−8 V; H(j1000)=0.5−0.5j; backward-Euler recurrence;
+balanced 5 V/5 V and zero cross current; unbalanced 70/13 V, 80/13 V and −1/1300 A.
+Other tests cover neutral revisions, live ownership, invalid/retained text,
+compound rollback/history, exact escaped IDs, unsupported types, synthesized
+native documents, drawing warnings and atomic size limits. These tests are not
+claimed as actual browser interactions.
+
+A separate ES-module VM loads the neutral kernel, wiring and interaction bundles
+without window/document/process or runtime imports, solves the 8 V divider and
+checks identity-preserving geometry-only Apply. The isolated publishing package
+contains exactly `index.html`, `app.js`, `style.css` with matching SHA-256-derived
+relative version references (`app.js` version `8b47fb771869`, CSS version
+`861e237d0589`), also observed in the final Chrome DOM. The ignored working-directory publish files are
+preserved, not used as release evidence.
+
+### Actual Chrome evidence
+
+The locally bundled application was exercised at `/circuits/`, followed by the
+isolated three-file package. Through Graphical controls (no native JSON or hidden
+fixture substitution), constructed:
+
+- 12 V divider with 1 kΩ/2 kΩ: displayed 8 V and ±4 mA; after reference reassignment,
+  displayed 4 V and −8 V with unchanged current.
+- 1 kΩ/1 µF RC low-pass with step source, zero storage and RMS AC: displayed
+  0.5−0.5j at 1000/(2π) Hz and rendered frequency/transient plots. The exact
+  backward-Euler sequence is an automated check, not inferred from the plot.
+- Five-resistor bridge and 10 V source: 5 V/5 V, cross current approximately
+  −8.67e−19 A; after lower-right resistance 2 kΩ, 5.3846 V/6.1538 V and
+  −7.6923e−4 A.
+
+Also checked SVG pointer placement, keyboard terminal selection/Enter/Escape,
+rotation, copy with pending external terminals, intentional opens, deletion,
+source/probe edits, incomplete-property correction, and history. Two constructed
+crossing wires remained two named nets until explicit Join; Separate selected
+incident wires split them again, and Undo/Redo replayed the operation. Graphical
+`bad-graph`, Form `form-pending`, and JSON `{pending-json` remained independently
+visible after a preset change; obsolete Graphical Apply preserved the applied RC.
+Synthesis adoption displayed the pending-draft confirmation.
+
+The clean publishing package rendered an exact `__proto__ <b> & "Q"` component ID
+literally (zero inserted `b` elements). Its Graphical Validate explicitly warned
+that a native-valid open circuit is not solver-certified. JSON-editor malformed
+input remained correctable, translated on language change, and preserved the
+current document; Restore returned identical native text and valid reapply worked.
+This is distinct from file import.
+
+English/Mongolian were inspected at desktop and 390/320 CSS pixels. Measured page
+scroll widths were 375/305 respectively (no horizontal page overflow); canvas
+scrolling is local. Invalid text and selection survived translation, controls
+stacked and keyboard focus remained visible. Warning/error capture was empty during the construction and initial package
+checks. The final package reload recorded three Chrome asynchronous message-channel
+closure errors, without an application stack; these are recorded separately from
+application failures (the application has no Chrome extension message listener).
+No failed app asset or application exception was observed. Existing diode transient completed
+and a 3000-interval run was cancelled before its result. Synthesis completed all
+three methods with independent sample evidence; the attempted Cancel occurred
+after completion, so active synthesis cancellation was not established in Chrome
+(the existing automated worker tests remain passing).
+
+### Limits and review gate
+
+The Chrome filechooser event timed out after clicking Import JSON, so neither
+valid nor malformed OS-file selection was completed. Export JSON was clicked,
+but download completion/path capture also timed out; downloaded bytes were not
+verified here. Existing strict parser/serializer tests and the JSON-editor checks
+do not establish these interactions. Manual follow-up: select valid exported JSON,
+then malformed JSON, confirm preserved circuit and translated error; download
+native JSON and inspect/reimport the actual file. Browser extension file-URL access
+may need enabling for the automation facility. No permission settings were changed.
+
+Geometry is session-only; no sidecar, autorouter, multi-terminal editing or new
+physics is included. Limits are 40 components, 240 vertices, 320 wires and 64 bends.
+Unsupported controlled-source v1 and v2/v3 remain intact. Provisional layouts may
+warn even for safe diagonal arrangements. Deleting a component preserves its
+anchors per Phase 6A1; leftover isolated nodes can therefore be native-valid but
+unsolvable. Undo, explicit connection or JSON editing is available; no automatic
+node cleanup is introduced. Native export does not preserve layout or transfer a
+synthesis certificate to later edits. Independent controller review remains the
+next gate. No merge or deployment was performed.

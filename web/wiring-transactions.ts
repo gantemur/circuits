@@ -1,7 +1,10 @@
+import { wiringMeaning } from './wiring-native.js';
 import { checkPoint, diagnostic, geometryDiagnostics, handle, netNames, partitions, reconcileNames, reject, required, vertexPoint, wirePoints,
   type DeviceType, type Diagnostic, type Handle, type ObservationDraft, type Point, type SourceDraft, type WiringGraph } from './wiring-graph.js';
 
 export type WiringOperation =
+  | { type: 'batch'; operations: WiringOperation[] }
+  | { type: 'edit-label'; device: Handle; label: string }
   | { type: 'add-device'; deviceType: DeviceType; id: string; value?: string; label?: string; point?: Point }
   | { type: 'add-vertex'; kind: 'junction' | 'free'; point: Point; name?: string }
   | { type: 'connect'; a: Handle; b: Handle; survivingName?: string; bends?: Point[] }
@@ -109,6 +112,20 @@ function segment(graph: WiringGraph, key: Handle, index: number): [Point, Point]
 }
 function mutate(graph: WiringGraph, operation: WiringOperation): Handle[] {
   switch (operation.type) {
+    case 'batch': {
+      const created: Handle[] = [];
+      for (const item of operation.operations) {
+        if (item.type === 'batch') reject('validation', 'nested-batch', 'Nested transactions are unsupported');
+        created.push(...mutate(graph, item));
+      }
+      return created;
+    }
+    case 'edit-label': {
+      const device = required(graph.devices, operation.device);
+      if (operation.label.length) device.label = operation.label;
+      else delete device.label;
+      return [];
+    }
     case 'add-device': return [addDevice(graph, operation)];
     case 'add-vertex': {
       const key = addVertex(graph, operation.kind, operation.point);
@@ -310,7 +327,7 @@ export function transact(graph: WiringGraph, operation: WiringOperation): Transa
     const after = partitionEvidence(next);
     const geometryOnly = ['move-device', 'rotate-device', 'move-vertex', 'move-bends'].includes(operation.type);
     const changed = JSON.stringify(graph) !== JSON.stringify(next);
-    const geometry = changed && (geometryOnly || JSON.stringify([graph.placements, graph.points, graph.routes]) !== JSON.stringify([next.placements, next.points, next.routes]));
-    return { status: 'ok', graph: next, created, scientific: changed && !geometryOnly, geometry, before, after };
+    const geometry = changed && (geometryOnly || JSON.stringify(graph.edges) !== JSON.stringify(next.edges) || JSON.stringify([graph.placements, graph.points, graph.routes]) !== JSON.stringify([next.placements, next.points, next.routes]));
+    return { status: 'ok', graph: next, created, scientific: changed && wiringMeaning(graph) !== wiringMeaning(next), geometry, before, after };
   } catch (error) { return { status: 'rejected', diagnostics: [diagnostic(error)] }; }
 }

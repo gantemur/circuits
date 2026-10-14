@@ -150,3 +150,26 @@ The focused catalog is `web/synthesis-copy.ts`; the shared navigation label rema
 | Rounding discrepancy | Тоймлолтын зөрүү | Exact SI rational versus its finite native value |
 
 Foster II coefficients refer to the positive `a*z/(z+p)` branch coefficients, not ordinary partial-fraction residues. The two finite-term labels explicitly distinguish impedance residue from admittance branch coefficient, while preserving the positive pole-rate convention.
+
+## Phase 6A2 graphical editor
+
+`web/wiring-copy.ts` is a typed EN/MN catalog using the shared current language.
+Controls, accessible names, completion states, conflicts and diagnostic categories
+translate on rendering; expandable model details retain the established English
+convention. Exact IDs, p/n roles, coordinates, SI values and native JSON do not
+translate. Names/property text remain intact across language changes.
+
+| English | Mongolian | Meaning |
+| --- | --- | --- |
+| Graphical | Зургаар | Third independent editing context |
+| Junction | Уулзвар | Explicit connected graph vertex, not a visual crossing |
+| Net name | Зангилааны нэр | Electrical connected-component identity |
+| Set reference | Лавлах зангилаа болгох | Explicit reassignment of node 0 |
+| Intentionally open | Зориуд задгай | Deliberate open terminal, distinct from pending |
+| Pending | Дуусаагүй | Construction requires completion |
+| Surviving net name | Үлдэх зангилааны нэр | Explicit naming choice when nets merge |
+| Restore uncommitted text | Батлаагүй текстийг сэргээх | Discard only Graphical text edits |
+
+Current Chrome evidence covers English/Mongolian desktop and 390/320 CSS pixels,
+local canvas scrolling, visible focus and retained invalid property text. This is
+not a translation review of the existing historical technical details.

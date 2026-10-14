@@ -144,3 +144,35 @@ circuit equations, while the unchanged kernel independently analyzes the exporte
 native circuits. The other tests cover graph partitions, completion, exact IDs,
 round-trips, dependencies, geometry and ownership. No graphical interaction is
 claimed by these headless tests.
+
+## Reading the Phase 6A2 browser editor
+
+Start with `web/wiring-interaction.ts`: `WiringSession` owns pending gestures and
+properties separately from the committed graph. `execute` preflights a bounded
+atomic transaction; `validate` invokes the unchanged native validator; `apply`
+checks live `LabState` ownership, calls the existing `importNative` once only when
+scientific content differs, and checkpoints the actual result. No DOM is required
+for this module. A valid native document is not a solvability certificate.
+
+`web/wiring-ui.ts` maps ordinary controls and SVG events to those operations.
+`saveProperties` groups an inspector commit atomically. `action` keeps explicit
+merge-name, dependency, pending-text and Apply guards. Pointer movement uses the
+SVG screen CTM; it never searches geometry to infer a net. Stable handles own
+pending names/routes. `web/wiring-render.ts` derives every lead/wire endpoint from
+the graph and provides conservative ambiguity warnings and a complete topology
+table. `web/wiring-copy.ts` holds bilingual presentation text.
+
+The focused Phase 6A1 correction is `wiringMeaning` in `wiring-native.ts`: valid
+candidates compare native scientific content; incomplete drafts compare resolved
+terminal relations, completion, values and anchored references. Coordinates and
+wire subdivisions are excluded. Consequently splitting a wire or removing a
+redundant cycle edge does not request new science, but remains undoable user work.
+`checkpointWiring` rebases ownership after the browser's one shared application.
+
+Read `test/wiring-browser.test.mjs` alongside `test/wiring.test.mjs`. Its minimal
+DOM adapter invokes the production input/change/click handlers to construct a
+12 V divider, RC filter and bridge from blank. Independent DC, transfer and
+backward-Euler expectations test the generated topology through the unchanged
+kernel. Other cases test ownership, neutral geometry, invalid text, exact IDs,
+unsupported inputs, drawing warnings and bounds. Real Chrome evidence is recorded
+separately in DECISIONS; handler tests do not establish pointer/file-picker behavior.

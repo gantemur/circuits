@@ -113,3 +113,9 @@ export function applyWiring(draft: WiringDraft, applied: AppliedWiringDocument):
   draft.checkpoint = canonical(draft.graph);
   return { status: changed ? 'applied' : 'unchanged' };
 }
+
+/** Called after the browser's single coherent validated import, not a copied authority. */
+export function checkpointWiring(draft: WiringDraft, applied: AppliedWiringDocument): void {
+  draft.ownership = owner(applied);
+  draft.checkpoint = canonical(draft.graph);
+}

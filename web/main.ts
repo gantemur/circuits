@@ -17,6 +17,7 @@ import { diodeTangentSchematic, escapeHtml, schematic } from './schematic.js';
 import { plot } from './plot.js';
 import { algebraicSummary, diodeFailureReason, documentIssueText, statusSummary, type DocumentIssue } from './diagnostics.js';
 import { language, persistLanguage, readLanguage, setLanguage, t, translate, type Language, type TranslationKey } from './i18n.js';
+import { WiringUI } from './wiring-ui.js';
 import { BuilderUI } from './builder-ui.js';
 import { OnePortUI } from './one-port-ui.js';
 import { ResistorTransformUI } from './resistor-transform-ui.js';
@@ -57,9 +58,10 @@ let pendingGuideAction: GuideAction | null = null;
 const inputDrafts = new Map<string, string>();
 const inputIssues = new Map<string, TranslationKey>();
 const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => validatedChange());
+const wiringUI = new WiringUI(byId('wiring-editor'), () => state, () => validatedChange(true), () => inputDrafts.size>0);
 const onePortUI = new OnePortUI(byId('one-port'), () => state);
 const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => state, {
-  hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty,
+  hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty || wiringUI.hasUnappliedDraft(),
   apply: json => { const result=importNative(state,json); if(!result.ok)return false; validatedChange();return true; },
   refresh: () => renderAll(),
   loadExample: id => loadPreset(id),
@@ -67,7 +69,7 @@ const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => sta
 });
 const synthesisUI = new SynthesisUI(byId('synthesize-view'), () => state, workspace, {
   hasPendingEdits: () => inputDrafts.size>0,
-  hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty,
+  hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty || wiringUI.hasUnappliedDraft(),
   changed: () => validatedChange(),
   openAnalyze: id => { openView('analyze'); document.querySelector<HTMLElement>(`[data-panel="${id}"]`)?.scrollIntoView({block:'start'}); },
   download,
@@ -114,8 +116,9 @@ function renderView(): void {
   }
   byId('form-editor-view').hidden = workspace.editorView !== 'form';
   byId('json-editor-view').hidden = workspace.editorView !== 'json';
+  byId('graphical-editor-view').hidden = workspace.editorView !== 'graphical';
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-editor-view]'))) button.setAttribute('aria-pressed', String(button.dataset.editorView === workspace.editorView));
-  if (workspace.view === 'editor') { builderUI.render(); renderJson(); }
+  if (workspace.view === 'editor') { builderUI.render(); renderJson(); if(workspace.editorView==='graphical')wiringUI.render(); }
   byId('one-port').hidden = transformMethod.method !== 'dc';
   byId('resistor-transform').hidden = transformMethod.method !== 'resistor';
   byId('transform-scope').textContent = t(transformMethod.method === 'dc' ? 'transformScope' : 'resScope');
@@ -536,6 +539,7 @@ function validatedChange(preserveInspectorDrafts=false): void {
   if (focused) document.getElementById(focused)?.focus({preventScroll:true});
 }
 function openView(view: WorkspaceView): void {
+  if(view!=='editor')wiringUI.leave();
   if(view!=='synthesize') synthesisUI.leave();
   if (workspace.view!=='editor') previousView=workspace.view;
   workspace.view=view; sweeps.reconcile(state,workspace,!document.hidden);
@@ -722,7 +726,7 @@ document.addEventListener('click',event=>{
   const lang=target.closest<HTMLButtonElement>('[data-language]');
   if(lang){const focus=(document.activeElement as HTMLElement|null)?.id;setLanguage(lang.dataset.language as Language);persistLanguage(language(),storage);renderAll();if(focus)document.getElementById(focus)?.focus({preventScroll:true});return;}
   const view=target.closest<HTMLButtonElement>('[data-view]');if(view){openView(view.dataset.view as WorkspaceView);return;}
-  const editorView=target.closest<HTMLButtonElement>('[data-editor-view]');if(editorView){workspace.editorView=editorView.dataset.editorView==='json'?'json':'form';renderView();return;}
+  const editorView=target.closest<HTMLButtonElement>('[data-editor-view]');if(editorView){wiringUI.leave();workspace.editorView=editorView.dataset.editorView==='graphical'?'graphical':editorView.dataset.editorView==='json'?'json':'form';renderView();return;}
   const comp=target.closest<HTMLElement>('[data-component],[data-schematic-component]');
   if(comp){
     const fromSchematic=comp.dataset.schematicComponent!==undefined;

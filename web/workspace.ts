@@ -17,7 +17,7 @@ import type { LabState, SweepPoint } from './lab.js';
 export type PanelType = 'dc' | 'frequency' | 'transient' | 'equations' | 'port' | 'port-frequency'
   | 'diode-characteristic' | 'dc-sweep';
 export type WorkspaceView = 'analyze' | 'transform' | 'synthesize' | 'editor';
-export type EditorView = 'form' | 'json';
+export type EditorView = 'form' | 'json' | 'graphical';
 export interface PanelConfig {
   id: string; type: PanelType; input: string; output: string;
   minHz: number; maxHz: number; points: number; inspectHz: number;

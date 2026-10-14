@@ -89,3 +89,32 @@
 #synthesis-expression,.synthesis-formula { overflow-wrap: anywhere; }
 @media(max-width:1100px) { .synthesis-results { grid-template-columns: minmax(0,1fr); } }
 @media(max-width:600px) { .synthesis-decompositions { grid-template-columns: minmax(0,1fr); } .workspace-nav { flex-wrap:wrap; } }
+
+/* Phase 6A2: the canvas scrolls locally; controls remain ordinary page content. */
+#wiring-editor, .w-layout, .w-drawing, .w-inspector { min-width: 0; max-width: 100%; }
+.w-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 1rem; }
+.w-viewport { overflow: auto; max-width: 100%; border: 1px solid var(--line, #bec8d5); background: #fcfdff; }
+#w-canvas { display: block; width: 100%; min-width: 580px; height: 440px; touch-action: pan-x pan-y; }
+#w-canvas text { font: 12px system-ui; fill: #21314b; stroke: none; }
+#w-canvas .wire-line { stroke: #486178; stroke-width: 2; fill: none; pointer-events: none; }
+#w-canvas .wire-hit { stroke: transparent; stroke-width: 18; fill: none; cursor: pointer; }
+#w-canvas .w-device { stroke: #21314b; stroke-width: 2; fill: white; cursor: pointer; }
+#w-canvas .device-hit { fill: transparent; stroke: none; }
+#w-canvas .vertex-hit { fill: transparent; stroke: none; }
+#w-canvas .w-vertex { stroke: #21314b; fill: #fff; stroke-width: 2; cursor: pointer; }
+#w-canvas .w-vertex.pending { stroke: #af4422; stroke-dasharray: 3 2; }
+#w-canvas .selected, #w-canvas [tabindex]:focus { stroke: #076db6; stroke-width: 4; outline: none; }
+#w-canvas [tabindex]:focus .wire-line { stroke: #076db6; stroke-width: 4; }
+#w-canvas .wire-pending { stroke: #af4422; stroke-width: 3; stroke-dasharray: 5; fill: none; pointer-events: none; }
+.w-tools { margin-block: 1rem; padding: .6rem; border: 1px solid #c6d0df; border-radius: .4rem; }
+.w-tools summary { cursor: pointer; min-height: 44px; padding: .5rem; }
+#wiring-editor button, #wiring-editor select { min-height: 44px; }
+#wiring-editor input, #wiring-editor select, #wiring-editor textarea { max-width: 100%; min-width: 0; }
+#wiring-editor select { width: 100%; text-overflow: ellipsis; }
+#wiring-editor p, #wiring-editor th, #wiring-editor td, #wiring-editor label, #wiring-editor h4 { overflow-wrap: anywhere; }
+#wiring-editor pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.w-incidents { display: flex; flex-wrap: wrap; gap: .7rem; }
+.w-check { display: flex; gap: .5rem; align-items: center; margin-block: .8rem; }
+#wiring-editor :focus-visible { outline: 3px solid #076db6; outline-offset: 2px; }
+@media(max-width: 850px) { .w-layout { grid-template-columns: minmax(0,1fr); } }
+@media(max-width: 440px) { #wiring-editor .controls-grid { grid-template-columns: minmax(0,1fr); } #wiring-editor .file-actions { flex-wrap: wrap; } #wiring-editor button { white-space: normal; } }
