@@ -98,7 +98,7 @@ controlled sources and v2/v3 are preserved intact. Native export contains no
 layout, and there is no layout persistence. This section describes the review
 branch, not publication; older release evidence above remains historical.
 
-## Phase 6A3b task branch: portable Graphical projects
+## Published Phase 6A3b: portable Graphical projects
 
 Save project and Open project appear inside Graphical, including Open on unsupported
 applied v2/v3 documents. Save includes the completed Graphical draft and actual

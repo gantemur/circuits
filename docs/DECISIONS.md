@@ -1322,3 +1322,92 @@ with controlled promises at the production-controller boundary, not timing claim
 about OS reads. No autosave, persistent history, autorouting, layout recognition,
 new devices, merge or deployment is included. Independent controller review is
 required before publication or another milestone.
+
+## Publication — Phases 6A3a–6A3b portable circuit projects
+
+Published accepted implementation `0a881fdcf97a0cdb15b4be81b1c9450819f33380`
+through a normal fast-forward from `64e04525a98839f61a5587b24b1ba6c0fc61f45e`.
+Preflight confirmed exact remote tips, clean tracked worktree, five commits ahead
+and no divergence. All reviewed commits are retained: `4334e52`, `73bc906`,
+`8deaeff`, `97aefa4`, `0a881fd`. No implementation changes, squash, rebase or force
+push were made during publication.
+
+- [Accepted branch validation](https://github.com/gantemur/circuits/actions/runs/38599580790): success.
+- [Integrated main validation](https://github.com/gantemur/circuits/actions/runs/38602660563): success for `0a881fd`.
+- [Publish browser lab](https://github.com/gantemur/circuits/actions/runs/38602660535): success for `0a881fd`, including validate, package and deploy jobs.
+- Public application: https://gantemur.github.io/circuits/
+
+Fresh isolated tracked-source installation passed npm ci, full npm test **473/473**,
+focused project/core/browser tests **80/80**, typecheck, explicit kernel/application/
+site builds, all six demos, DOM-free project/core smoke and git diff --check. The
+VM smoke retains its documented realm-local JSON clone shim. Source-level tests
+with controlled deferred promises independently verify stale reads, overlapping
+file attempts, native change-and-restore and pending edit-and-restore; public
+browser timing is not substituted for these deterministic race tests.
+
+### Public HTTPS acceptance after deployment
+
+Used a fresh isolated headless Chrome profile with extensions disabled. Completed
+Browser.downloadProgress events and subsequent disk reads established actual file
+completion. DOM.setFileInputFiles exercised the real project/native inputs; this
+is not a claim of human OS-picker operation.
+
+- Built the RC from blank, with 1 kΩ/1 µF, 1 V DC/RMS, step at zero, zero capacitor
+  storage, ordered output anchors, R at (370,230), quarter-turn rotation and two
+  bends (200,300)/(250,300). Saved, reloaded, reopened and re-exported identical
+  complete 1,570-byte project content. Native Analyze bytes stayed unchanged until
+  explicit Apply. The exported circuit independently produced H(j1000)=0.5−0.5j
+  and v[k]=(v[k−1]+0.1)/1.1 for 0.0001 s steps; actual frequency/transient plots rendered.
+- Balanced and unbalanced five-resistor bridges completed project download/reimport
+  with exact topology and geometry. Balanced voltages were 5 and 5 V (cross current
+  below 1e-18 A roundoff); unbalanced values were 70/13 and 80/13 V, with cross current
+  −1/1300 A. Editing BR from 1000 to 2000 in the public Graphical inspector preserved
+  the complete drawing; the saved unapplied edit did not change Analyze until Apply.
+- Source-free Cauer and Foster drawings were rotated, exported, reopened and
+  re-exported exactly. Native scientific bytes remained equal. Portable data does
+  not contain a synthesis certificate; editing never recertifies a generated circuit.
+- Complete unapplied exports left Analyze unchanged. Applied geometry-only edits
+  changed the saved-content indicator while native exports stayed identical. Zoom
+  changed saved content. Pending numeric text, unfinished wires and active moves
+  blocked export without losing work. Automated production tests additionally
+  assert scientific identity/revision preservation.
+- Actual malformed, unsupported envelope/drawing versions, negative scientific
+  component values, hidden shorts, incorrect ground/probe anchors, missing vertices
+  and excessive bends were rejected. The old SVG, pending coordinate text, Form/
+  JSON drafts and exported Analyze document remained intact. Controlled-source v1,
+  diode v2 and BJT v3 project drawings returned explicit unsupported outcomes.
+- Explicit valid-native/invalid-drawing fallback produced an unapplied provisional
+  draft with no saved-project checkpoint. A large valid drawing visibly reported
+  nonfatal incomplete quality inspection before and after Open. Native/project
+  transport interchange was rejected rather than silently converted.
+- Dirty consent cancellation and stale pending-text confirmation preserved work.
+  Form/JSON survived replacement. Opening supported v1 projects over applied v2/v3
+  left their native exports identical until Apply. Exact markup-looking Unicode/
+  punctuation IDs stayed literal and round-tripped without creating elements.
+- All 35 examples opened. Divider resistor editing, linear plots, DC Thévenin/Norton,
+  resistor Preview/Use/Return, diode/BJT DC/frequency, all synthesis-method handoffs,
+  diode transient completion and active diode/synthesis cancellation passed.
+- EN/MN desktop, 390 and 320 CSS-pixel layouts had no page overflow. Public screenshots
+  were inspected. Keyboard cancellation returned focus to Open; drawing scrolling
+  remained local. The wheel check initially lacked foreground focus; bringing the
+  Chrome target to front and waiting for the scroll event resolved the harness
+  failure without changing the application. A temporary evaluation-string quoting
+  error in the state-check script was corrected; fresh checks had no application
+  runtime exceptions. Browser startup/allocator diagnostics were kept separate.
+
+### Publishing package and closure
+
+The clean package contains exactly index.html, app.js and style.css. Public HTML
+and its matching relative versioned assets were compared byte for byte with the
+isolated release build, matching the accepted implementation hashes:
+
+- HTML: `cd0a83961654a0311a2ce5a570075ba3f40a7873c33ff640ec68783640dd0922`
+- JS: `707b3b386b76afcfd2e1babdeff84700e3744bae4f91543530f15cdc5762d50a`
+- CSS: `861e237d05890d3c5665097a163ecc9ab6c3ad30d724e081cfe1d1a57b1d535a`
+
+This release-status closure is documentation-only. Its final SHA, validation and
+Pages run links are reported in the delivery after those runs and final public
+asset verification complete. Earlier task-branch evidence above is preserved.
+Human OS-picker operation, OS crash durability and exhaustive drawing collision
+certification remain outside the evidence. No autosave, crash recovery, routing,
+new models or next milestone is authorized by this publication.

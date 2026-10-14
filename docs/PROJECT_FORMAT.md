@@ -1,6 +1,6 @@
 # Portable circuit-and-drawing projects — version 1
 
-Phase 6A3a defines the headless infrastructure; Phase 6A3b adds task-branch
+Phase 6A3a defines the headless infrastructure; published Phase 6A3b adds
 browser Save/Open described below. Neither introduces autosave, layout recognition
 or new scientific schemas.
 Native JSON export and strict native v1/v2/v3 parsers remain unchanged.
@@ -179,7 +179,7 @@ render-time localization; its technical message remains English. The budget does
 not reject projects, alter data, skip structural checks or change saved-content
 keys. Segment construction is linear in segment count, with bounded graph lookups.
 
-## Save, Apply and future Open ownership
+## Save, Apply and Open ownership
 
 A completed unapplied graph may be exported. The saved native data describes that
 draft, not necessarily the analyzed circuit. Export does not call Apply. The last
@@ -188,7 +188,7 @@ revision; moving a symbol can change saved content without invalidating analysis
 Incomplete drafts remain correctable in memory but are not portable projects.
 
 Phase 6A3b prepares and validates before replacement, asks before replacing dirty
-Graphical work, preserve Form/JSON, and recheck applied document identity, revision
+Graphical work, preserves Form/JSON, and rechecks applied document identity, revision
 and serialized content after asynchronous reading and confirmation. Also recheck
 Graphical scientific/geometry revisions plus pending-text/gesture changes (those
 are not all represented by the current graph revision). Use a generation or full
@@ -202,7 +202,7 @@ v2/v3 and controlled-source data remain outside graphical scope. Persistent draf
 recovery, browser autosave and migration remain deferred. Browser file controls
 are described below.
 
-## Phase 6A3b browser integration (task branch, not published)
+## Published Phase 6A3b browser integration
 
 Edit circuit → Graphical now has separate Save project and Open project controls.
 Save produces `circuits-unfolded.cuf.json` from the completed Graphical draft,

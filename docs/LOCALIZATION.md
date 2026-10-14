@@ -174,7 +174,7 @@ Current Chrome evidence covers English/Mongolian desktop and 390/320 CSS pixels,
 local canvas scrolling, visible focus and retained invalid property text. This is
 not a translation review of the existing historical technical details.
 
-## Phase 6A3b portable projects (task branch)
+## Phase 6A3b portable projects (published)
 
 `web/project-copy.ts` translates Save project (**Төслийг хадгалах**), Open project
 (**Төсөл нээх**), export initiation, independent applied/export checkpoints,

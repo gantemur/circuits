@@ -10,7 +10,19 @@ The repository is named `circuits`. **Circuits Unfolded** is the working applica
 
 ## Status
 
-**Phase 6A2 is published:** [Graphical](docs/PHASE_6A2_SPECIFICATION.md) joins Form and JSON within Edit circuit. It constructs strict v1 R/C/L/V/I circuits with explicit wiring, junctions, source/storage/observation properties, undo/redo, and guarded Apply. Three independent drafts retain pending text and conflicts. Geometry is session-only, imported layouts are provisional, and ambiguous drawings show a warning plus the exact topology. Limits are 40 components, 240 vertices and 320 wires; controlled-source v1 and all v2/v3 remain unsupported in Graphical. Accepted implementation `2d1a725` passed main validation and Pages deployment; public graphical construction, history, file round trips and legacy checks passed. See the release evidence in [DECISIONS](docs/DECISIONS.md).
+**Phases 6A3a–6A3b are published:** the [portable project core](docs/PROJECT_FORMAT.md)
+pairs unchanged native scientific JSON with a strictly checked drawing. Graphical
+Save project downloads a completed draft and its geometry as `.cuf.json`; Open
+project validates and previews before replacing only Graphical. Apply alone changes
+Analyze. Native JSON export still exports the analyzed circuit without geometry.
+Independent saved/applied indicators and stale read/confirmation guards protect
+ongoing work. Accepted implementation `0a881fd` was fast-forwarded with all five
+reviewed commits preserved; public completed-download/reimport and scientific
+checks passed. See the [browser project specification](docs/PHASE_6A3B_SPECIFICATION.md)
+and [release evidence](docs/DECISIONS.md). Autosave, crash recovery and autorouting
+remain deferred; no subsequent milestone is authorized.
+
+**Phase 6A2 is published:** [Graphical](docs/PHASE_6A2_SPECIFICATION.md) joins Form and JSON within Edit circuit. It constructs strict v1 R/C/L/V/I circuits with explicit wiring, junctions, source/storage/observation properties, undo/redo, and guarded Apply. Three independent drafts retain pending text and conflicts. Native-only imports have provisional layouts; the published Phase 6A3 Save/Open workflow now preserves supported drawings. Ambiguous drawings show a warning plus the exact topology. Limits are 40 components, 240 vertices and 320 wires; controlled-source v1 and all v2/v3 remain unsupported in Graphical. Accepted implementation `2d1a725` passed main validation and Pages deployment; public graphical construction, history, file round trips and legacy checks passed. See the release evidence in [DECISIONS](docs/DECISIONS.md).
 
 **Phase 6A1 is published:** the [headless wiring model](docs/PHASE_6A1_SPECIFICATION.md) provides explicit connectivity, atomic editing, native v1 R/C/L/V/I conversion, history and ownership guards. Its headless model underpins the published Phase 6A2 editor. See the [editor API](docs/WIRING_API.md).
 
@@ -163,14 +175,3 @@ No account, runtime server, or external AI API is required to use the built app.
 ## Licensing
 
 Original repository code and documentation are released under the [MIT license](LICENSE). The companion book, privately supplied references, and third-party device models are outside that grant. Future imported models must carry their own provenance and license information.
-
-**Phase 6A3a is a headless task-branch implementation:** the
-[portable project core](docs/PROJECT_FORMAT.md) pairs unchanged native scientific
-JSON with a strictly checked drawing. It supplies pure validation, reconstruction,
-export and saved-content comparison. **Phase 6A3b is implemented on its task
-branch, not published:** Graphical Save project downloads a completed draft and
-its drawing as `.cuf.json`; Open project validates and previews before replacing
-only Graphical. Apply alone changes Analyze. Native JSON export still exports the
-analyzed circuit without geometry. Independent saved/applied indicators and stale
-read/confirmation guards protect ongoing work. See the [browser project specification](docs/PHASE_6A3B_SPECIFICATION.md).
-The published application is unchanged; autosave and autorouting remain deferred.

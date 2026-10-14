@@ -1,7 +1,9 @@
 # Phase 6A3b — browser portable projects
 
-Status: implemented and locally/browser validated; awaiting independent review on codex/phase-6a3b-browser-project-save-open, based on
-accepted 97aefa40d37aee9e3c34f9cbabb7af788bad2546. No merge or deployment.
+Status: accepted and published as `0a881fdcf97a0cdb15b4be81b1c9450819f33380`,
+fast-forwarded from `codex/phase-6a3b-browser-project-save-open` with all reviewed
+Phase 6A3a commits retained. Fresh release validation and public file-operation
+acceptance passed; see DECISIONS for workflow links, results and limitations.
 
 ## Contract
 

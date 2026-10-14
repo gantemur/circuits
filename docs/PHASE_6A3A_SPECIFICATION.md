@@ -1,7 +1,10 @@
 # Phase 6A3a — portable circuit-and-drawing project core
 
-Status: implemented and locally validated; awaiting independent review on `codex/phase-6a3a-portable-project-core`, based on
-released `64e04525a98839f61a5587b24b1ba6c0fc61f45e`. No browser UI, merge or deployment.
+Status: accepted and published with Phase 6A3b in implementation
+`0a881fdcf97a0cdb15b4be81b1c9450819f33380`. The original task branch was
+`codex/phase-6a3a-portable-project-core`, based on released `64e04525a98839f61a5587b24b1ba6c0fc61f45e`.
+Historical headless acceptance and the bounded-warning correction remain in DECISIONS.
+Browser integration is governed separately by PHASE_6A3B_SPECIFICATION.md.
 
 ## Contract fixed before implementation
 
