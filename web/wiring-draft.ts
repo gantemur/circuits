@@ -1,12 +1,13 @@
 import { serializeBrowserDocument, type BrowserDocument } from './native-document.js';
-import { importWiring, nativeCandidate, type ImportWiring } from './wiring-native.js';
-import { transact, type WiringOperation, type TransactionResult } from './wiring-transactions.js';
+import { importWiring, nativeCandidate, documentMeaning, type ImportWiring } from './wiring-native.js';
+import { transact, partitionEvidence, type WiringOperation, type TransactionResult } from './wiring-transactions.js';
+import { exportProject } from './project-format.js';
 import { type Diagnostic, type WiringGraph } from './wiring-graph.js';
 
 export interface AppliedWiringDocument { document: BrowserDocument; revision: number }
 interface Ownership extends AppliedWiringDocument { snapshot: string }
 interface Change { field: keyof WiringGraph; before: unknown; after: unknown }
-interface HistoryEntry { operation: WiringOperation; changes: Change[]; scientific: boolean; geometry: boolean }
+interface HistoryEntry { operation: WiringOperation | {type:'replace-layout'}; changes: Change[]; scientific: boolean; geometry: boolean }
 export interface WiringDraft {
   graph: WiringGraph; scientificRevision: number; geometryRevision: number;
   ownership: Ownership; checkpoint: string; history: HistoryEntry[]; redo: HistoryEntry[]; historyLimit: number;
@@ -47,6 +48,9 @@ export function wiringDirty(draft: WiringDraft): boolean { return canonical(draf
 export function commitWiring(draft: WiringDraft, operation: WiringOperation): TransactionResult {
   const result = transact(draft.graph, operation);
   if (result.status !== 'ok') return result;
+  return recordWiring(draft, operation, result);
+}
+function recordWiring(draft: WiringDraft, operation: HistoryEntry['operation'], result: Extract<TransactionResult,{status:'ok'}>): TransactionResult {
   const changes: Change[] = [];
   // Scope history to changed model collections and metadata, excluding ownership,
   // diagnostics and any DOM. Each transaction is exactly one bounded history step.
@@ -57,7 +61,9 @@ export function commitWiring(draft: WiringDraft, operation: WiringOperation): Tr
   }
   // A previously absent optional label would also need inclusion if label editing
   // is added; current operations never add or remove top-level model fields.
-  if (changes.length) {
+  // Explicit layout adoption also owns its viewport. Keep a history entry even
+  // when the generated graph is identical, so Fit can be undone coherently.
+  if (changes.length || operation.type === 'replace-layout') {
     draft.history.push({ operation: structuredClone(operation), changes, scientific: result.scientific, geometry: result.geometry });
     if (draft.history.length > draft.historyLimit) draft.history.shift();
     draft.redo = [];
@@ -118,4 +124,17 @@ export function applyWiring(draft: WiringDraft, applied: AppliedWiringDocument):
 export function checkpointWiring(draft: WiringDraft, applied: AppliedWiringDocument): void {
   draft.ownership = owner(applied);
   draft.checkpoint = canonical(draft.graph);
+}
+
+/** One representation-only history entry. Scientific equality includes every
+ * ordered native field, not graph handles or merely component counts. */
+export function replaceWiringGeometry(draft: WiringDraft, graph: WiringGraph): boolean {
+  const before = nativeCandidate(draft.graph);
+  const after = nativeCandidate(graph);
+  if (before.status !== 'ok' || after.status !== 'ok' ||
+      documentMeaning(before.document) !== documentMeaning(after.document) || exportProject(graph).status !== 'ok') return false;
+  const next = structuredClone(graph);
+  recordWiring(draft, {type:'replace-layout'}, {status:'ok', graph:next, created:[],
+    scientific:false, geometry:true, before:partitionEvidence(draft.graph), after:partitionEvidence(next)});
+  return true;
 }

@@ -1,3 +1,4 @@
+import { rememberLayoutPort } from './layout-port.js';
 import { serializeDocument } from '../src/model.js';
 import type { RcSynthesisResult } from '../src/rc-synthesis.js';
 import type { FosterResult } from '../src/foster-synthesis.js';
@@ -143,6 +144,7 @@ export function synthesisPortHandoff(workspace:WorkspaceState,state:LabState,sna
   if(!panel)return null;
   panel.p='port';panel.q='0';panel.portMode=1;panel.externalDrive=null;panel.portMatrix='z';panel.portView='single';
   panel.portFrequencyHz=frequencyHz;panel.settingsOpen=true;
+  rememberLayoutPort(state,panel.p,panel.q);
   workspace.layoutIsSuggested=false;
   return panel.id;
 }

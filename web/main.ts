@@ -1,3 +1,4 @@
+import { rememberLayoutPort } from './layout-port.js';
 import { SynthesisUI } from './synthesis-ui.js';
 import { bjtDcHtml, bjtMetrics, mixedDiodeMetrics } from './bjt-presentation.js';
 import { assembleBjtSystem } from '../src/bjt-system.js';
@@ -698,6 +699,8 @@ document.addEventListener('change',async event=>{
     if(handlePanelFieldChange(workspace,state,target.dataset.panelId??'',target.dataset.panelField,target.value)) {
       // A panel's chosen observation also identifies the measurement marked in
       // the circuit drawing. Other panels retain their independent selections.
+      const layoutPanel=workspace.panels.find(p=>p.id===target.dataset.panelId);
+      if(layoutPanel && ['p','q'].includes(target.dataset.panelField??'') && (layoutPanel.type==='port'||layoutPanel.type==='port-frequency')) rememberLayoutPort(state,layoutPanel.p,layoutPanel.q);
       if(target.dataset.panelField==='output' && state.document.circuit.observations.some(o=>o.id===target.value)) {
         state.output=target.value;
         renderSchematic();

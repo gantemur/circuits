@@ -1511,3 +1511,105 @@ witnesses, quality limits and visuals precedes any Phase 6A3c2 authorization.
 A later integration should explicitly preview/adopt native-only initial drawings
 and design undo/conflict ownership separately; it must preserve saved geometry.
 No Arrange button, rerouting UI, autosave, new models or synthesis extension added.
+
+## Phase 6A3c2 — browser layout integration, local acceptance (2026-10-14)
+
+Task branch `codex/phase-6a3c2-browser-layout` starts from accepted headless
+`f9b800a797433c1c9f03e686428922afb0df0f46`. Preflight fetched origin, confirmed
+clean tracked state and released main `632a1e34db25ef3ad95b43790d28212afeac5663`,
+and verified accepted c1 [validation](https://github.com/gantemur/circuits/actions/runs/38609474528).
+The c2 specification was written before implementation. This entry records local
+acceptance only: main remains unchanged; no merge or deployment occurred.
+
+### Representation and ownership
+
+The browser reuses `generateTopologyLayout` for a clean native-only initial drawing,
+without changing applied science, manufacturing a disk-save checkpoint or requiring
+Apply. The existing provisional importer/unsupported path remains authoritative
+when recognition, size or quality fails. Saved projects, dirty drafts, pending text
+and gestures are never automatically rearranged. User-authored history/redo also
+excludes automatic generation immediately after Apply; the two existing regressions
+that exposed that boundary were fixed without changing their expectations.
+
+Source-free drawings use explicit ordered selectors or a valid explicit
+analysis/synthesis pair owned by the exact current document/revision/serialization.
+Names and ground are not used to guess a port. Suggest operates on the current
+strict draft candidate and renders read-only before/after drawings. Use rechecks
+ownership, exact ordered native equality and complete geometry verification, then
+records one geometry-only bounded history operation. Stored graphs (including
+handles, allocator and anchors) and entry-keyed viewports provide exact Undo/Redo;
+no second recognition call reconstructs history. Even an identical-graph adoption
+records a separate entry, so its viewport Fit cannot overwrite an older Undo record.
+A regression covers repeated adoption and saved-state restoration. Scientific revision and analyzed
+identity remain unchanged. Saved-content comparisons correctly recover the earlier
+checkpoint, including a project with no explicit viewport.
+
+Preview ownership includes document/draft identity, revisions, exact science and
+graph, pending controls, unfinished gestures, viewport, ordered ports and monotone
+interaction generation. Edit-and-restore retires consent; language changes do not.
+Project read/confirmation guards and layout authorization remain independent.
+Generation is synchronous/bounded, so no asynchronous proposal race is introduced.
+No numerical kernel, native/project schema, renderer, tolerance or physical law changed.
+
+### Automated and mathematical evidence
+
+Clean `npm ci`, full `npm test` **542/542**, focused topology/browser tests **69/69**,
+`npm run typecheck`, kernel/app/site builds, all six demos (`demo`, `demo:diode`,
+`demo:diode-transient`, `demo:bjt`, `demo:rc-synthesis`, `demo:foster`), DOM-free
+kernel/layout smoke and `git diff --check` passed. All original **513 tests and
+expectations are unchanged**; 29 new integration tests exercise production event
+handlers/controller paths, initial families, unsupported/unrecognized/oversized/
+quality-rejected cases, exact unusual IDs, port ownership, pending work, history,
+portable project checkpoints and conflicts.
+
+Independent science checks across generated/adopted/history/project-parser states:
+divider 8 V, 4 mA, source −4 mA; RC `0.5−0.5i` at 1000 rad/s; RLC `−10i` at
+10000 rad/s; balanced bridge 5 V/5 V; unbalanced 70/13 V, 80/13 V and −1/1300 A;
+Cauer/Foster impedance `1200−1600i` Ω at 1000 rad/s. Exact native equality is
+checked separately from these floating-point physical experiments.
+
+### Actual Chrome checks
+
+Isolated Chrome loaded the clean locally served publishing package. Actual native
+file inputs opened divider, RC low/high pass, RL/RLC, parallel R/RC, balanced and
+unbalanced bridges, Cauer and Foster I/II. Their ordinary editable drawings match
+the accepted c1 structural evidence. Source-free synthesis handoffs produced initial
+layouts without manual port guessing. Unrecognized star kept the provisional graph.
+Preview/Cancel/Use, exact Undo/Redo, pointer selection/movement, wire operations,
+independent Form/JSON/Graphical drafts and stale edit-and-restore were exercised.
+
+A completed `.cuf.json` download after adoption was reopened via the real file input
+after page reload; another completed download matched the entire project exactly.
+Saved geometry was not rearranged. Native JSON download and valid/malformed file
+imports were also completed: malformed text preserved science. These were Chrome
+protocol file selections, **not a human OS file-dialog gesture**. Deterministic tests
+cover delayed read/confirmation races separately. All 35 examples opened; linear
+RC plots, DC equivalence, resistor Preview/Use/Return, diode/BJT panels, all three
+synthesis methods, handoffs, and active diode/synthesis worker cancellation passed.
+
+EN/MN at 1280, 390 and 320 CSS px had no page overflow or application exceptions;
+before/after drawings stack and scroll locally. Exact punctuation/markup-like port
+IDs remain literal. Screenshots, completed project artifact and result records are
+in [actual browser evidence](evidence/phase-6a3c2/README.md). Browser harness mistakes
+(invalid example option, locale-dependent assertion and unsettled pointer scrolling)
+were corrected and the completed runs repeated; they were not product fixes.
+
+Fit-to-view bridge/Foster labels remain small. Raw SI values, hollow junctions,
+vertical lower-lead detours and arbitrary font metrics remain the accepted visual
+limitations. Zoom, inspector and topology table remain important. No physical touch
+or screen-reader audit is claimed. Earlier c1 SVGs/screenshots are preserved.
+
+### Clean publishing package and review gate
+
+A second isolated clean-source package matches the browser-tested package byte for
+byte and contains exactly `index.html`, `app.js`, `style.css`, with relative
+SHA-256-derived version references:
+
+- HTML `ae83f379cc1df5a35597c3a44a9e983a66eeef2a6d187fb14cb23301097170b1`
+- JS `02e423cb7237429872a496c43f7b7d42f0d4df4e8f3929c78f71f422ee8ee571`
+- CSS `ffe3882992cd48e9d85da7faf64c712bcfb1898a9ff620a68b7cb48b545469d2`
+
+These intentionally differ from released main. Independent controller review of the
+browser integration precedes any publication authorization. General autorouting,
+interactive bend dragging, autosave/recovery, nonlinear graphical devices and
+additional synthesis methods remain outside this task.

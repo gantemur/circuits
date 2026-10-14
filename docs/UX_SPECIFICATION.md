@@ -114,3 +114,22 @@ supported valid native/invalid drawing permits an explicit provisional conversio
 which remains unapplied and unexported. Loaded drawings remain independent against
 external changes and require Discard to return to clean synchronization. No imported
 history or hidden Apply occurs. Language changes preserve current preview ownership.
+
+## Phase 6A3c2: initial drawing and explicit arrangement (task branch)
+
+Native-only, clean Graphical entries use verified bounded layouts where supported.
+This is initial representation, not Apply or a disk-save checkpoint. Opened projects,
+edited drafts, unfinished gestures and pending text are not rearranged. Unrecognized,
+unsupported, oversized or geometry-rejected cases retain the existing fallback.
+
+Source-free ports are ordered selectors, never inferred from names or reference.
+An explicit analysis/synthesis port is reusable only for its exact applied document
+identity, revision and serialization. Suggest layout uses the current draft candidate.
+Read-only before/after drawings show recognition, verification and limitations. Use
+replaces placements, routes, vertices and anchors in one geometry-only history step.
+Cancel changes none of them. Undo/Redo restore exact stored drawings and viewport
+state. Apply alone changes science. Preview ownership includes all editing work and
+a monotone generation: edit-and-restore is stale, language changes are harmless.
+Project and layout replacement consents remain separate. Mobile drawings stack and
+scroll locally; focus returns to Suggest after Use/Cancel. See the
+[contract](PHASE_6A3C2_SPECIFICATION.md) and [Chrome evidence](evidence/phase-6a3c2/README.md).

@@ -6,3 +6,6 @@ export { setLanguage } from '../../web/i18n.js';
 
 export * from '../../web/project-controller.js';
 export * from '../../web/project-copy.js';
+export * from '../../web/layout-controller.js';
+export * from '../../web/layout-copy.js';
+export * from '../../web/layout-port.js';

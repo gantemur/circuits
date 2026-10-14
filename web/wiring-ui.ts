@@ -1,3 +1,5 @@
+import { LayoutController } from './layout-controller.js';
+import { lt, type LayoutCopyKey } from './layout-copy.js';
 import { projectWarnings } from './project-validation.js';
 import { ProjectController } from './project-controller.js';
 import { pt, type ProjectCopyKey } from './project-copy.js';
@@ -19,7 +21,9 @@ const option=(value:string,label:string,selected:string)=>`<option value="${e(va
 export class WiringUI {
   readonly session: WiringSession;
   readonly project: ProjectController;
+  readonly layout: LayoutController;
   private persistViewport=true;
+  private layoutViews=new WeakMap<object,{before:ViewBox;after:ViewBox;persistBefore:boolean}>();
   private fileIntent=0;
   private view:ViewBox={x:-100,y:-100,width:800,height:500};
   private controls=new Map<string,string>();
@@ -34,11 +38,24 @@ export class WiringUI {
     this.project=new ProjectController({session:this.session,viewport:()=>this.persistViewport?this.view:undefined,
       pending:()=>this.pendingTools.size,editingSnapshot:()=>JSON.stringify([Array.from(this.controls),Array.from(this.pendingTools)]),
       install:candidate=>{
+        this.layout?.cancel();
         this.session.installProject(candidate.graph);
         this.controls.clear();this.pendingTools.clear();this.checked.clear();this.pointer=null;
         this.persistViewport=!!candidate.project.drawing.viewport;
         this.view=candidate.project.drawing.viewport??fitWiring(candidate.graph);
       }});
+    this.layout=new LayoutController({session:this.session,pending:()=>this.pendingTools.size,
+      editingSnapshot:()=>JSON.stringify([Array.from(this.controls),Array.from(this.pendingTools),this.view]),
+      installed:initial=>{
+        this.touch();
+        this.controls.clear();this.pendingTools.clear();this.checked.clear();this.pointer=null;
+        const fitted=fitWiring(this.session.draft!.graph);
+        const entry=this.session.draft!.history.at(-1);
+        if(!initial && entry?.operation.type==='replace-layout')
+          this.layoutViews.set(entry,{before:{...this.view},after:fitted,persistBefore:this.persistViewport});
+        this.persistViewport=true;this.view=fitted;
+      }});
+    this.layout.initialize();
     if(this.session.draft)this.view=fitWiring(this.session.draft.graph);
     root.addEventListener('input',event=>this.input(event.target));
     root.addEventListener('change',event=>{
@@ -46,6 +63,7 @@ export class WiringUI {
         const file=event.target.files?.[0];
         event.target.value=''; // Selecting the same file again must start a new attempt.
         if(file){
+          this.layout.touch();
           const intent=++this.fileIntent;
           void this.project.read(file).then(()=>{
             if(intent!==this.fileIntent)return;
@@ -61,23 +79,25 @@ export class WiringUI {
     });
     root.addEventListener('click',event=>this.click(event));
     root.addEventListener('keydown',event=>{
-      if(event.key==='Escape'){this.project.touch();this.session.cancel();this.render();}
-      if((event.key==='Enter'||event.key===' ')&&event.target instanceof SVGElement){event.preventDefault();this.svgTarget(event.target);}
+      if(event.key==='Escape'){this.touch();this.session.cancel();this.render();}
+      if((event.key==='Enter'||event.key===' ')&&event.target instanceof SVGElement && !event.target.closest('[data-layout-drawing]')){event.preventDefault();this.svgTarget(event.target);}
     });
     root.addEventListener('pointerdown',event=>{this.pointer={x:event.clientX,y:event.clientY,id:event.pointerId};this.suppressClick=false;});
     root.addEventListener('pointerup',event=>{
       if(this.pointer&&Math.hypot(event.clientX-this.pointer.x,event.clientY-this.pointer.y)>8)this.suppressClick=true;
       this.pointer=null;
     });
-    root.addEventListener('pointercancel',()=>{this.pointer=null;this.suppressClick=true;this.session.cancel();this.render();});
+    root.addEventListener('pointercancel',()=>{this.touch();this.pointer=null;this.suppressClick=true;this.session.cancel();this.render();});
   }
+  private touch():void {this.project.touch();this.layout?.touch();}
   hasUnappliedDraft():boolean {return this.session.hasDrafts() || this.pendingTools.size>0;}
-  leave():void {if(this.session.moving)this.project.touch();this.session.moving=false;this.pointer=null;}
+  leave():void {if(this.session.moving)this.touch();this.session.moving=false;this.pointer=null;}
   private value(key:string,fallback=''):string{return this.controls.get(key)??fallback;}
   private input(target:EventTarget|null):void {
     if(!(target instanceof HTMLInputElement||target instanceof HTMLSelectElement||target instanceof HTMLTextAreaElement))return;
     if(target.id==='w-project-file')return;
-    this.project.touch();
+    this.touch();
+    if(target.dataset.layoutPort){this.layout.setPort(target.dataset.layoutPort==='p'?0:1,target.value);return;}
     if(target instanceof HTMLInputElement && target.type==='checkbox' && target.id){
       if(target.checked)this.checked.add(target.id);else this.checked.delete(target.id);
     }
@@ -127,6 +147,25 @@ export class WiringUI {
     if(initial)content+=f('initial','initialValue',initial.value);
     return `<h4>${e(device.id)} · ${device.type}</h4><div class="controls-grid">${content}</div><div class="file-actions">${button('save','save')}${button('rotate','rotate')}${button('move','move')}${button('copy','copy')}</div><label class="w-check"><input type="checkbox" id="w-delete-probes" ${this.checked.has('w-delete-probes')?'checked':''}>${e(wt('removeProbes'))}</label>${button('delete-device','remove')}`;
   }
+  private layoutContent():string {
+    const layout=this.layout,graph=this.session.draft!.graph;
+    const action=(name:string,key:LayoutCopyKey)=>`<button type="button" class="button outline" data-layout-action="${name}">${e(lt(key))}</button>`;
+    const nodes=graph.names.map(n=>n.name);
+    const sourceFree=graph.sources.length===0;
+    const ports=sourceFree?`<div class="controls-grid">${(['p','q'] as const).map((role,index)=>{
+      const selected=nodes.includes(layout.port[index]!)?layout.port[index]! : '';
+      return `<div class="field"><label for="layout-${role}">${e(lt(index===0?'positive':'negative'))}</label><select id="layout-${role}" data-layout-port="${role}">${option('',lt('choose'),selected)}${nodes.map(n=>option(n,n,selected)).join('')}</select></div>`;
+    }).join('')}</div><p>${e(lt('hint'))}</p>`:'';
+    const drawing=(g:typeof graph)=>renderWiringSvg(g,null,fitWiring(g),null)
+      .replace(/ id="w-canvas"/,'').replace(/ tabindex="0"/g,'').replace(/ data-w-[\w-]+="[^"]*"/g,'').replace(/role="button"/g,'');
+    const independent=this.session.independentProject||this.session.hasDrafts();
+    return `<section class="layout-controls"><h3>${e(lt('title'))}</h3><p>${e(lt(independent?'saved':layout.initialStatus==='verified'?'initial':'fallback'))}</p>
+      ${!independent&&layout.initialStatus!=='verified'&&!(layout.initialStatus==='port-required'&&layout.port[0]&&layout.port[1])?`<p>${e(lt(layout.initialStatus as LayoutCopyKey))}</p>`:''}
+      ${ports}${action('suggest','suggest')}<p role="status" data-layout-status>${e(lt(layout.status as LayoutCopyKey))}</p>
+      ${layout.proposal&&layout.before?`<section tabindex="-1" data-layout-preview><h4>${e(lt(layout.proposal.witness.family))}</h4><p>${e(lt('evidence'))}</p><p>${e(lt('consent'))}</p>
+        <div class="layout-comparison">${[[lt('before'),layout.before],[lt('after'),layout.proposal.graph]].map(([title,g])=>`<div><h4>${e(title as string)}</h4><div class="layout-drawing" data-layout-drawing>${drawing(g as typeof graph)}</div></div>`).join('')}</div>
+        <p>${e(lt('limits'))}</p>${action('use','use')}${action('cancel','cancel')}</section>`:''}</section>`;
+  }
   private projectContent():string {
     const p=this.project;
     const action=(name:string,key:ProjectCopyKey)=>`<button type="button" class="button outline" data-project-action="${name}">${e(pt(key))}</button>`;
@@ -151,6 +190,7 @@ export class WiringUI {
     const base=this.session.draft?.ownership.document;
     if(!this.pendingTools.size)this.session.sync();
     if(base!==this.session.draft?.ownership.document){this.controls.clear();this.view=this.session.draft?fitWiring(this.session.draft.graph):this.view;}
+    this.layout.initialize();this.layout.reconcile();
     const s=this.session,draft=s.draft;
     const actions=`<div class="file-actions">${button('new','new')}${button('discard','discard')}${button('undo','undo')}${button('redo','redo')}${button('validate','validate')}${button('apply','apply')}${button('restore-text','restoreText')}</div>`;
     if(!draft||s.oversized()){
@@ -179,7 +219,7 @@ export class WiringUI {
     const quality=s.independentProject
       ? projectWarnings(graph).map(d=>`<p class="warning" data-w-ambiguity>${e(pt(d.code==='drawing-inspection-incomplete'?'inspection':'warning'))}</p>`).join('')
       : ambiguousWiring(graph)?`<p class="warning" data-w-ambiguity>${e(wt('warning'))}</p>`:'';
-    this.root.innerHTML=`<p>${e(wt('hint'))}</p><p class="small muted">${this.session.independentProject?'':e(wt('provisional'))} ${e(wt('bounds'))}</p>${actions}${this.projectContent()}
+    this.root.innerHTML=`<p>${e(wt('hint'))}</p><p class="small muted">${this.session.independentProject||this.layout.initialStatus==='verified'?'':e(wt('provisional'))} ${e(wt('bounds'))}</p>${actions}${this.projectContent()}${this.layoutContent()}
       <p class="${conflict?'warning':'soft-note'}" role="status" data-w-status>${e(wt(status))}</p><p data-w-pending>${s.pending.size||this.pendingTools.size?e(wt('pendingText')):''}</p>
       ${issue?`<div class="error-card" role="alert">${e(wt(issue.category))} ${issue.handles.map(key=>e(graph.devices.find(d=>d.key===key)?.id??vertices.find(v=>v.value===key)?.label??key)).join(', ')}<details><summary>${e(wt('technical'))}</summary><pre>${e(issue.message)}</pre></details></div>`:''}
       <div class="w-layout"><section class="w-drawing"><div class="file-actions">${(['fit','zoom-in','zoom-out','left','right','up','down'] as const).map((a,i)=>button(a,(['fit','zoomIn','zoomOut','left','right','up','down'] as WiringCopyKey[])[i]!)).join('')}</div>
@@ -253,6 +293,16 @@ export class WiringUI {
     if(this.suppressClick){this.suppressClick=false;return;}
     try {
       const target=event.target;
+      if(target.closest('[data-layout-drawing]'))return;
+      const layoutAction=target.closest<HTMLElement>('[data-layout-action]')?.dataset.layoutAction;
+      if(layoutAction){
+        if(layoutAction==='suggest')this.layout.suggest();
+        if(layoutAction==='use')this.layout.adopt();
+        if(layoutAction==='cancel')this.layout.cancel();
+        this.render();
+        this.root.querySelector<HTMLElement>(this.layout.proposal?'[data-layout-preview]':'[data-layout-action="suggest"]')?.focus();
+        return;
+      }
       const projectAction=target.closest<HTMLElement>('[data-project-action]')?.dataset.projectAction;
       if(projectAction){
         if(projectAction==='open'){this.root.querySelector<HTMLInputElement>('#w-project-file')?.click();return;}
@@ -265,7 +315,7 @@ export class WiringUI {
         return;
       }
       if(target instanceof HTMLInputElement&&target.id==='w-project-file')return;
-      if(target.closest('svg')||target.closest('[data-w-add]')||target.closest('[data-w-action]'))this.project.touch();
+      if(target.closest('svg')||target.closest('[data-w-add]')||target.closest('[data-w-action]'))this.touch();
       if(target.closest('svg')){
         if(this.session.moving){const svg=this.root.querySelector<SVGSVGElement>('svg')!,matrix=svg.getScreenCTM();if(!matrix)return;
           const point=new DOMPoint(event.clientX,event.clientY).matrixTransform(matrix.inverse());this.moveTo({x:Math.round(point.x/10)*10,y:Math.round(point.y/10)*10});this.render();return;}
@@ -288,8 +338,8 @@ export class WiringUI {
   }
   private action(action:string):void {
     const s=this.session,graph=s.draft?.graph;
-    if(action==='new'){this.project.resetSaved();this.persistViewport=true;s.blank();this.pendingTools.clear();this.controls.clear();this.checked.clear();this.view=fitWiring(s.draft!.graph);return;}
-    if(action==='discard'){this.project.resetSaved();this.persistViewport=true;s.reload();this.pendingTools.clear();this.controls.clear();this.checked.clear();if(s.draft)this.view=fitWiring(s.draft.graph);return;}
+    if(action==='new'){this.layout.cancel();this.project.resetSaved();this.persistViewport=true;s.blank();this.pendingTools.clear();this.controls.clear();this.checked.clear();this.view=fitWiring(s.draft!.graph);return;}
+    if(action==='discard'){this.layout.cancel();this.project.resetSaved();this.persistViewport=true;s.reload();this.pendingTools.clear();this.controls.clear();this.checked.clear();if(s.draft)this.view=fitWiring(s.draft.graph);return;}
     if(action==='restore-text'){s.pending.clear();for(const key of this.pendingTools)this.controls.delete(key);this.pendingTools.clear();s.issue=null;return;}
     if(!graph)return;
     const endpoint=this.read('endpoint'),wire=this.read('wire'),survivingName=this.read('survivor');
@@ -308,7 +358,13 @@ export class WiringUI {
       return;
     }
     if(action==='validate'){if(this.pendingTools.size)s.issue={category:'completion',code:'pending-properties',handles:[],message:'Commit pending property text first.'};else s.validate();return;}
-    if(action==='undo'||action==='redo'){s.history(action==='redo');this.controls.delete('bends');return;}
+    if(action==='undo'||action==='redo'){
+      const entry=(action==='undo'?s.draft!.history:s.draft!.redo).at(-1);
+      const view=entry?this.layoutViews.get(entry):undefined;
+      s.history(action==='redo');
+      if(view){this.view={...(action==='undo'?view.before:view.after)};this.persistViewport=action==='undo'?view.persistBefore:true;}
+      this.controls.delete('bends');return;
+    }
     if(action==='cancel'){s.cancel();return;}
     if(['fit','zoom-in','zoom-out','left','right','up','down'].includes(action))this.persistViewport=true;
     if(action==='fit'){this.view=fitWiring(graph);return;}

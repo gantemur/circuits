@@ -183,3 +183,17 @@ connectivity/anchor failures and nonfatal incomplete visual inspection. Codes an
 retained diagnostics are translated on render; expandable details remain English.
 `.cuf.json`, native keys and exact IDs remain invariant and HTML-escaped. The
 provisional native-only fallback explicitly says the rejected drawing is not kept.
+
+## Phase 6A3c2 layout terminology
+
+`web/layout-copy.ts` holds the typed English/Mongolian layout catalog. Rendering
+translates status identifiers at display time and escapes exact native IDs.
+“Suggest layout” / “Байрлал санал болгох” and “Use suggested layout” /
+“Санал болгосон байрлалыг хэрэглэх” describe geometry, not electrical Apply.
+Ordered “layout ports” / “зургийн портын туйлууд” do not redefine ground.
+“Recognized and verified” separates structural recognition and bounded geometry
+checks from synthesis certification. Independent drawing, missing/invalid port,
+unsupported template, rejected geometry, incomplete draft and stale preview have
+distinct messages. EN/MN desktop, 390 and 320 px were exercised in Chrome; retained
+proposals survive language switching. Raw SI labels and very small fitted bridge
+labels remain renderer limitations, not translated engineering-unit formatting.

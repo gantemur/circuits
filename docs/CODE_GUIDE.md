@@ -234,3 +234,21 @@ After `npm run build:app`, `node scripts/layout-evidence.mjs /tmp/layout-evidenc
 recreates generated/provisional SVG pairs with the **unchanged** editor renderer.
 The [committed inspection record](evidence/phase-6a3c1/README.md) separates geometry
 checks from actual visual judgment and lists remaining rendering limitations.
+
+## Reading browser layout ownership (Phase 6A3c2)
+
+Start with `web/layout-controller.ts`: `initialize` installs only a clean native-only
+representation; `suggest` captures ownership and produces a read-only result; `adopt`
+rechecks exact science and geometry before touching history. `web/layout-port.ts`
+stores only explicit analysis/synthesis pairs, scoped by document identity/revision
+and serialization. It does not infer ports from names or default observations.
+
+`web/wiring-draft.ts:replaceWiringGeometry` validates both native candidates and
+records changed graph fields through the existing bounded history machinery.
+Scientific revision stays unchanged. `web/wiring-ui.ts` supplies pending controls,
+monotone interactions, read-only SVG previews and entry-keyed viewport restoration;
+project consent/checkpoints remain in the independent project controller. Read
+`test/layout-browser.test.mjs` for production-event-path ownership/history regressions
+and independent divider/RC/RLC/bridge/synthesis checks across export/parser round trips.
+These deterministic event tests complement, rather than replace, the actual Chrome
+[evidence](evidence/phase-6a3c2/README.md).

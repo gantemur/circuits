@@ -1,0 +1,22 @@
+[
+  {
+    "name": "completed native download / actual valid and malformed file import",
+    "data": "PASS"
+  },
+  {
+    "name": "SVG pointer selection and move",
+    "data": "PASS"
+  },
+  {
+    "name": "language switch retains preview",
+    "data": "PASS"
+  },
+  {
+    "name": "linear RC frequency and transient plots",
+    "data": "PASS"
+  },
+  {
+    "name": "application exceptions",
+    "data": []
+  }
+]

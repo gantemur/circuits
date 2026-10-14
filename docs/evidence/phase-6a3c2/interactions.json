@@ -1,0 +1,133 @@
+[
+  {
+    "name": "split/replacement/delete",
+    "data": "explicit reselection, intended replacement removed"
+  },
+  {
+    "name": "checkbox, text focus and device history",
+    "data": "PASS"
+  },
+  {
+    "name": "pointer state",
+    "data": "Select a terminal, Start wire, then click the other endpoint. Intersections do not connect unless you explicitly join them. Apply sends a validated circuit to analysis. Small-circuit limit: 40 components, 240 vertices, 320 wires. Use Save project to retain geometry across visits.New blank draftDiscard and reloadUndoRedoValidateApplyRestore uncommitted textSave project (.cuf.json) exports this completed Graphical draft and its drawing. Export Native JSON exports the analyzed circuit without geometry. Apply sends Graphical science to Analyze; Save and Open do not.Save projectOpen project\n      No project export/open checkpoint yet.Unapplied scientific circuit: Analyze remains unchanged.\n      \n      Drawing layoutIndependent drawing: saved or edited geometry is never rearranged automatically.\n      \n      Positive layout portChoose a node0n1n3n4Negative layout portChoose a node0n1n3n4Layout ports control drawing orientation only. They do not change the circuit or its reference node.Suggest layout\n      \n      Unapplied graphical work.\n      \n      Fit circuitZoom inZoom outPan leftPan rightPan upPan down\n      \n      \n      Cancel wire / move00 · 0 · Junctionn1n1 · n1 · Junctionn1n1 · n1 · Junctionn3n3 · n3 · Junctionn4n4 · n4 · Junction\n      Add componentRCLVI\n      ComponentChoose explicitlySelect\n      PropertiesSelect\n      InitializationInitializationEquilibriumSpecified storageCommit properties\n      \n      Terminals and junctionsEndpoint0 · Junction · h1n1 · Junction · h3n1 · Junction · h5n3 · Junction · h7n4 · Junction · h9Other endpointChoose explicitly0 · Junction "
+  },
+  {
+    "name": "crossing/join/separate/pointer/cancel/history",
+    "data": "PASS"
+  },
+  {
+    "name": "obsolete choices/gestures",
+    "data": "PASS"
+  },
+  {
+    "name": "en layout 1280",
+    "data": {
+      "width": 1280,
+      "page": 1265,
+      "canvas": 580,
+      "local": 578
+    }
+  },
+  {
+    "name": "en layout 390",
+    "data": {
+      "width": 390,
+      "page": 375,
+      "canvas": 580,
+      "local": 328
+    }
+  },
+  {
+    "name": "en layout 320",
+    "data": {
+      "width": 320,
+      "page": 305,
+      "canvas": 580,
+      "local": 258
+    }
+  },
+  {
+    "name": "mn layout 1280",
+    "data": {
+      "width": 1280,
+      "page": 1265,
+      "canvas": 580,
+      "local": 578
+    }
+  },
+  {
+    "name": "mn layout 390",
+    "data": {
+      "width": 390,
+      "page": 375,
+      "canvas": 580,
+      "local": 328
+    }
+  },
+  {
+    "name": "mn layout 320",
+    "data": {
+      "width": 320,
+      "page": 305,
+      "canvas": 580,
+      "local": 258
+    }
+  },
+  {
+    "name": "independent drafts and responsive controls",
+    "data": "PASS"
+  },
+  {
+    "name": "synthesis Graphical adoption guard",
+    "data": "Unapplied Graphical, Form or JSON drafts exist. Keep them and adopt this circuit? They will remain editable with a stale-base warning.Keep drafts and adoptCancel adoption"
+  },
+  {
+    "name": "active synthesis cancellation",
+    "data": {
+      "target": [
+        {
+          "type": "worker",
+          "url": ""
+        }
+      ],
+      "status": "Run completeLast certified target snapshotF(z) = ((362880) + (876672)z + (826868)z^2 + (403704)z^3 + (112245)z^4 + (18144)z^5 + (1638)z^6 + (72)z^7 + (1)z^8) / ((40320) + (109584)z + (118124)z^2 + (67284)z^3 + (22449)z^4 + (4536)z^5 + (546)z^6 + (36)z^7 + (1)z^8)",
+      "lifecycle": [
+        {
+          "method": "Target.targetDestroyed",
+          "params": {
+            "targetId": "93E808269165C971EB230885FDAAB7C2"
+          },
+          "time": 1792002655859
+        }
+      ]
+    }
+  },
+  {
+    "name": "diode completion",
+    "data": [
+      "",
+      "Completed fixed-step nonlinear transient.",
+      "Run completeLast certified target snapshotF(z) = ((362880) + (876672)z + (826868)z^2 + (403704)z^3 + (112245)z^4 + (18144)z^5 + (1638)z^6 + (72)z^7 + (1)z^8) / ((40320) + (109584)z + (118124)z^2 + (67284)z^3 + (22449)z^4 + (4536)z^5 + (546)z^6 + (36)z^7 + (1)z^8)",
+      "",
+      "",
+      "The applied circuit changed. This draft is retained; Discard explicitly to reload before Apply.",
+      "Builder matches the analyzed circuit."
+    ]
+  },
+  {
+    "name": "diode cancellation",
+    "data": [
+      "",
+      "Run cancelled before a result arrived.",
+      "Run completeLast certified target snapshotF(z) = ((362880) + (876672)z + (826868)z^2 + (403704)z^3 + (112245)z^4 + (18144)z^5 + (1638)z^6 + (72)z^7 + (1)z^8) / ((40320) + (109584)z + (118124)z^2 + (67284)z^3 + (22449)z^4 + (4536)z^5 + (546)z^6 + (36)z^7 + (1)z^8)",
+      "",
+      "",
+      "The applied circuit changed. This draft is retained; Discard explicitly to reload before Apply.",
+      "Builder matches the analyzed circuit."
+    ]
+  },
+  {
+    "name": "runtime exceptions",
+    "data": []
+  }
+]

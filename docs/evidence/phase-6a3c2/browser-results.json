@@ -1,0 +1,208 @@
+[
+  {
+    "name": "divider",
+    "value": {
+      "text": "Drawing layoutInitial generated drawing; no electrical Apply is needed. Generating a drawing does not save a project.\n      \n      Suggest layout\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "rc-low",
+    "value": {
+      "text": "Drawing layoutInitial generated drawing; no electrical Apply is needed. Generating a drawing does not save a project.\n      \n      Suggest layout\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "rc-high",
+    "value": {
+      "text": "Drawing layoutInitial generated drawing; no electrical Apply is needed. Generating a drawing does not save a project.\n      \n      Suggest layout\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "rl",
+    "value": {
+      "text": "Drawing layoutInitial generated drawing; no electrical Apply is needed. Generating a drawing does not save a project.\n      \n      Suggest layout\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "rlc",
+    "value": {
+      "text": "Drawing layoutInitial generated drawing; no electrical Apply is needed. Generating a drawing does not save a project.\n      \n      Suggest layout\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "parallel-r",
+    "value": {
+      "text": "Drawing layoutIndependent drawing: saved or edited geometry is never rearranged automatically.\n      \n      Positive layout portChoose a node0portNegative layout portChoose a node0portLayout ports control drawing orientation only. They do not change the circuit or its reference node.Suggest layoutSuggested layout adopted. Science is unchanged; Undo/Redo restores stored drawings.\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "parallel-rc",
+    "value": {
+      "text": "Drawing layoutIndependent drawing: saved or edited geometry is never rearranged automatically.\n      \n      Positive layout portChoose a node0portmiddleNegative layout portChoose a node0portmiddleLayout ports control drawing orientation only. They do not change the circuit or its reference node.Suggest layoutSuggested layout adopted. Science is unchanged; Undo/Redo restores stored drawings.\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "bridge-balanced",
+    "value": {
+      "text": "Drawing layoutInitial generated drawing; no electrical Apply is needed. Generating a drawing does not save a project.\n      \n      Suggest layout\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "bridge-unbalanced",
+    "value": {
+      "text": "Drawing layoutInitial generated drawing; no electrical Apply is needed. Generating a drawing does not save a project.\n      \n      Suggest layout\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "cauer",
+    "value": {
+      "text": "Drawing layoutIndependent drawing: saved or edited geometry is never rearranged automatically.\n      \n      Positive layout portChoose a node0portn1n2Negative layout portChoose a node0portn1n2Layout ports control drawing orientation only. They do not change the circuit or its reference node.Suggest layoutSuggested layout adopted. Science is unchanged; Undo/Redo restores stored drawings.\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "foster-I",
+    "value": {
+      "text": "Drawing layoutIndependent drawing: saved or edited geometry is never rearranged automatically.\n      \n      Positive layout portChoose a node0portn1n2Negative layout portChoose a node0portn1n2Layout ports control drawing orientation only. They do not change the circuit or its reference node.Suggest layoutSuggested layout adopted. Science is unchanged; Undo/Redo restores stored drawings.\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "foster-II",
+    "value": {
+      "text": "Drawing layoutIndependent drawing: saved or edited geometry is never rearranged automatically.\n      \n      Positive layout portChoose a node0portn1n2Negative layout portChoose a node0portn1n2Layout ports control drawing orientation only. They do not change the circuit or its reference node.Suggest layoutSuggested layout adopted. Science is unchanged; Undo/Redo restores stored drawings.\n      ",
+      "project": "completed download; exact native document checked"
+    }
+  },
+  {
+    "name": "preview cancel/adopt/exact undo redo",
+    "value": "PASS"
+  },
+  {
+    "name": "completed project download, reload, actual file-input reopen",
+    "value": "adopted-divider.cuf.json"
+  },
+  {
+    "name": "edit and restore retires preview",
+    "value": "PASS"
+  },
+  {
+    "name": "en 1280",
+    "value": {
+      "width": 1280,
+      "page": 1265,
+      "local": [
+        {
+          "width": 454,
+          "scroll": 580
+        },
+        {
+          "width": 454,
+          "scroll": 580
+        }
+      ]
+    }
+  },
+  {
+    "name": "en 390",
+    "value": {
+      "width": 390,
+      "page": 375,
+      "local": [
+        {
+          "width": 296,
+          "scroll": 580
+        },
+        {
+          "width": 296,
+          "scroll": 580
+        }
+      ]
+    }
+  },
+  {
+    "name": "en 320",
+    "value": {
+      "width": 320,
+      "page": 305,
+      "local": [
+        {
+          "width": 226,
+          "scroll": 580
+        },
+        {
+          "width": 226,
+          "scroll": 580
+        }
+      ]
+    }
+  },
+  {
+    "name": "mn 1280",
+    "value": {
+      "width": 1280,
+      "page": 1265,
+      "local": [
+        {
+          "width": 454,
+          "scroll": 580
+        },
+        {
+          "width": 454,
+          "scroll": 580
+        }
+      ]
+    }
+  },
+  {
+    "name": "mn 390",
+    "value": {
+      "width": 390,
+      "page": 375,
+      "local": [
+        {
+          "width": 296,
+          "scroll": 580
+        },
+        {
+          "width": 296,
+          "scroll": 580
+        }
+      ]
+    }
+  },
+  {
+    "name": "mn 320",
+    "value": {
+      "width": 320,
+      "page": 305,
+      "local": [
+        {
+          "width": 226,
+          "scroll": 580
+        },
+        {
+          "width": 226,
+          "scroll": 580
+        }
+      ]
+    }
+  },
+  {
+    "name": "fallback",
+    "value": "Туйлыг сонгож, Утас эхлүүлэхийг дарсны дараа нөгөө төгсгөлийг дарна. Огтлолцлыг ил тод холбохоос нааш утаснууд холбогдохгүй. Хэрэглэх нь шалгасан хэлхээг тооцоонд шилжүүлнэ.Түр байрлал: эх JSON-д утасны анхны зураг байхгүй. Топологийн хүснэгт нь холболтын үндсэн мэдээлэл юм. Жижиг хэлхээний хязгаар: 40 элемент, 240 орой, 320 утас. Зургийг хадгалахын тулд Төслийг хадгалах үйлдлийг ашиглана уу.Шинэ хоосон ноорогНооргийг хаяж дахин ачаалахБуцаахДахин хийхШалгахХэрэглэхБатлаагүй текстийг сэргээхТөслийг хадгалах (.cuf.json) нь гүйцээсэн Зургаар ноорог болон зургийг экспортлоно. Native JSON экспорт нь шинжилж буй хэлхээг зураггүй гаргана. Хэрэглэх нь нооргийг Шинжлэх рүү шилжүүлнэ; хадгалах, нээх нь шилжүүлэхгүй.Төслийг хадгалахТөсөл нээх\n      Төсөл экспортлосон эсвэл нээсэн суурь хараахан байхгүй.Шинжлэх ухааны хэлхээ Шинжлэх талбартай таарч байна.\n      \n      Зургийн байрлалТүр зураг болон холболтын бүрэн хүснэгт хэвээр байна.\n      \n      Зургийн портын эерэг туйлЗангилаа сонгох0abxЗург"
+  },
+  {
+    "name": "application exceptions",
+    "value": []
+  }
+]

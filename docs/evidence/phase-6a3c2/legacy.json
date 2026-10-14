@@ -1,0 +1,427 @@
+[
+  {
+    "name": "example bjt-ce",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example bjt-follower",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example bjt-saturation",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example bjt-cutoff",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example bjt-pnp",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example divider",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rc",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rc-high-pass",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rc-loaded",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rc-cascade",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rl",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rlc",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example vcvs",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rc3-low-pass",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rc3-high-pass",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rlc-band-pass",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rlc-notch",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example butterworth2-low-pass",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example butterworth2-high-pass",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rc-impedance-ladder",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example rl-impedance-ladder",
+    "value": {
+      "panels": 2,
+      "plots": 2,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example res-series",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example res-star",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example res-bridge",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example port-t",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example port-rc-section",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example port-rc-cascade",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example diode-single",
+    "value": {
+      "panels": 2,
+      "plots": 1,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example diode-series",
+    "value": {
+      "panels": 2,
+      "plots": 1,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example diode-pair",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example diode-rc",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example diode-rc-step",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example diode-rc-biased-sine",
+    "value": {
+      "panels": 2,
+      "plots": 3,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example half-wave-rectifier",
+    "value": {
+      "panels": 2,
+      "plots": 1,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "example half-wave-rectifier-rc",
+    "value": {
+      "panels": 2,
+      "plots": 0,
+      "alerts": [
+        "",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "DC equivalent",
+    "value": "Vth8 VRth666.6667 ΩIN0.012 A"
+  },
+  {
+    "name": "resistor Preview Use Return",
+    "value": "PASS"
+  },
+  {
+    "name": "cauer-infinity source-free handoff",
+    "value": [
+      "dc",
+      "port",
+      "port-frequency"
+    ]
+  },
+  {
+    "name": "foster-I source-free handoff",
+    "value": [
+      "port-frequency",
+      "port",
+      "port-frequency"
+    ]
+  },
+  {
+    "name": "foster-II source-free handoff",
+    "value": [
+      "port-frequency",
+      "port",
+      "port-frequency"
+    ]
+  },
+  {
+    "name": "synthesis supported Graphical path",
+    "value": "PASS"
+  },
+  {
+    "name": "application errors",
+    "value": []
+  }
+]

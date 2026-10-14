@@ -182,3 +182,32 @@ as certification. Exact arbitrary-font typography is not certified.
 See [PHASE_6A3C1_SPECIFICATION.md](PHASE_6A3C1_SPECIFICATION.md) and the
 [visual evidence](evidence/phase-6a3c1/README.md). A later browser integration must
 keep saved drawings untouched and separately design explicit preview/undo ownership.
+
+## Phase 6A3c2 browser layout integration
+
+The headless `WiringSession` native importer remains the safe provisional adapter.
+The browser's `LayoutController.initialize()` may replace only the initial clean
+representation with `generateTopologyLayout`; it checkpoints that representation
+without mutating the applied document or declaring a saved project. Existing
+history/redo entries, independent project ownership and unfinished work exclude
+automatic initialization. A clean external sync creates a new eligible draft.
+
+`rememberLayoutPort(state,p,q)` records explicit valid pairs for that document,
+revision and serialization only. Source-free proposals otherwise require ordered
+native-node selectors. Reference-node identity is untouched.
+
+`LayoutController.suggest()/adopt()/cancel()` manage synchronous bounded proposals.
+Authorization includes applied identity/revision/serialization, draft identity and
+revisions, exact graph and native meaning, pending text/tools/gestures, ports, view
+and monotone interaction generation. Before adoption, strict native equality and
+complete geometric verification run again. There is no force-adoption path.
+
+`replaceWiringGeometry(draft,graph)` validates exact ordered native equality and
+project export validity, then records one `replace-layout` history entry using the
+existing bounded changed-field storage (including allocator, anchors and graph
+collections). The controller supplies the additional geometry certificate check.
+Undo/Redo use stored fields, not recognition. An explicit adoption keeps its own
+history entry even for identical graph fields, because it also owns viewport Fit. The UI stores before/after viewport
+state keyed by that history entry, including absence of a portable viewport.
+Generated graphs remain ordinary editable WiringGraphs. No project/native format,
+public transaction union, numerical law, tolerance or renderer changed.
