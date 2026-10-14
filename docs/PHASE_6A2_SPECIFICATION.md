@@ -1,7 +1,8 @@
 # Phase 6A2 — bilingual SVG circuit editor
 
-Status: implemented, awaiting independent review on `codex/phase-6a2-svg-circuit-editor`, based
-on accepted Phase 6A1 `0a9ac3e`. No merge or publication is authorized.
+Status: published with accepted implementation
+`2d1a725cee4d4ffa1f292cef45e7ecfd1e4f69c6`. See DECISIONS.md for release
+validation, public browser evidence and limitations. No further milestone is authorized.
 
 ## Scope and ownership
 

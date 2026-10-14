@@ -1037,3 +1037,77 @@ bilingual layout and active worker-cancellation evidence is carried forward for
 unchanged paths, not claimed as repeated. Human OS-picker and session-only geometry
 limits remain. Main/publication are unchanged; ready for the controller's separate
 final publication decision.
+
+## Phases 6A1–6A2 publication — 2026-10-14
+
+Fast-forwarded main from `3c52eff2c7cc7f8c827d7eb13a13975d0f82542c` to accepted
+`2d1a725cee4d4ffa1f292cef45e7ecfd1e4f69c6`, preserving all six reviewed commits:
+0a9ac3e, 6506ca0, 66cd302, 1531c2c, 08fb65d, 2d1a725. No implementation changes
+were made during release. Accepted branch validation 38530224131 was successful.
+Initial main [validation](https://github.com/gantemur/circuits/actions/runs/38581379437)
+and [Pages publication](https://github.com/gantemur/circuits/actions/runs/38581379409)
+completed successfully, including validate, package and deploy jobs.
+
+Fresh isolated accepted-source checks passed: clean npm ci; full suite **393/393**;
+focused graph/browser suite **66/66**; typecheck; kernel/application/site builds;
+all six numerical demos; DOM-free kernel/graph/session smoke; git diff --check.
+The three-file package has relative SHA-256-derived asset versions and embedded
+worker code. Public HTTPS bytes matched the clean package exactly:
+
+- index.html: `6b9eacb72a72f44dd2665c2b2a0bf4833df78864a09a712aad5ecf5a34805bfa`
+- app.js: `d758c971523ad9a4e71deb1c8aec0d725a635c5c275b23ec98af9437bbdbd467`
+- style.css: `861e237d05890d3c5665097a163ecc9ab6c3ad30d724e081cfe1d1a57b1d535a`
+
+Actual public Chrome checks used a new isolated profile with extensions disabled,
+CDP and https://gantemur.github.io/circuits/ (not a local server). Blank Graphical
+construction and downloaded native connectivity established: divider 8 V, 4 mA
+resistor currents and −4 mA source current; changed reference 4 V/−8 V with
+identical branch currents/powers; RC 0.5−0.5j at 1000 rad/s with configured DC,
+RMS AC, step and zero capacitor initialization, frequency/transient plots; bridge
+5 V/5 V with roundoff-zero cross current, then 70/13 V, 80/13 V and −1/1300 A.
+Independent evaluation of downloaded native documents checked connectivity and
+physical values; fresh tests retain the backward-Euler recurrence expectations.
+
+Public interactions passed crossing without connection, explicit join and
+selected separation, split/replacement/delete, device copy/history, intentional
+open versus incomplete terminals, Cancel/Escape, rotation and all four final
+history cases. Obsolete gestures retired; unrelated rotation history preserved
+valid completion. Geometry-only Apply exported identical scientific content;
+object identity/revision and exactly-once import are established by fresh
+production-path tests, not by hidden-state inspection in Chrome.
+
+Public Graphical/Form/JSON drafts survived navigation, translation and external
+changes. Change-and-restore stale Apply and pending inspector replacement were
+blocked. Invalid property text remained correctable. Transform/Synthesize guarded
+a Graphical-only draft. Unsupported controlled-source v1, diode v2 and BJT v3
+remained intact and exported native documents. Cauer/Foster I/Foster II adoption,
+source-free port-frequency handoff and the supported Graphical path worked; no
+certificate transfer to edited circuits is implied.
+
+Actual Chrome downloads completed, saved bytes were strictly parsed, and divider
+and RC files were selected through the browser file-input path, reanalyzed and
+exported unchanged. Sources/AC/waveforms/observations/storage and exact ID
+`<b>Vs</b> & "Q"` survived. Malformed JSON and negative-resistor native files were
+rejected while analysis and pending Graphical text remained intact. This is
+protocol file selection, not a human-operated OS picker.
+
+All 35 examples opened with their suggested panels. Representative linear DC,
+frequency/transient, DC equivalent (8 V, 666.6667 Ω, 0.012 A), resistor
+Preview/Use/Return, diode and BJT DC/frequency, and synthesis paths passed. Diode
+transient completed; its 3000-interval run and a bounded degree-eight Cauer run
+were cancelled while live workers were observed. English/Mongolian desktop,
+390 px and 320 px had no horizontal page overflow (scroll widths 1265/375/305).
+Checkbox focus, text selection, real pointer wiring, Fit/Zoom/Pan and local SVG
+scrolling worked; narrow screenshots were visually inspected.
+
+Successful browser runs recorded no application exceptions. Console comparison
+was clean; browser process GPU diagnostics are distinct from application errors.
+No application console messages were suppressed. The earlier unattributed
+message-channel error is not assigned a cause. Human OS-picker, persistent layout,
+autorouting quality and unsupported-device editing remain outside verification or
+scope. Layout remains provisional/session-only, with explicit topology and
+warnings; leftover anchors are not silently removed.
+
+This documentation-only status update follows successful initial publication and
+public acceptance. Its final SHA must also pass validation/Pages and public-byte
+comparison before the release is reported complete. No next phase is begun.

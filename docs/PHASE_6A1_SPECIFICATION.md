@@ -1,7 +1,8 @@
 # Phase 6A1 — headless graphical connectivity
 
-Status: implemented on `codex/phase-6a1-graphical-connectivity`, awaiting independent
-review. No graphical UI, merge or publication is included.
+Status: published with accepted implementation
+`2d1a725cee4d4ffa1f292cef45e7ecfd1e4f69c6`. See DECISIONS.md for release
+validation, public browser evidence and limitations. No further milestone is authorized.
 
 ## Authoritative state
 
