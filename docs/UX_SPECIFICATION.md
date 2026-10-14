@@ -97,3 +97,20 @@ components, 240 vertices, 320 edges, and 64 bends per route. Unsupported v1
 controlled sources and v2/v3 are preserved intact. Native export contains no
 layout, and there is no layout persistence. This section describes the review
 branch, not publication; older release evidence above remains historical.
+
+## Phase 6A3b task branch: portable Graphical projects
+
+Save project and Open project appear inside Graphical, including Open on unsupported
+applied v2/v3 documents. Save includes the completed Graphical draft and actual
+geometry/viewport; Export Native JSON remains the analyzed scientific document;
+Apply remains the only scientific transition. Saved-content, scientific match and
+incomplete-work messages are independent. Download initiation is not disk durability.
+
+Open validates a separate file input before showing a focusable inline preview with
+component IDs/counts and nonfatal warnings. Replace only Graphical is explicit;
+dirty-work consent names pending text and gestures and preserves Form/JSON. Cancel
+and replacement return focus to Open project. Invalid files change no draft. A
+supported valid native/invalid drawing permits an explicit provisional conversion,
+which remains unapplied and unexported. Loaded drawings remain independent against
+external changes and require Discard to return to clean synchronization. No imported
+history or hidden Apply occurs. Language changes preserve current preview ownership.

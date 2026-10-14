@@ -1,3 +1,6 @@
+import { projectWarnings } from './project-validation.js';
+import { ProjectController } from './project-controller.js';
+import { pt, type ProjectCopyKey } from './project-copy.js';
 import { WiringSession } from './wiring-interaction.js';
 import { fitWiring, renderWiringSvg, wiringTopology, ambiguousWiring, type ViewBox } from './wiring-render.js';
 import { wt, type WiringCopyKey } from './wiring-copy.js';
@@ -15,6 +18,9 @@ const option=(value:string,label:string,selected:string)=>`<option value="${e(va
 
 export class WiringUI {
   readonly session: WiringSession;
+  readonly project: ProjectController;
+  private persistViewport=true;
+  private fileIntent=0;
   private view:ViewBox={x:-100,y:-100,width:800,height:500};
   private controls=new Map<string,string>();
   private openSections=new Set(['w-terminals','w-topology']);
@@ -23,14 +29,39 @@ export class WiringUI {
   private checkboxOwner:string|undefined;
   private pointer: {x:number;y:number;id:number}|null=null;
   private suppressClick=false;
-  constructor(private root:HTMLElement,state:()=>LabState,private applied:()=>void,private hasPendingInspector:()=>boolean=()=>false) {
+  constructor(private root:HTMLElement,state:()=>LabState,private applied:()=>void,private hasPendingInspector:()=>boolean=()=>false, private download:(name:string,text:string,type:string)=>void=()=>{throw new Error("Download unavailable");}) {
     this.session=new WiringSession(state);
+    this.project=new ProjectController({session:this.session,viewport:()=>this.persistViewport?this.view:undefined,
+      pending:()=>this.pendingTools.size,editingSnapshot:()=>JSON.stringify([Array.from(this.controls),Array.from(this.pendingTools)]),
+      install:candidate=>{
+        this.session.installProject(candidate.graph);
+        this.controls.clear();this.pendingTools.clear();this.checked.clear();this.pointer=null;
+        this.persistViewport=!!candidate.project.drawing.viewport;
+        this.view=candidate.project.drawing.viewport??fitWiring(candidate.graph);
+      }});
     if(this.session.draft)this.view=fitWiring(this.session.draft.graph);
     root.addEventListener('input',event=>this.input(event.target));
-    root.addEventListener('change',event=>{this.input(event.target);if(event.target instanceof HTMLSelectElement)this.render();});
+    root.addEventListener('change',event=>{
+      if(event.target instanceof HTMLInputElement && event.target.id==='w-project-file'){
+        const file=event.target.files?.[0];
+        event.target.value=''; // Selecting the same file again must start a new attempt.
+        if(file){
+          const intent=++this.fileIntent;
+          void this.project.read(file).then(()=>{
+            if(intent!==this.fileIntent)return;
+            this.render();
+            this.root.querySelector<HTMLElement>('[data-project-preview]')?.focus();
+          });
+          this.render();
+        }
+        return;
+      }
+      this.input(event.target);
+      if(event.target instanceof HTMLSelectElement)this.render();
+    });
     root.addEventListener('click',event=>this.click(event));
     root.addEventListener('keydown',event=>{
-      if(event.key==='Escape'){this.session.cancel();this.render();}
+      if(event.key==='Escape'){this.project.touch();this.session.cancel();this.render();}
       if((event.key==='Enter'||event.key===' ')&&event.target instanceof SVGElement){event.preventDefault();this.svgTarget(event.target);}
     });
     root.addEventListener('pointerdown',event=>{this.pointer={x:event.clientX,y:event.clientY,id:event.pointerId};this.suppressClick=false;});
@@ -41,10 +72,12 @@ export class WiringUI {
     root.addEventListener('pointercancel',()=>{this.pointer=null;this.suppressClick=true;this.session.cancel();this.render();});
   }
   hasUnappliedDraft():boolean {return this.session.hasDrafts() || this.pendingTools.size>0;}
-  leave():void {this.session.moving=false;this.pointer=null;}
+  leave():void {if(this.session.moving)this.project.touch();this.session.moving=false;this.pointer=null;}
   private value(key:string,fallback=''):string{return this.controls.get(key)??fallback;}
   private input(target:EventTarget|null):void {
     if(!(target instanceof HTMLInputElement||target instanceof HTMLSelectElement||target instanceof HTMLTextAreaElement))return;
+    if(target.id==='w-project-file')return;
+    this.project.touch();
     if(target instanceof HTMLInputElement && target.type==='checkbox' && target.id){
       if(target.checked)this.checked.add(target.id);else this.checked.delete(target.id);
     }
@@ -53,8 +86,9 @@ export class WiringUI {
     if(target.dataset.wControl){
       const key=target.dataset.wControl;this.controls.set(key,target.value);
       if(key==='device'){if(this.session.selection?.key!==target.value)this.checked.delete('w-delete-probes');this.session.selection=target.value?{kind:'device',key:target.value}:null;}
-      if(['x','y','probe-id','probe-label'].includes(key)||key.startsWith('bends-')||key.startsWith('node-name-'))this.pendingTools.add(key);
+      if(['x','y','probe-id','probe-label','initial'].includes(key)||key.startsWith('bends-')||key.startsWith('node-name-'))this.pendingTools.add(key);
     }
+    const saved=this.root.querySelector('[data-project-saved]');if(saved)saved.textContent=pt(this.project.savedState());
   }
   private field(key:string,label:WiringCopyKey,value:string,prop=false):string {
     const text=prop?this.session.pending.get(key)??value:this.value(key,value);
@@ -93,6 +127,23 @@ export class WiringUI {
     if(initial)content+=f('initial','initialValue',initial.value);
     return `<h4>${e(device.id)} · ${device.type}</h4><div class="controls-grid">${content}</div><div class="file-actions">${button('save','save')}${button('rotate','rotate')}${button('move','move')}${button('copy','copy')}</div><label class="w-check"><input type="checkbox" id="w-delete-probes" ${this.checked.has('w-delete-probes')?'checked':''}>${e(wt('removeProbes'))}</label>${button('delete-device','remove')}`;
   }
+  private projectContent():string {
+    const p=this.project;
+    const action=(name:string,key:ProjectCopyKey)=>`<button type="button" class="button outline" data-project-action="${name}">${e(pt(key))}</button>`;
+    const diagnostic=p.diagnostics.map(d=>{
+      const key:ProjectCopyKey=d.code==='pending-terminal'?'terminal':d.code==='incomplete-draft'?'incomplete':d.code==='drawing-inspection-incomplete'?'inspection':
+        ['reference-node','observation-node','observation-coverage'].includes(d.code)?'anchors':
+        ['merged-nodes','terminal-node','unbound-component','node-coverage'].includes(d.code)?'connectivity':
+        ['file-limit','resource-limit','record-limit'].includes(d.code)?'resource':p.candidate||p.status==='exported'||p.status==='opened'?'warning':'invalid';
+      return `<p class="warning">${e(pt(key))}</p><details><summary>${e(pt('technical'))}</summary><pre>${e(d.code+': '+d.message)}</pre></details>`;
+    }).join('');
+    const candidate=p.candidate;
+    return `<section class="w-project"><p>${e(pt('hint'))}</p><div class="file-actions">${action('save','save')}${action('open','open')}<input id="w-project-file" type="file" accept=".json,.cuf.json,application/json" hidden></div>
+      <p data-project-saved>${e(pt(p.savedState()))}</p><p>${e(pt(p.scientificApplied()?'applied':'unapplied'))}</p>
+      <p role="status" data-project-status>${e(pt(p.status as ProjectCopyKey))}</p>${diagnostic}${p.retainedNative?`<details><summary>${e(pt('technical'))}</summary><pre>${e(p.retainedNative)}</pre></details>`:''}
+      ${candidate||p.fallback?`<section tabindex="-1" data-project-preview aria-label="${e(pt('preview'))}" class="soft-note">
+        <p>${e(pt('preview'))}</p>${candidate?`<p>${e(pt('summary'))}: ${candidate.graph.devices.length} / ${candidate.project.document.circuit.nodes.length} / ${candidate.graph.edges.length}</p><p>${candidate.graph.devices.map(d=>e(d.id)).join(', ')}</p><p>${e(pt(p.replacementNeedsConsent?'consent':'unapplied'))}</p>${action('accept','accept')}`:action('fallback','fallback')}${action('cancel','cancel')}</section>`:''}</section>`;
+  }
   render():void {
     for(const details of Array.from(this.root.querySelectorAll<HTMLDetailsElement>('details[id]'))){if(details.open)this.openSections.add(details.id);else this.openSections.delete(details.id);}
     const active=document.activeElement instanceof HTMLInputElement||document.activeElement instanceof HTMLTextAreaElement||document.activeElement instanceof HTMLSelectElement?document.activeElement:null;
@@ -103,7 +154,7 @@ export class WiringUI {
     const s=this.session,draft=s.draft;
     const actions=`<div class="file-actions">${button('new','new')}${button('discard','discard')}${button('undo','undo')}${button('redo','redo')}${button('validate','validate')}${button('apply','apply')}${button('restore-text','restoreText')}</div>`;
     if(!draft||s.oversized()){
-      this.root.innerHTML=`<p class="warning">${e(wt(s.oversized()?'oversized':'unsupported'))}</p>${button('new','new')}${button('discard','discard')}`;return;
+      this.root.innerHTML=`<p class="warning">${e(wt(s.oversized()?'oversized':'unsupported'))}</p>${button('new','new')}${button('discard','discard')}${this.projectContent()}`;return;
     }
     const graph=draft.graph,names=netNames(graph);
     const vertices=graph.vertices.map(v=>({value:v.key,label:v.kind==='terminal'?`${graph.devices.find(d=>d.key===v.device)!.id}.${v.role} · ${names.get(v.key)} · ${wt(v.completion==='open'?'intentionallyOpen':v.completion)}`:`${names.get(v.key)} · ${wt(v.kind)} · ${v.key}`}));
@@ -123,11 +174,16 @@ export class WiringUI {
     const conflict=wiringConflict(draft,s.state());
     const status=conflict?'conflict':s.status==='valid'?'valid':s.status==='applied'?'applied':this.hasUnappliedDraft()?'dirty':'clean';
     const issue=s.issue;
-    this.root.innerHTML=`<p>${e(wt('hint'))}</p><p class="small muted">${e(wt('provisional'))} ${e(wt('bounds'))}</p>${actions}
+    // Portable files can reach the full route limit. Use their accepted bounded
+    // warning scan instead of re-running the older editor's quadratic heuristic.
+    const quality=s.independentProject
+      ? projectWarnings(graph).map(d=>`<p class="warning" data-w-ambiguity>${e(pt(d.code==='drawing-inspection-incomplete'?'inspection':'warning'))}</p>`).join('')
+      : ambiguousWiring(graph)?`<p class="warning" data-w-ambiguity>${e(wt('warning'))}</p>`:'';
+    this.root.innerHTML=`<p>${e(wt('hint'))}</p><p class="small muted">${this.session.independentProject?'':e(wt('provisional'))} ${e(wt('bounds'))}</p>${actions}${this.projectContent()}
       <p class="${conflict?'warning':'soft-note'}" role="status" data-w-status>${e(wt(status))}</p><p data-w-pending>${s.pending.size||this.pendingTools.size?e(wt('pendingText')):''}</p>
       ${issue?`<div class="error-card" role="alert">${e(wt(issue.category))} ${issue.handles.map(key=>e(graph.devices.find(d=>d.key===key)?.id??vertices.find(v=>v.value===key)?.label??key)).join(', ')}<details><summary>${e(wt('technical'))}</summary><pre>${e(issue.message)}</pre></details></div>`:''}
       <div class="w-layout"><section class="w-drawing"><div class="file-actions">${(['fit','zoom-in','zoom-out','left','right','up','down'] as const).map((a,i)=>button(a,(['fit','zoomIn','zoomOut','left','right','up','down'] as WiringCopyKey[])[i]!)).join('')}</div>
-      ${ambiguousWiring(graph)?`<p class="warning" data-w-ambiguity>${e(wt('warning'))}</p>`:''}
+      ${quality}
       ${s.gesture?`<p class="warning">${e(wt('activeWire'))}</p>`:''}${s.moving?`<p class="warning">${e(wt('move'))}</p>`:''}
       ${button('cancel','cancel')}<div class="w-viewport">${renderWiringSvg(graph,s.selection,this.view,s.gesture)}</div></section>
       <section class="w-inspector"><h3>${e(wt('palette'))}</h3><div class="file-actions">${(['R','C','L','V','I'] as const).map(type=>`<button type="button" class="button" data-w-add="${type}">${type}</button>`).join('')}</div>
@@ -197,6 +253,19 @@ export class WiringUI {
     if(this.suppressClick){this.suppressClick=false;return;}
     try {
       const target=event.target;
+      const projectAction=target.closest<HTMLElement>('[data-project-action]')?.dataset.projectAction;
+      if(projectAction){
+        if(projectAction==='open'){this.root.querySelector<HTMLInputElement>('#w-project-file')?.click();return;}
+        if(projectAction==='save')this.project.save(this.download);
+        if(projectAction==='accept')this.project.accept();
+        if(projectAction==='cancel')this.project.cancel();
+        if(projectAction==='fallback')this.project.prepareFallback();
+        this.render();
+        this.root.querySelector<HTMLElement>(projectAction==='fallback'?'[data-project-preview]':'[data-project-action="open"]')?.focus();
+        return;
+      }
+      if(target instanceof HTMLInputElement&&target.id==='w-project-file')return;
+      if(target.closest('svg')||target.closest('[data-w-add]')||target.closest('[data-w-action]'))this.project.touch();
       if(target.closest('svg')){
         if(this.session.moving){const svg=this.root.querySelector<SVGSVGElement>('svg')!,matrix=svg.getScreenCTM();if(!matrix)return;
           const point=new DOMPoint(event.clientX,event.clientY).matrixTransform(matrix.inverse());this.moveTo({x:Math.round(point.x/10)*10,y:Math.round(point.y/10)*10});this.render();return;}
@@ -219,8 +288,8 @@ export class WiringUI {
   }
   private action(action:string):void {
     const s=this.session,graph=s.draft?.graph;
-    if(action==='new'){s.blank();this.pendingTools.clear();this.controls.clear();this.checked.clear();this.view=fitWiring(s.draft!.graph);return;}
-    if(action==='discard'){s.reload();this.pendingTools.clear();this.controls.clear();this.checked.clear();if(s.draft)this.view=fitWiring(s.draft.graph);return;}
+    if(action==='new'){this.project.resetSaved();this.persistViewport=true;s.blank();this.pendingTools.clear();this.controls.clear();this.checked.clear();this.view=fitWiring(s.draft!.graph);return;}
+    if(action==='discard'){this.project.resetSaved();this.persistViewport=true;s.reload();this.pendingTools.clear();this.controls.clear();this.checked.clear();if(s.draft)this.view=fitWiring(s.draft.graph);return;}
     if(action==='restore-text'){s.pending.clear();for(const key of this.pendingTools)this.controls.delete(key);this.pendingTools.clear();s.issue=null;return;}
     if(!graph)return;
     const endpoint=this.read('endpoint'),wire=this.read('wire'),survivingName=this.read('survivor');
@@ -241,6 +310,7 @@ export class WiringUI {
     if(action==='validate'){if(this.pendingTools.size)s.issue={category:'completion',code:'pending-properties',handles:[],message:'Commit pending property text first.'};else s.validate();return;}
     if(action==='undo'||action==='redo'){s.history(action==='redo');this.controls.delete('bends');return;}
     if(action==='cancel'){s.cancel();return;}
+    if(['fit','zoom-in','zoom-out','left','right','up','down'].includes(action))this.persistViewport=true;
     if(action==='fit'){this.view=fitWiring(graph);return;}
     if(action==='zoom-in'||action==='zoom-out'){const factor=action==='zoom-in'?.8:1.25;
       const width=Math.max(200,Math.min(4000,this.view.width*factor)),height=Math.max(150,Math.min(3000,this.view.height*factor));
@@ -254,7 +324,7 @@ export class WiringUI {
     if(action==='copy'&&device){const keys=s.execute({type:'copy-device',device:device.key});if(keys){s.selection={kind:'device',key:keys[0]!};this.controls.set('device',keys[0]!);}return;}
     if(action==='delete-device'&&device){const included=(this.root.querySelector<HTMLInputElement>('#w-delete-probes')?.checked??false)?graph.observations.filter(o=>o.type==='current'&&o.device===device.key).map(o=>o.key):[];
       if(s.execute({type:'delete-device',device:device.key,deleteObservations:included})){for(const key of s.pending.keys())if(key.startsWith(device.key+':'))s.pending.delete(key);s.selection=null;}return;}
-    if(action==='initial'){s.execute({type:'set-initial',kind:this.read('initial') as 'storage'|'equilibrium'});return;}
+    if(action==='initial'){if(s.execute({type:'set-initial',kind:this.read('initial') as 'storage'|'equilibrium'}))this.pendingTools.delete('initial');return;}
     if(action==='start'){s.begin(endpoint);return;}
     if(action==='connect'){if(!s.gesture)s.begin(endpoint);s.finish(this.read('target'),survivingName);return;}
     if(action==='disconnect'){s.execute({type:'disconnect',vertex:endpoint});return;}

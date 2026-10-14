@@ -31,7 +31,7 @@ const en = {
   position:'Canvas coordinates', selection:'Selection', device:'Component', junction:'Junction', free:'Free endpoint',
   tableHint:'p → n defines positive device current and V(p)−V(n). No wire crossing or symbol placement changes connectivity.',
   pendingText:'Property text is uncommitted. Commit it or Discard; changing modes or language preserves it.',
-  bounds:'Small-circuit limit: 40 components, 240 vertices, 320 wires. Geometry is session-only.',
+  bounds:'Small-circuit limit: 40 components, 240 vertices, 320 wires. Use Save project to retain geometry across visits.',
 };
 const mn: Record<keyof typeof en,string> = {
   restoreText:'Батлаагүй текстийг сэргээх', movePosition:'Сонгосон уулзварыг X/Y руу зөөх', title:'Зургаар',hint:'Туйлыг сонгож, Утас эхлүүлэхийг дарсны дараа нөгөө төгсгөлийг дарна. Огтлолцлыг ил тод холбохоос нааш утаснууд холбогдохгүй. Хэрэглэх нь шалгасан хэлхээг тооцоонд шилжүүлнэ.',
@@ -65,7 +65,7 @@ const mn: Record<keyof typeof en,string> = {
   position:'Зургийн координат',selection:'Сонголт',device:'Элемент',junction:'Уулзвар',free:'Чөлөөт төгсгөл',
   tableHint:'p → n нь гүйдлийн эерэг чиглэл, V(p)−V(n) нь хүчдэл. Утасны огтлолцол, элементийн байрлал холболтыг өөрчлөхгүй.',
   pendingText:'Шинж чанарын текст батлагдаагүй. Батлах эсвэл нооргийг хаяна уу; горим, хэл солиход хадгалагдана.',
-  bounds:'Жижиг хэлхээний хязгаар: 40 элемент, 240 орой, 320 утас. Зураг зөвхөн энэ сессэд хадгалагдана.',
+  bounds:'Жижиг хэлхээний хязгаар: 40 элемент, 240 орой, 320 утас. Зургийг хадгалахын тулд Төслийг хадгалах үйлдлийг ашиглана уу.',
 };
 export type WiringCopyKey = keyof typeof en;
 export const wt = (key: WiringCopyKey): string => (language()==='mn' ? mn : en)[key];

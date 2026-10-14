@@ -9,6 +9,7 @@ export const WIRING_LIMITS = { devices: 40, vertices: 240, wires: 320 };
 export type WiringSelection = { kind: 'device' | 'vertex' | 'edge'; key: Handle; segment?: number } | null;
 export class WiringSession {
   draft: WiringDraft | null = null;
+  independentProject = false;
   selection: WiringSelection = null;
   gesture: { start: Handle; bends: Point[] } | null = null;
   moving = false;
@@ -16,12 +17,13 @@ export class WiringSession {
   issue: Diagnostic | null = null;
   status: 'idle' | 'valid' | 'applied' | 'unsupported' | 'oversize' = 'idle';
   constructor(readonly state: () => LabState) { this.reload(); }
-  hasDrafts(): boolean { return !!(this.gesture || this.pending.size || this.draft && wiringDirty(this.draft)); }
+  hasDrafts(): boolean { return !!(this.independentProject || this.moving || this.gesture || this.pending.size || this.draft && wiringDirty(this.draft)); }
   oversized(): boolean {
     const graph = this.draft?.graph;
     return !!graph && (graph.devices.length > WIRING_LIMITS.devices || graph.vertices.length > WIRING_LIMITS.vertices || graph.edges.length > WIRING_LIMITS.wires);
   }
   reload(): void {
+    this.independentProject = false; this.moving = false;
     const result = createWiringDraft(this.state());
     this.draft = 'graph' in result ? result : null;
     this.status = this.draft ? this.oversized() ? 'oversize' : 'idle' : 'unsupported';
@@ -35,6 +37,7 @@ export class WiringSession {
     if (result === 'synchronized') { this.selection = null; this.issue = null; this.status = this.oversized() ? 'oversize' : 'idle'; }
   }
   blank(): void {
+    this.independentProject = false; this.moving = false;
     // Explicit New is a new independent draft, even on an unsupported document.
     const seed = createWiringDraft({document: {circuit:{schemaVersion:1,nodes:['0'],components:[],observations:[]},
       experiment:{schemaVersion:1,sources:[],initial:{kind:'equilibrium'}}},revision:0});
@@ -43,6 +46,17 @@ export class WiringSession {
     checkpointWiring(seed, this.state());
     seed.graph = emptyWiring('storage');
     this.pending.clear(); this.gesture = null; this.selection = null; this.issue = null; this.status = 'idle';
+  }
+  /** Install a validated project against the actual applied owner, including v2/v3.
+   * Checkpoint ownership first; an independent flag prevents provisional resync. */
+  installProject(graph: WiringGraph): void {
+    const seed = createWiringDraft({document:{circuit:{schemaVersion:1,nodes:['0'],components:[],observations:[]},
+      experiment:{schemaVersion:1,sources:[],initial:{kind:'equilibrium'}}},revision:0});
+    if (!('graph' in seed)) throw new Error('Empty v1 draft unavailable');
+    checkpointWiring(seed,this.state());
+    seed.graph=structuredClone(graph);
+    this.draft=seed;this.independentProject=true;
+    this.pending.clear();this.cancel();this.selection=null;this.issue=null;this.status='idle';
   }
   /** Retire only references whose graph identity disappeared. A deleted device's
    * terminal becomes a free anchor; that is not permission to finish its old wire. */
@@ -101,7 +115,7 @@ export class WiringSession {
   }
   validate(): ReturnType<typeof nativeCandidate> | null {
     if (!this.draft) return null;
-    if (this.gesture || this.pending.size) {
+    if (this.moving || this.gesture || this.pending.size) {
       this.issue = {category:'completion',code:'pending-properties',handles:[],message:'Commit property text or cancel the unfinished wire first'};
       return null;
     }

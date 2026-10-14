@@ -1,7 +1,8 @@
 # Portable circuit-and-drawing projects — version 1
 
-Phase 6A3a is headless infrastructure. There are no browser Save/Open controls,
-local autosave, layout recognition or new scientific schemas in this milestone.
+Phase 6A3a defines the headless infrastructure; Phase 6A3b adds task-branch
+browser Save/Open described below. Neither introduces autosave, layout recognition
+or new scientific schemas.
 Native JSON export and strict native v1/v2/v3 parsers remain unchanged.
 
 ## Envelope and authority
@@ -186,7 +187,7 @@ saved project key is separate from the Graphical Apply checkpoint and scientific
 revision; moving a symbol can change saved content without invalidating analysis.
 Incomplete drafts remain correctable in memory but are not portable projects.
 
-Phase 6A3b must prepare and validate before replacement, ask before replacing dirty
+Phase 6A3b prepares and validates before replacement, asks before replacing dirty
 Graphical work, preserve Form/JSON, and recheck applied document identity, revision
 and serialized content after asynchronous reading and confirmation. Also recheck
 Graphical scientific/geometry revisions plus pending-text/gesture changes (those
@@ -198,4 +199,30 @@ remains unapplied until explicit Apply invokes the existing shared native path o
 No ownership counters are trusted from a file. Stale/deleted/renamed device
 references fail structurally; there is no approximate name matching. Valid native
 v2/v3 and controlled-source data remain outside graphical scope. Persistent draft
-recovery, browser autosave, migration, and file dialogs are deferred.
+recovery, browser autosave and migration remain deferred. Browser file controls
+are described below.
+
+## Phase 6A3b browser integration (task branch, not published)
+
+Edit circuit → Graphical now has separate Save project and Open project controls.
+Save produces `circuits-unfolded.cuf.json` from the completed Graphical draft,
+including its current viewport. It does not Apply. The shared native JSON export
+still exports the analyzed document without drawing data. Open previews validated
+content and warnings, then explicitly replaces only Graphical. It never applies
+science or clears Form/JSON. Drawing-stage failures offer a separate provisional
+native-only conversion when supported; this has no saved-project checkpoint until
+export, since the rejected file did not contain that provisional drawing.
+
+The project controller retains applied identity/revision/serialization, draft
+identity/revisions, pending/gesture/control/viewport snapshots, a monotone edit
+generation, and a per-read attempt. It rechecks after reading and before replacement.
+Presentation rerenders do not advance the generation. Opened projects stay
+independent even after Apply, so external changes produce conflicts rather than
+regenerating layout. Explicit Discard returns to normal synchronization.
+
+Saved content is separate from Apply. A completed download initiation records an
+export checkpoint; the UI does not claim the OS wrote a file. Pending text or
+active wire/move gestures block Save and cannot appear safely saved. Opened files
+without a viewport retain that absence until an explicit pan/zoom/fit action.
+File history, sessions and ownership tokens are never serialized. No autosave,
+layout recognition or migration is implemented.

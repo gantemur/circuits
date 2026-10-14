@@ -1231,3 +1231,94 @@ released-baseline package byte for byte, with the same hashes recorded above.
 No browser interaction evidence is claimed or needed for this headless-only change.
 No merge or deployment occurred. Phase 6A3a is ready for controller review and
 possible authorization of Phase 6A3b; Save/Open, autosave and routing remain deferred.
+
+## Phase 6A3b — portable project Save/Open browser integration
+
+Implemented on `codex/phase-6a3b-browser-project-save-open`, descending directly
+from accepted core `97aefa40d37aee9e3c34f9cbabb7af788bad2546`. Main remains released
+`64e04525a98839f61a5587b24b1ba6c0fc61f45e`; this is not a publication record.
+
+Graphical Save project exports the completed independent draft as `.cuf.json`
+using guarded export, strict serialization and saved-content keys. All property,
+source/storage, initialization, coordinate, name, bend and observation text plus
+wire/move gestures guard Save. Native JSON remains a separate scientific format.
+Save/Open never Apply. Saved-content and scientific Apply checkpoints are separate;
+geometry/viewport changes do not invalidate scientific analysis. The UI reports
+only download initiation, not proven disk durability.
+
+Open checks size before reading, then prepares a strict candidate and previews
+counts, exact escaped IDs and nonfatal warnings. Explicit replacement names only
+Graphical; Form/JSON are retained. Attempt IDs, applied identity/revision/exact
+serialization, draft identity/scientific/geometry revisions, pending/gesture/control/
+viewport snapshots and monotone edit generation guard both read completion and
+acceptance. Edit-and-restore cannot revive an old authorization. Older read callbacks
+cannot move focus to newer candidates. Language-only rendering retains intent.
+Opened supported v1 projects work independently over applied v2/v3 documents and
+retain geometry against later external changes. Fresh history contains no imported
+ownership data. Apply uses the existing shared native path; pending inspector
+text still blocks replacement. A supported valid-native/invalid-drawing fallback
+is explicit, provisional, unapplied and unexported until Save.
+
+The accepted schema, topology/native validation and scientific kernels are unchanged.
+Opened project drawings use the accepted bounded quality-warning scan, avoiding a
+second quadratic legacy-renderer scan. Incomplete inspection remains nonfatal and
+visible in both languages. It never certifies collision-free geometry.
+
+### Automated evidence
+
+Clean-source npm ci, npm test **473/473** (451 retained + 22 new controller/UI cases),
+focused project tests **80/80**, typecheck, explicit kernel/app/site builds, all six
+numerical demos and git diff --check passed. Controlled deferred promises verify
+stale reads, overlapping selections and stale confirmation deterministically.
+Production handlers verify pending guards, save-initiation failure, exact IDs,
+independent nonlinear owners, geometry/anchors, content keys and strict failures.
+The headless project round-trip and 8 V divider smoke passes in a DOM/process-free
+VM; the previously documented realm-local JSON clone shim remains a test limitation.
+
+### Actual browser evidence
+
+An isolated headless Chrome profile served the actual three-file package under
+`/circuits/`. CDP observed completed download events, read completed files from disk,
+and selected those files using DOM.setFileInputFiles (not a simulated JSON paste).
+
+- Constructed an RC from a blank Graphical draft, including 1 V step/RMS source,
+  R=1000 ohms, C=1e-6 F, zero capacitor storage, moved R to (370,230), rotated it,
+  added bends (200,300)/(250,300), and chose the capacitor's p terminal and ground
+  vertex as output anchors. Saved, reloaded, opened and re-exported exactly the
+  same 1,570-byte project. Analyze remained unchanged until Apply. The exported
+  applied circuit independently gives H(j1000)=0.5−0.5j and backward-Euler recurrence
+  v[k]=(v[k−1]+0.1)/1.1 for h=0.0001 s; actual Frequency/Transient plots rendered.
+- Unbalanced bridge and source-free Foster projects were opened, rotated, saved,
+  reloaded and reimported through actual file input, with exact drawing/native
+  round trips. Native JSON downloads and reimports remained separate and successful.
+- Invalid JSON and valid-native/invalid-drawing files preserved work; explicit
+  provisional fallback succeeded. Pending coordinate consent cancellation retained
+  text, edit-and-restore invalidated confirmation, and real Form/JSON drafts survived
+  replacement. Keyboard Enter cancellation restored focus to Open project.
+- RC projects opened over both diode and BJT documents without changing their
+  exported scientific bytes until Apply. Markup-looking Unicode/punctuation IDs
+  displayed literally, created no markup elements and round-tripped exactly.
+- All 35 examples opened; divider/RC, DC equivalent comparison, resistor Preview →
+  Use → Return, all Cauer/Foster analysis handoffs, diode/BJT panels and diode
+  transient completion worked. Actual synthesis and diode worker runs were cancelled
+  through their controls. Native invalid-file preservation and independent draft
+  guards were exercised by the legacy interaction checks.
+- EN/MN at 1280, 390 and 320 CSS pixels had no page overflow. Screenshots were
+  inspected; controls/text remained readable. Existing drawing scrolling and focus
+  checks passed. Application runtime exception/error checks were empty; browser
+  startup/allocator diagnostics are not application failures.
+
+Clean publishing output contains only index.html, app.js and style.css. Matching
+relative SHA-256 versions and byte equality with the browser acceptance package
+were checked. Final package hashes:
+
+- HTML: `cd0a83961654a0311a2ce5a570075ba3f40a7873c33ff640ec68783640dd0922`
+- JS: `707b3b386b76afcfd2e1babdeff84700e3744bae4f91543530f15cdc5762d50a`
+- CSS: `861e237d05890d3c5665097a163ecc9ab6c3ad30d724e081cfe1d1a57b1d535a`
+
+Human operation of the OS picker and durability across OS failure were not tested.
+The UI deliberately does not claim either. Browser asynchronous races are tested
+with controlled promises at the production-controller boundary, not timing claims
+about OS reads. No autosave, persistent history, autorouting, layout recognition,
+new devices, merge or deployment is included. Independent controller review is
+required before publication or another milestone.

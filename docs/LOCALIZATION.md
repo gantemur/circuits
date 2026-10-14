@@ -173,3 +173,13 @@ translate. Names/property text remain intact across language changes.
 Current Chrome evidence covers English/Mongolian desktop and 390/320 CSS pixels,
 local canvas scrolling, visible focus and retained invalid property text. This is
 not a translation review of the existing historical technical details.
+
+## Phase 6A3b portable projects (task branch)
+
+`web/project-copy.ts` translates Save project (**Төслийг хадгалах**), Open project
+(**Төсөл нээх**), export initiation, independent applied/export checkpoints,
+incomplete drafts, replacement consent, stale operations, resource/format/scientific/
+connectivity/anchor failures and nonfatal incomplete visual inspection. Codes and
+retained diagnostics are translated on render; expandable details remain English.
+`.cuf.json`, native keys and exact IDs remain invariant and HTML-escaped. The
+provisional native-only fallback explicitly says the rejected drawing is not kept.

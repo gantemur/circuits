@@ -191,3 +191,18 @@ Read `test/support/project-fixtures.mjs` for independently declared terminal gro
 and placements; `test/project.test.mjs` checks retained physical anchors/geometry,
 corruption outcomes, repeated cycles, and independent divider/RC/RLC/bridge values.
 Source-free Cauer/Foster examples use the accepted generators and distinct layouts.
+
+## Reading Phase 6A3b browser Save/Open
+
+Start in `web/project-controller.ts`: Save uses guarded export, serialization and
+content keys; read prepares a strict result without installing; accept rechecks the
+owner then installs only Graphical. Follow capture/current to see why identities,
+snapshots and monotone generations all matter. `WiringUI` supplies every pending
+text collection, gesture and viewport plus render-time translated copy. Its file
+input and injected download callback are browser boundaries. `installProject` in
+`wiring-interaction.ts` establishes fresh history against the live scientific owner,
+without converting that owner (which may be v2/v3). Its independent flag protects
+opened geometry from clean synchronization. Follow existing Apply for the one
+scientific transition. `test/project-browser.test.mjs` exercises these production
+paths, with deferred promises for races, independently authored layouts and kernel
+checks. The accepted headless validator and native schemas are unchanged.

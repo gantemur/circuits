@@ -58,7 +58,7 @@ let pendingGuideAction: GuideAction | null = null;
 const inputDrafts = new Map<string, string>();
 const inputIssues = new Map<string, TranslationKey>();
 const builderUI = new BuilderUI(byId('builder-editor'), () => state, () => validatedChange());
-const wiringUI = new WiringUI(byId('wiring-editor'), () => state, () => validatedChange(true), () => inputDrafts.size>0);
+const wiringUI = new WiringUI(byId('wiring-editor'), () => state, () => validatedChange(true), () => inputDrafts.size>0, download);
 const onePortUI = new OnePortUI(byId('one-port'), () => state);
 const resistorUI = new ResistorTransformUI(byId('resistor-transform'), () => state, {
   hasDrafts: () => builderUI.hasUnappliedDraft() || jsonDirty || wiringUI.hasUnappliedDraft(),
@@ -534,6 +534,7 @@ document.addEventListener('visibilitychange',()=>{
   if (!document.hidden && workspace.view==='analyze') renderPanels();
 });
 function validatedChange(preserveInspectorDrafts=false): void {
+  wiringUI.project.touch();
   const focused = (document.activeElement as HTMLElement | null)?.id;
   if(!preserveInspectorDrafts){inputDrafts.clear(); inputIssues.clear();} reconcilePanels(workspace,state); renderAll();
   if (focused) document.getElementById(focused)?.focus({preventScroll:true});

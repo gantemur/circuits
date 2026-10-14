@@ -167,5 +167,10 @@ Original repository code and documentation are released under the [MIT license](
 **Phase 6A3a is a headless task-branch implementation:** the
 [portable project core](docs/PROJECT_FORMAT.md) pairs unchanged native scientific
 JSON with a strictly checked drawing. It supplies pure validation, reconstruction,
-export and saved-content comparison; browser Save/Open and persistent geometry
-controls are not yet implemented. The published application is unchanged.
+export and saved-content comparison. **Phase 6A3b is implemented on its task
+branch, not published:** Graphical Save project downloads a completed draft and
+its drawing as `.cuf.json`; Open project validates and previews before replacing
+only Graphical. Apply alone changes Analyze. Native JSON export still exports the
+analyzed circuit without geometry. Independent saved/applied indicators and stale
+read/confirmation guards protect ongoing work. See the [browser project specification](docs/PHASE_6A3B_SPECIFICATION.md).
+The published application is unchanged; autosave and autorouting remain deferred.
