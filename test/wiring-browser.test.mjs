@@ -160,3 +160,70 @@ test('geometry-only production Apply retains numerical ownership and does not no
   h.control('device',h.ui.session.draft.graph.devices[0].key);h.action('select-device');h.action('rotate');h.action('apply');
   assert.equal(h.changes,0);assert.equal(h.state.document,doc);assert.equal(h.state.revision,revision);assert.equal(h.ui.hasUnappliedDraft(),false);
 });
+
+test('production selectors invalidate removed wires explicitly, then use the selected replacement',()=>{
+  const h=uiHarness(),edge=h.ui.session.draft.graph.edges[0].key;
+  h.control('wire',edge);h.action('split');
+  assert.equal(h.root.querySelector('[data-w-control="wire"]').value,'');
+  const before=structuredClone(h.ui.session.draft.graph);h.action('delete-wire');assert.deepEqual(h.ui.session.draft.graph,before);
+  const replacement=before.edges.at(-1).key;h.control('wire',replacement);h.action('delete-wire');
+  assert.ok(!h.ui.session.draft.graph.edges.some(e=>e.key===replacement));
+  assert.equal(h.root.querySelector('[data-w-control="wire"]').value,'');
+});
+test('device deletion, copy and undo/redo keep displayed choices and active devices coherent',()=>{
+  const h=uiHarness(),devices=h.ui.session.draft.graph.devices,r=devices.at(-1).key;
+  h.control('device',r);h.action('delete-device');assert.equal(h.root.querySelector('[data-w-control="device"]').value,'');
+  h.control('device',devices[0].key);h.action('select-device');assert.equal(h.ui.session.selection.key,devices[0].key);
+  h.action('copy');const copy=h.ui.session.selection.key;
+  assert.equal(h.root.querySelector('[data-w-control="device"]').value,copy);
+  h.action('undo');assert.equal(h.root.querySelector('[data-w-control="device"]').value,'');h.action('redo');
+  assert.equal(h.root.querySelector('[data-w-control="device"]').value,'');h.control('device',copy);h.action('select-device');assert.equal(h.ui.session.selection.key,copy);
+});
+test('displayed select wins over a still-valid cached choice; unrelated pending text survives reconciliation',()=>{
+  const h=uiHarness(),[first,second]=h.ui.session.draft.graph.devices;
+  h.control('device',first.key);h.action('select-device');h.property('dc','bad');
+  h.text('probe-id','pending observation');h.text(`node-name-${h.ui.session.draft.graph.reference}`,'pending name');
+  const query=h.root.querySelector.bind(h.root);
+  h.root.querySelector=selector=>selector==='[data-w-control="device"]'?new HTMLSelectElement({},second.key):query(selector);
+  h.action('select-device');assert.equal(h.ui.session.selection.key,second.key);
+  assert.equal(h.ui.session.pending.get(first.key+':dc'),'bad');
+  assert.match(h.root.innerHTML,/pending observation/);assert.match(h.root.innerHTML,/pending name/);
+});
+test('rename and merge clear obsolete survivor names without choosing another net',()=>{
+  const h=uiHarness(),graph=h.ui.session.draft.graph,inVertex=graph.names.find(n=>n.name==='in').vertex;
+  h.control('survivor','in');h.rename(inVertex,'renamed');
+  assert.equal(h.root.querySelector('[data-w-control="survivor"]').value,'');
+  h.control('survivor','renamed');h.control('endpoint',inVertex);h.control('target',graph.reference);h.action('connect');
+  assert.equal(h.root.querySelector('[data-w-control="survivor"]').value,'');
+});
+test('pending gestures survive unrelated rendering/history but cannot finish from removed or deleted terminals',()=>{
+  const h=uiHarness(),graph=h.ui.session.draft.graph,start=graph.vertices[0].key;
+  h.control('endpoint',start);h.action('start');h.ui.render();assert.equal(h.ui.session.gesture.start,start);
+  h.control('device',graph.devices[0].key);h.action('rotate');h.action('undo');assert.equal(h.ui.session.gesture.start,start);
+  h.action('cancel');h.action('new');h.add('R','R',1000);h.action('undo'); // undo property batch
+  const device=h.ui.session.draft.graph.devices[0];h.control('endpoint',device.terminals[0].vertex);h.action('start');h.action('undo');
+  assert.equal(h.ui.session.gesture,null);h.action('redo');h.control('device',device.key);h.action('select-device');
+  h.control('endpoint',device.terminals[0].vertex);h.action('start');h.action('delete-device');assert.equal(h.ui.session.gesture,null);
+  h.control('endpoint','missing');h.action('start');assert.equal(h.ui.session.gesture,null);
+});
+test('production focus restoration preserves text ranges and never selects checkbox text',()=>{
+  const h=uiHarness();h.control('device',h.ui.session.draft.graph.devices[0].key);h.action('select-device');
+  const oldDocument=globalThis.document;
+  try {
+    for(const type of ['checkbox','text','textarea','select']){
+      const input=type==='textarea'?new HTMLTextAreaElement():type==='select'?new HTMLSelectElement():new HTMLInputElement();
+      input.type=type;input.id=type==='checkbox'?'w-delete-probes':'focus-test';input.selectionStart=1;input.selectionEnd=3;
+      let focus=0,ranges=0;input.focus=()=>focus++;input.setSelectionRange=(a,b)=>{assert.ok(type==='text'||type==='textarea');assert.equal(a,1);assert.equal(b,3);ranges++;};
+      h.root.contains=()=>true;globalThis.document={activeElement:input,getElementById:id=>id===input.id?input:null};
+      h.root.listeners.get('keydown')({key:'Escape',target:input});setLanguage('mn');h.ui.render();h.action('validate');h.action('undo');h.action('redo');
+      assert.equal(focus,5);assert.equal(ranges,type==='text'||type==='textarea'?5:0);setLanguage('en');
+    }
+  }finally{globalThis.document=oldDocument;setLanguage('en');}
+});
+test('shared ownership blocks change-and-restore and pending inspector text, clean sync is coherent',()=>{
+  const h=uiHarness(),original=exportNative(h.state);h.control('device',h.ui.session.draft.graph.devices[0].key);h.action('rotate');
+  importNative(h.state,exportNative(createLab('rc')));importNative(h.state,original);h.action('apply');assert.equal(h.ui.session.issue.category,'conflict');
+  h.action('discard');importNative(h.state,exportNative(createLab('rc')));h.ui.render();assert.deepEqual(ok(nativeCandidate(h.ui.session.draft.graph)).document,h.state.document);
+  const root=new Root(),ui=new WiringUI(root,()=>h.state,()=>assert.fail('unsafe import'),()=>true);ui.render();
+  root.dispatch('click',new Element({wAction:'apply'}));assert.equal(ui.session.issue.code,'inspector-pending');
+});

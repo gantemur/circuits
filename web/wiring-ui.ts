@@ -9,6 +9,8 @@ import type { LabState } from './lab.js';
 import { escapeHtml } from './schematic.js';
 const e=(value:string|number)=>escapeHtml(String(value));
 const button=(action:string,label:WiringCopyKey,extra='')=>`<button type="button" class="button outline" data-w-action="${action}" ${extra}>${e(wt(label))}</button>`;
+const textSelectionSupported = (element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): boolean =>
+  element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement && ['text','search','url','tel','password'].includes(element.type);
 const option=(value:string,label:string,selected:string)=>`<option value="${e(value)}"${value===selected?' selected':''}>${e(label)}</option>`;
 
 export class WiringUI {
@@ -17,6 +19,8 @@ export class WiringUI {
   private controls=new Map<string,string>();
   private openSections=new Set(['w-terminals','w-topology']);
   private pendingTools=new Set<string>();
+  private checked=new Set<string>();
+  private checkboxOwner:string|undefined;
   private pointer: {x:number;y:number;id:number}|null=null;
   private suppressClick=false;
   constructor(private root:HTMLElement,state:()=>LabState,private applied:()=>void,private hasPendingInspector:()=>boolean=()=>false) {
@@ -41,10 +45,14 @@ export class WiringUI {
   private value(key:string,fallback=''):string{return this.controls.get(key)??fallback;}
   private input(target:EventTarget|null):void {
     if(!(target instanceof HTMLInputElement||target instanceof HTMLSelectElement||target instanceof HTMLTextAreaElement))return;
+    if(target instanceof HTMLInputElement && target.type==='checkbox' && target.id){
+      if(target.checked)this.checked.add(target.id);else this.checked.delete(target.id);
+    }
     if(target.dataset.wProp){this.session.pending.set(target.dataset.wProp,target.value);this.session.status='idle';
       const status=this.root.querySelector('[data-w-pending]');if(status)status.textContent=wt('pendingText');}
     if(target.dataset.wControl){
       const key=target.dataset.wControl;this.controls.set(key,target.value);
+      if(key==='device'){if(this.session.selection?.key!==target.value)this.checked.delete('w-delete-probes');this.session.selection=target.value?{kind:'device',key:target.value}:null;}
       if(['x','y','probe-id','probe-label'].includes(key)||key.startsWith('bends-')||key.startsWith('node-name-'))this.pendingTools.add(key);
     }
   }
@@ -52,9 +60,19 @@ export class WiringUI {
     const text=prop?this.session.pending.get(key)??value:this.value(key,value);
     return `<div class="field"><label for="w-${e(key)}">${e(wt(label))}</label><input id="w-${e(key)}" ${prop?'data-w-prop':'data-w-control'}="${e(key)}" value="${e(text)}"></div>`;
   }
+  /** A select has one authoritative value. Removed choices become an explicit
+   * empty choice, never the browser's implicit first option (which could delete
+   * a different wire). Text drafts live in separate maps and are not reconciled. */
+  private reconcileChoice(key:string, options:{value:string}[], fallback=''):string {
+    const requested=this.controls.get(key)??fallback;
+    const selected=options.some(item=>item.value===requested)?requested:'';
+    this.controls.set(key,selected);
+    return selected;
+  }
   private select(key:string,label:WiringCopyKey,options:{value:string;label:string}[],fallback='',prop=false):string {
-    const selected=prop?this.session.pending.get(key)??fallback:this.value(key,fallback);
-    return `<div class="field"><label for="w-${e(key)}">${e(wt(label))}</label><select id="w-${e(key)}" ${prop?'data-w-prop':'data-w-control'}="${e(key)}">${options.map(o=>option(o.value,o.label,selected)).join('')}</select></div>`;
+    const selected=prop?this.session.pending.get(key)??fallback:this.reconcileChoice(key,options,fallback);
+    const choices=options.some(item=>item.value===selected)?options:[{value:'',label:wt('choose')},...options];
+    return `<div class="field"><label for="w-${e(key)}">${e(wt(label))}</label><select id="w-${e(key)}" ${prop?'data-w-prop':'data-w-control'}="${e(key)}">${choices.map(o=>option(o.value,o.label,selected)).join('')}</select></div>`;
   }
   private deviceProperties(device:Device):string {
     const graph=this.session.draft!.graph,p=graph.placements.find(p=>p.key===device.key)!;
@@ -73,12 +91,12 @@ export class WiringUI {
     }
     const initial=graph.storage.find(s=>s.device===device.key);
     if(initial)content+=f('initial','initialValue',initial.value);
-    return `<h4>${e(device.id)} · ${device.type}</h4><div class="controls-grid">${content}</div><div class="file-actions">${button('save','save')}${button('rotate','rotate')}${button('move','move')}${button('copy','copy')}</div><label class="w-check"><input type="checkbox" id="w-delete-probes">${e(wt('removeProbes'))}</label>${button('delete-device','remove')}`;
+    return `<h4>${e(device.id)} · ${device.type}</h4><div class="controls-grid">${content}</div><div class="file-actions">${button('save','save')}${button('rotate','rotate')}${button('move','move')}${button('copy','copy')}</div><label class="w-check"><input type="checkbox" id="w-delete-probes" ${this.checked.has('w-delete-probes')?'checked':''}>${e(wt('removeProbes'))}</label>${button('delete-device','remove')}`;
   }
   render():void {
     for(const details of Array.from(this.root.querySelectorAll<HTMLDetailsElement>('details[id]'))){if(details.open)this.openSections.add(details.id);else this.openSections.delete(details.id);}
     const active=document.activeElement instanceof HTMLInputElement||document.activeElement instanceof HTMLTextAreaElement||document.activeElement instanceof HTMLSelectElement?document.activeElement:null;
-    const focus=active&&this.root.contains(active)?{id:active.id,start:active instanceof HTMLSelectElement?null:active.selectionStart,end:active instanceof HTMLSelectElement?null:active.selectionEnd}:null;
+    const focus=active&&this.root.contains(active)?{id:active.id,start:textSelectionSupported(active)?(active as HTMLInputElement).selectionStart:null,end:textSelectionSupported(active)?(active as HTMLInputElement).selectionEnd:null}:null;
     const base=this.session.draft?.ownership.document;
     if(!this.pendingTools.size)this.session.sync();
     if(base!==this.session.draft?.ownership.document){this.controls.clear();this.view=this.session.draft?fitWiring(this.session.draft.graph):this.view;}
@@ -92,10 +110,15 @@ export class WiringUI {
     const devices=graph.devices.map(d=>({value:d.key,label:`${d.id} · ${d.type}`}));
     const nets=graph.names.map(n=>({value:n.name,label:n.name}));
     const wires=graph.edges.map(edge=>({value:edge.key,label:`${edge.key}: ${vertices.find(v=>v.value===edge.a)!.label} → ${vertices.find(v=>v.value===edge.b)!.label}`}));
-    const endpoint=this.value('endpoint',vertices[0]?.value??'');
+    // Reconcile before deriving inspector/route content, not only while emitting HTML.
+    s.reconcileReferences();
+    this.reconcileChoice('device',devices,devices[0]?.value??'');
+    const endpoint=this.reconcileChoice('endpoint',vertices,vertices[0]?.value??'');
     const chosen=s.selection?.kind==='device'?graph.devices.find(d=>d.key===s.selection!.key):undefined;
+    if(this.checkboxOwner!==chosen?.key){this.checked.delete('w-delete-probes');this.checkboxOwner=chosen?.key;}
+    for(const id of this.checked)if(id.startsWith('w-incident-')&&!graph.edges.some(edge=>id===`w-incident-${edge.key}`))this.checked.delete(id);
     const selectedVertex=graph.vertices.find(v=>v.key===endpoint);
-    const edgeKey=this.value('wire',graph.edges[0]?.key??'');
+    const edgeKey=this.reconcileChoice('wire',wires,graph.edges[0]?.key??'');
     const route=graph.routes.find(r=>r.key===edgeKey);
     const conflict=wiringConflict(draft,s.state());
     const status=conflict?'conflict':s.status==='valid'?'valid':s.status==='applied'?'applied':this.hasUnappliedDraft()?'dirty':'clean';
@@ -116,17 +139,21 @@ export class WiringUI {
       <div class="file-actions">${button('select-vertex','select')}${button('start','start')}${button('connect','finish')}${button('disconnect','disconnect')}${button('open','open')}${button('reference','reference')}${button('move-vertex','move')}</div>
       ${this.field(`node-name-${endpoint}`,'name',names.get(endpoint)??'')}${button('rename','rename')}
       <div class="controls-grid">${this.field('x','x','100')}${this.field('y','y','100')}</div>${button('add-junction','addJunction')}${button('add-free','addFree')}${button('position-vertex','movePosition')}
-      ${selectedVertex?.kind==='junction'?`<div class="w-incidents">${graph.edges.filter(edge=>edge.a===endpoint||edge.b===endpoint).map(edge=>`<label><input type="checkbox" data-w-incident="${edge.key}">${e(edge.key)}</label>`).join('')}${button('separate','separate')}</div>`:''}</details>
+      ${selectedVertex?.kind==='junction'?`<div class="w-incidents">${graph.edges.filter(edge=>edge.a===endpoint||edge.b===endpoint).map(edge=>`<label><input type="checkbox" id="w-incident-${edge.key}" data-w-incident="${edge.key}" ${this.checked.has(`w-incident-${edge.key}`)?'checked':''}>${e(edge.key)}</label>`).join('')}${button('separate','separate')}</div>`:''}</details>
       <details id="w-wires" class="w-tools" ${this.openSections.has('w-wires')?'open':''}><summary>${e(wt('wires'))}</summary><div class="controls-grid">${this.select('wire','wire',wires,graph.edges[0]?.key??'')}${this.field('segment','segment','0')}${this.field('fraction','fraction','0.5')}${this.select('other-wire','otherWire',wires,graph.edges[1]?.key??'')}${this.field('other-segment','otherSegment','0')}</div>
       <div class="file-actions">${button('split','split')}${button('attach','attach')}${button('join','join')}${button('delete-wire','deleteWire')}</div>
       <div class="field"><label for="w-bends">${e(wt('bends'))}</label><textarea id="w-bends" data-w-control="bends-${edgeKey}">${e(this.value(`bends-${edgeKey}`,route?.bends.map(p=>`${p.x} ${p.y}`).join('\n')??''))}</textarea></div>${button('bends','saveBends')}</details>
       <details id="w-observations" class="w-tools" ${this.openSections.has('w-observations')?'open':''}><summary>${e(wt('observations'))}</summary><div class="controls-grid">${this.field('probe-id','id','out')}${this.field('probe-label','label','')}${this.select('probe-type','observations',[{value:'voltage',label:wt('voltage')},{value:'current',label:wt('current')}],'voltage')}${this.select('probe-p','endpoint',vertices,vertices[0]?.value??'')}${this.select('probe-n','target',vertices,vertices[1]?.value??'')}${this.select('probe-device','device',devices,devices[0]?.value??'')}</div>${button('add-probe','addObservation')}
       ${this.select('probe','observations',graph.observations.map(o=>({value:o.key,label:o.id})),graph.observations[0]?.key??'')}${button('delete-probe','removeObservation')}</details>
       <details id="w-topology" ${this.openSections.has('w-topology')?'open':''}><summary>${e(wt('topology'))}</summary>${wiringTopology(graph)}</details>`;
-    if(focus){const element=document.getElementById(focus.id);if(element instanceof HTMLInputElement||element instanceof HTMLTextAreaElement||element instanceof HTMLSelectElement){element.focus({preventScroll:true});if(!(element instanceof HTMLSelectElement))element.setSelectionRange(focus.start,focus.end);}}
+    if(focus){const element=document.getElementById(focus.id);if(element instanceof HTMLInputElement||element instanceof HTMLTextAreaElement||element instanceof HTMLSelectElement){element.focus({preventScroll:true});if(textSelectionSupported(element)&&focus.start!==null&&focus.end!==null)(element as HTMLInputElement|HTMLTextAreaElement).setSelectionRange(focus.start,focus.end);}}
   }
   private read(key:string,fallback=''):string {
-    return this.controls.get(key)??this.root.querySelector<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>(`[data-w-control="${key}"]`)?.value??fallback;
+    const control=this.root.querySelector<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>(`[data-w-control="${key}"]`);
+    // Read the displayed select even when the browser changed it without an input
+    // event (keyboard/autofill). Text fields retain their independent pending map.
+    if(control instanceof HTMLSelectElement){this.controls.set(key,control.value);return control.value;}
+    return this.controls.get(key)??control?.value??fallback;
   }
   private saveProperties(device:Device):void {
     const graph=this.session.draft!.graph,p=graph.placements.find(p=>p.key===device.key)!;
@@ -192,12 +219,17 @@ export class WiringUI {
   }
   private action(action:string):void {
     const s=this.session,graph=s.draft?.graph;
-    if(action==='new'){s.blank();this.pendingTools.clear();this.controls.clear();this.view=fitWiring(s.draft!.graph);return;}
-    if(action==='discard'){s.reload();this.pendingTools.clear();this.controls.clear();if(s.draft)this.view=fitWiring(s.draft.graph);return;}
+    if(action==='new'){s.blank();this.pendingTools.clear();this.controls.clear();this.checked.clear();this.view=fitWiring(s.draft!.graph);return;}
+    if(action==='discard'){s.reload();this.pendingTools.clear();this.controls.clear();this.checked.clear();if(s.draft)this.view=fitWiring(s.draft.graph);return;}
     if(action==='restore-text'){s.pending.clear();for(const key of this.pendingTools)this.controls.delete(key);this.pendingTools.clear();s.issue=null;return;}
     if(!graph)return;
     const endpoint=this.read('endpoint'),wire=this.read('wire'),survivingName=this.read('survivor');
     const device=s.selection?.kind==='device'?graph.devices.find(d=>d.key===s.selection!.key):undefined;
+    if(['save','rotate','move','copy','delete-device'].includes(action) && device?.key!==this.read('device')){
+      s.selection=null;
+      s.issue={category:'dependency',code:'select-device',handles:[],message:'Select the displayed component before this operation'};
+      return;
+    }
     if(action==='apply'){
       if(this.pendingTools.size){s.issue={category:'completion',code:'pending-properties',handles:[],message:'Commit pending net, route, coordinate or observation text first.'};return;}
       if(this.hasPendingInspector()){s.issue={category:'completion',code:'inspector-pending',handles:[],message:'Correct the existing inspector/source draft before replacing its circuit.'};return;}
@@ -219,7 +251,7 @@ export class WiringUI {
     if(action==='save'&&device){this.saveProperties(device);return;}
     if(action==='rotate'&&device){s.execute({type:'rotate-device',device:device.key,quarterTurns:1});return;}
     if(action==='move'||action==='move-vertex'){if(action==='move-vertex')s.selection={kind:'vertex',key:endpoint};s.moving=true;s.gesture=null;return;}
-    if(action==='copy'&&device){const keys=s.execute({type:'copy-device',device:device.key});if(keys)s.selection={kind:'device',key:keys[0]!};return;}
+    if(action==='copy'&&device){const keys=s.execute({type:'copy-device',device:device.key});if(keys){s.selection={kind:'device',key:keys[0]!};this.controls.set('device',keys[0]!);}return;}
     if(action==='delete-device'&&device){const included=(this.root.querySelector<HTMLInputElement>('#w-delete-probes')?.checked??false)?graph.observations.filter(o=>o.type==='current'&&o.device===device.key).map(o=>o.key):[];
       if(s.execute({type:'delete-device',device:device.key,deleteObservations:included})){for(const key of s.pending.keys())if(key.startsWith(device.key+':'))s.pending.delete(key);s.selection=null;}return;}
     if(action==='initial'){s.execute({type:'set-initial',kind:this.read('initial') as 'storage'|'equilibrium'});return;}

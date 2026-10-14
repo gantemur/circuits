@@ -1,7 +1,7 @@
 /** Browser-independent interaction state; unfinished gestures never enter the graph. */
 import { createWiringDraft, commitWiring, wiringConflict, wiringDirty, synchronizeWiring, checkpointWiring,
   undoWiring, redoWiring, type WiringDraft } from './wiring-draft.js';
-import { emptyWiring, type Diagnostic, type Point, type Handle } from './wiring-graph.js';
+import { emptyWiring, type Diagnostic, type Point, type Handle, type WiringGraph } from './wiring-graph.js';
 import { nativeCandidate, documentMeaning } from './wiring-native.js';
 import { transact, type WiringOperation } from './wiring-transactions.js';
 import { importNative, type LabState } from './lab.js';
@@ -44,6 +44,22 @@ export class WiringSession {
     seed.graph = emptyWiring('storage');
     this.pending.clear(); this.gesture = null; this.selection = null; this.issue = null; this.status = 'idle';
   }
+  /** Retire only references whose graph identity disappeared. A deleted device's
+   * terminal becomes a free anchor; that is not permission to finish its old wire. */
+  reconcileReferences(previous?:WiringGraph):void {
+    const graph=this.draft?.graph;
+    if(!graph)return;
+    if(this.selection){
+      const collection=this.selection.kind==='device'?graph.devices:this.selection.kind==='edge'?graph.edges:graph.vertices;
+      if(!collection.some(item=>item.key===this.selection!.key))this.selection=null;
+    }
+    if(this.gesture){
+      const current=graph.vertices.find(vertex=>vertex.key===this.gesture!.start);
+      const old=previous?.vertices.find(vertex=>vertex.key===this.gesture!.start);
+      if(!current || old && (old.kind!==current.kind || old.kind==='terminal' && current.kind==='terminal' &&
+        (old.device!==current.device || old.role!==current.role)))this.gesture=null;
+    }
+  }
   execute(operation: WiringOperation): Handle[] | null {
     if (!this.draft || this.oversized()) return null;
     const preview = transact(this.draft.graph, operation);
@@ -52,13 +68,20 @@ export class WiringSession {
       this.issue = {category:'validation',code:'editor-limit',handles:[],message:'Graphical size limit exceeded'};
       return null;
     }
+    const previous=this.draft.graph;
     const result = commitWiring(this.draft, operation);
     if(result.status!=='ok')return null;
+    this.reconcileReferences(previous);
     this.issue = null; this.status = 'idle';
     return result.created;
   }
   cancel(): void { this.gesture = null; this.moving = false; }
-  begin(vertex: Handle): void { this.gesture = {start:vertex,bends:[]}; this.moving = false; }
+  begin(vertex: Handle): void {
+    if(!this.draft?.graph.vertices.some(item=>item.key===vertex)){
+      this.issue={category:'dependency',code:'select-endpoint',handles:[],message:'Select an existing endpoint first'};return;
+    }
+    this.gesture = {start:vertex,bends:[]}; this.moving = false;
+  }
   finish(vertex: Handle, survivingName?: string): boolean {
     if (!this.gesture) return false;
     const result = this.execute({type:'connect',a:this.gesture.start,b:vertex,bends:this.gesture.bends,
@@ -68,8 +91,10 @@ export class WiringSession {
   }
   history(redo: boolean): void {
     if (!this.draft) return;
-    this.cancel();
+    const previous=this.draft.graph;
+    this.moving=false;
     (redo ? redoWiring : undoWiring)(this.draft);
+    this.reconcileReferences(previous);
     this.selection = null; this.issue = null; this.status = 'idle';
   }
   validate(): ReturnType<typeof nativeCandidate> | null {
