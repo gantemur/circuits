@@ -999,3 +999,41 @@ existing R/C/L/V/I graphical scope. Geometry remains session-only; existing size
 collision-warning and leftover-anchor behavior remains unchanged. Ready for a
 separate controller publication decision; main is unchanged and this branch has
 not been merged or deployed.
+
+## Phase 6A2 final Undo/Redo identity correction — 2026-10-14
+
+At reviewed `1531c2cb9134c226558666b250587dbcfdb78cfa`, two new tests first
+failed: Redo of device deletion retained a wire gesture from its former terminal,
+and Undo of deletion retained a gesture from the free anchor becoming a terminal.
+`travel()` restores graph fields in place, so retaining the graph object itself
+could not preserve its old vertex identities. The bounded correction snapshots the
+graph before history traversal. Existing reconciliation then detects removed
+vertices, kind changes and terminal owner/role changes without altering history,
+connectivity or Apply. No accepted operation reassigns an existing terminal's
+owner/role directly; those comparisons remain intact.
+
+Four added regressions cover terminal-to-anchor Redo through production UI
+handlers, connected-anchor-to-terminal Undo, unchanged gestures through unrelated
+rotation Undo/Redo with successful completion, and removal by undoing creation.
+They also check unchanged applied document identity/revision, native candidate,
+history entries, scientific revision for geometry history, pending text and
+independent workspace/state. All 389 earlier expectations remain unchanged.
+
+Clean committed-source validation passed: `npm ci`, focused graph/browser tests
+**66/66**, full suite **393/393**, typecheck, kernel/application/site builds, all
+six numerical demos, DOM-free VM smoke and `git diff --check`. The isolated
+package contains only index.html, app.js and style.css with matching relative
+content-version references. JS SHA-256:
+`d758c971523ad9a4e71deb1c8aec0d725a635c5c275b23ec98af9437bbdbd467`.
+
+Actual isolated Chrome against that package exercised all four history sequences
+through production controls. Both kind transitions retired the pending wire;
+clicking another endpoint after retirement created no connection. Unrelated
+rotation history preserved the gesture and normal completion added one wire.
+Undoing creation retired the vanished terminal's gesture. The successful run had
+no application runtime exceptions. Harness-only selector/SVG-click errors were
+corrected before this successful run. The previous extensive file round-trip,
+bilingual layout and active worker-cancellation evidence is carried forward for
+unchanged paths, not claimed as repeated. Human OS-picker and session-only geometry
+limits remain. Main/publication are unchanged; ready for the controller's separate
+final publication decision.
