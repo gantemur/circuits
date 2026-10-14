@@ -115,7 +115,7 @@ which remains unapplied and unexported. Loaded drawings remain independent again
 external changes and require Discard to return to clean synchronization. No imported
 history or hidden Apply occurs. Language changes preserve current preview ownership.
 
-## Phase 6A3c2: initial drawing and explicit arrangement (task branch)
+## Phase 6A3c2: initial drawing and explicit arrangement (published)
 
 Native-only, clean Graphical entries use verified bounded layouts where supported.
 This is initial representation, not Apply or a disk-save checkpoint. Opened projects,

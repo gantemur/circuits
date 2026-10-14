@@ -1,9 +1,10 @@
 # Phase 6A3c2 — readable initial layouts and guarded arrangement
 
-Status: implemented and locally verified; awaiting independent review, not published.
-This contract was written before substantial code changes. Branch
-`codex/phase-6a3c2-browser-layout` descends from accepted `f9b800a`; main remains
-`632a1e3`. No merge or deployment is authorized.
+Status: published from accepted `dcde3d2c10ce06e34672cef40a611c18372f9c54`, preserving
+both reviewed commits after baseline `632a1e3`. Initial main validation and all Pages
+jobs succeeded; the HTTPS package matched a clean build. See
+[publication evidence](evidence/phase-6a3c-release/README.md). The contract below was
+written before implementation; no further development milestone is authorized.
 
 ## Initial representation versus replacement
 

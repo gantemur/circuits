@@ -137,7 +137,7 @@ use the draft-aware export with all pending-text and gesture state. Invalid draw
 results retain a successfully validated native document for a future explicit
 native-only recovery choice, never automatic repair.
 
-## Phase 6A3c1 headless initial layouts (not browser-integrated)
+## Phase 6A3c1 headless initial layouts (published with 6A3c2)
 
 `web/topology-layout.ts` exports `generateTopologyLayout(unknown, {port?: [p,q]})`.
 It accepts strict **native documents only**, never a portable project or editor
@@ -180,8 +180,8 @@ and issue codes. Zero issues from the older optional warning scan is never used
 as certification. Exact arbitrary-font typography is not certified.
 
 See [PHASE_6A3C1_SPECIFICATION.md](PHASE_6A3C1_SPECIFICATION.md) and the
-[visual evidence](evidence/phase-6a3c1/README.md). A later browser integration must
-keep saved drawings untouched and separately design explicit preview/undo ownership.
+[visual evidence](evidence/phase-6a3c1/README.md). The published browser integration
+below keeps saved drawings untouched and provides separate preview/undo ownership.
 
 ## Phase 6A3c2 browser layout integration
 

@@ -1,7 +1,10 @@
 # Phase 6A3c1 — deterministic native-only initial layout
 
-Status: implemented for independent review on `codex/phase-6a3c1-topology-layout`, based
-on released `632a1e34db25ef3ad95b43790d28212afeac5663`. No browser integration.
+Status: published together with Phase 6A3c2 from accepted `dcde3d2c10ce06e34672cef40a611c18372f9c54`.
+The reviewed headless commit `f9b800a` and browser commit `dcde3d2` are preserved.
+See [publication evidence](evidence/phase-6a3c-release/README.md). The original
+headless-only contract and its historical acceptance results are retained below;
+current browser behavior is governed by PHASE_6A3C2_SPECIFICATION.md.
 
 ## Contract established before implementation
 

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "strict public project exports and independent DC/power/AC/BE/bridge/synthesis checks",
+    "value": "PASS"
+  },
+  {
+    "name": "unsupported preserves science",
+    "value": "PASS"
+  },
+  {
+    "name": "oversized preserves science",
+    "value": "PASS"
+  },
+  {
+    "name": "quality preserves science",
+    "value": "PASS"
+  },
+  {
+    "name": "saved project navigation/Apply and identical-geometry viewport undo/redo",
+    "value": "PASS"
+  },
+  {
+    "name": "missing, duplicate, stale, reversed source-free ports",
+    "value": "PASS"
+  }
+]

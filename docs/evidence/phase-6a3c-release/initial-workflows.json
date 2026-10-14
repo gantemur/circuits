@@ -1,0 +1,42 @@
+[
+  {
+    "id": 38619193786,
+    "name": "Validate",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/gantemur/circuits/actions/runs/38619193786",
+    "head_sha": "dcde3d2c10ce06e34672cef40a611c18372f9c54",
+    "jobs": [
+      {
+        "name": "check",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  {
+    "id": 38619194426,
+    "name": "Publish browser lab",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/gantemur/circuits/actions/runs/38619194426",
+    "head_sha": "dcde3d2c10ce06e34672cef40a611c18372f9c54",
+    "jobs": [
+      {
+        "name": "validate / check",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "package",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "deploy",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  }
+]

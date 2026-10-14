@@ -1613,3 +1613,102 @@ These intentionally differ from released main. Independent controller review of 
 browser integration precedes any publication authorization. General autorouting,
 interactive bend dragging, autosave/recovery, nonlinear graphical devices and
 additional synthesis methods remain outside this task.
+
+## Phases 6A3c1–6A3c2 — controlled publication (2026-10-14)
+
+Publication was explicitly authorized after independent review. Preflight fetched
+origin and confirmed clean tracked state, expected main
+`632a1e34db25ef3ad95b43790d28212afeac5663`, accepted branch tip
+`dcde3d2c10ce06e34672cef40a611c18372f9c54`, and exactly two commits ahead with no
+divergence. Accepted [branch validation](https://github.com/gantemur/circuits/actions/runs/38616039828)
+succeeded. Main was fast-forwarded normally, preserving headless
+`f9b800a797433c1c9f03e686428922afb0df0f46` and browser
+`dcde3d2c10ce06e34672cef40a611c18372f9c54`. No implementation file was changed.
+
+Initial main [Validate](https://github.com/gantemur/circuits/actions/runs/38619193786)
+and [Publish browser lab](https://github.com/gantemur/circuits/actions/runs/38619194426)
+completed successfully for that exact SHA. The latter's validate/check, package
+and deploy jobs all succeeded. HTTPS acceptance below ran after deployment.
+This separate documentation closure marks both phases published; it introduces no
+new development milestone. Its own validation/deployment and final asset comparison
+are checked after pushing, with exact final SHA/run links in the delivery report.
+
+### Clean release checks
+
+A fresh Git archive of the accepted revision, outside the working repository,
+passed clean npm ci; 542/542 complete tests; 69/69 focused layout/browser tests;
+typecheck; kernel, application and site builds; all six existing numerical demos;
+DOM-free layout/kernel VM smoke; and git diff --check. Native/kernel code and
+existing test expectations were not edited. Ignored local publishing files were
+not used for verification or deployment.
+
+The clean directory has exactly index.html, app.js and style.css. Actual public
+HTML and its relative content-versioned JS/CSS matched that directory byte for byte
+and independently matched the accepted hashes:
+
+- HTML `ae83f379cc1df5a35597c3a44a9e983a66eeef2a6d187fb14cb23301097170b1`
+- JS `02e423cb7237429872a496c43f7b7d42f0d4df4e8f3929c78f71f422ee8ee571`
+- CSS `ffe3882992cd48e9d85da7faf64c712bcfb1898a9ff620a68b7cb48b545469d2`
+
+### Actual production-browser evidence
+
+New isolated Chrome profile, extensions disabled, against
+https://gantemur.github.io/circuits/. Native file inputs opened all twelve accepted
+fixture variants: divider, RC low/high, RL/RLC, parallel R/RC, balanced/unbalanced
+bridge, Cauer, Foster I and Foster II. Real canvas structures, source signs and p/n
+roles match accepted c1 drawings. Before/after native exports remain identical;
+initial generation does not Apply or invent a save checkpoint. Ordinary move/rotate
+and history operate on generated drawings. Downloaded projects pass the strict
+portable parser. Unsupported controlled-source science remains intact; oversized,
+unrecognized and geometry-rejected cases retain provisional graph/topology instead
+of installing partial geometry.
+
+Missing, duplicate, changed/restored and reversed source-free ports were exercised.
+Synthesis's explicit current-document handoff supplies its port; a native-only
+passive file starts with blank selectors. Exact IDs with punctuation, Unicode,
+leading/trailing whitespace and markup-like text remain literal. Changed node IDs
+and resistor values retain the parallel structural family and exact native data.
+Ground remains the original native reference.
+
+Preview/Cancel/Use preserves science. Exact project comparisons verify moved/rotated
+drawings, routes, anchors and viewport through Undo/Redo. An identical-geometry
+suggestion's Fit is independently undoable. Opening saved geometry, navigation and
+Apply do not rearrange it; saved-content status returns to the earlier checkpoint
+on Undo. A completed adopted-project download was reopened through the actual file
+input after reload, then downloaded again with full content equality. Native JSON
+remains scientific-only. Invalid native/project files retain current science.
+
+Obsolete proposals retire after graphical edits, pending text edit-and-restore,
+scientific example change-and-restore, port changes, another example, Discard,
+project Open and replacement of a project candidate. Language switches retain a
+valid proposal. Internal applied identity/revision and delayed-read races are also
+covered by deterministic production-controller tests; browser checks observe exact
+native bytes and public controls, not instrumented private application state.
+
+Independent physical calculations from actual downloaded project documents passed:
+divider 8 V, +4 mA resistors, −4 mA source, +16/+32/−48 mW; RC H(i1000)=0.5−0.5i
+and backward-Euler values 1−(1/1.1)^n for 0.1 ms steps; RLC H(i10000)=−10i;
+balanced bridge 5/5 V and zero cross current; unbalanced 70/13 and 80/13 V with
+−1/1300 A; distinct Cauer/Foster topologies with Z(i1000)=1200−1600i Ω. Exact
+science was separately compared through adoption/history and project reopening.
+
+All 35 examples and representative Form/JSON/Graphical conflicts, linear plots,
+DC equivalent, resistor Preview/Use/Return, diode/BJT panels, synthesis/port handoffs
+and active diode/synthesis worker cancellation were exercised. No application
+exceptions were observed in completed acceptance runs. Browser/GPU diagnostics were
+not misclassified as application exceptions. Automation assertion/scroll timing
+issues were corrected in the harness only; implementation was untouched.
+
+EN/MN at desktop, 390 and 320 CSS px fit without horizontal page overflow. Wide
+canvases scroll locally; comparisons stack, exact port IDs stay escaped and focus
+returns after Use/Cancel. Small fitted bridge/Foster text, raw SI labels, hollow
+junctions and unusual lower-lead detours remain accepted presentation limits.
+File selection used Chrome protocol on real inputs and downloads completed; human
+OS dialogs, screen readers and physical touch devices were not tested. Local scroll
+position was checked programmatically; no physical scrolling gesture is certified.
+
+See [public release evidence](evidence/phase-6a3c-release/README.md), with new actual
+HTTPS screenshots and result records. Earlier implementation visual evidence and
+historical records remain unchanged. General autorouting, interactive bend dragging,
+persistent history, autosave/recovery, label redesign and new scientific methods
+remain outside this publication.

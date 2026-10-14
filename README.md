@@ -10,17 +10,22 @@ The repository is named `circuits`. **Circuits Unfolded** is the working applica
 
 ## Status
 
-**Phases 6A3c1–6A3c2 are task-branch work, not published:**
-[readable initial layouts and guarded arrangement](docs/PHASE_6A3C2_SPECIFICATION.md)
-integrate the accepted bounded topology engine into Graphical. Recognized native-only
-circuits receive an initial drawing without changing science or requiring Apply.
-Source-free circuits need an explicitly owned or selected ordered port. Existing
-project drawings remain independent. Suggest layout previews before/after drawings;
-Use is one geometry-only, exactly undoable operation with stale-preview guards.
-Unrecognized or rejected layouts retain the provisional importer and exact topology.
-See the [API](docs/WIRING_API.md), [browser evidence](docs/evidence/phase-6a3c2/README.md)
-and preserved [headless evidence](docs/evidence/phase-6a3c1/README.md).
-Main and the published application remain at the portable-project release below.
+**Phases 6A3c1–6A3c2 are published:**
+[readable circuit layouts](docs/PHASE_6A3C2_SPECIFICATION.md) provide verified initial
+Graphical drawings for bounded series/shunt, parallel, bridge, Cauer and Foster
+structures. Native-only initialization does not change science or require Apply.
+Source-free networks use explicit ordered ports or an owned analysis/synthesis
+handoff. Suggest layout provides a read-only comparison and guarded Use/Cancel;
+geometry and viewport changes undo exactly. Saved project drawings and independent
+editor drafts remain protected. Unsupported or rejected layouts retain the safe
+fallback and scientific document. No general autorouter is provided.
+
+Accepted `dcde3d2` preserves both reviewed commits from `632a1e3`; main validation,
+Pages deployment and actual HTTPS browser acceptance succeeded. Clean checks passed
+542 tests and 69 focused expectations. The public three-file package matched the
+clean build byte for byte. See [publication evidence](docs/evidence/phase-6a3c-release/README.md)
+and [release records](docs/DECISIONS.md). The lab retains all **35 examples**.
+Small fitted labels, raw SI values and lower-lead detours remain known limitations.
 
 **Phases 6A3a–6A3b are published:** the [portable project core](docs/PROJECT_FORMAT.md)
 pairs unchanged native scientific JSON with a strictly checked drawing. Graphical
@@ -32,7 +37,7 @@ ongoing work. Accepted implementation `0a881fd` was fast-forwarded with all five
 reviewed commits preserved; public completed-download/reimport and scientific
 checks passed. See the [browser project specification](docs/PHASE_6A3B_SPECIFICATION.md)
 and [release evidence](docs/DECISIONS.md). Autosave, crash recovery and autorouting
-remain deferred. The separately authorized layout integration is described above.
+remain deferred. The published layout integration is described above.
 
 **Phase 6A2 is published:** [Graphical](docs/PHASE_6A2_SPECIFICATION.md) joins Form and JSON within Edit circuit. It constructs strict v1 R/C/L/V/I circuits with explicit wiring, junctions, source/storage/observation properties, undo/redo, and guarded Apply. Three independent drafts retain pending text and conflicts. Native-only imports have provisional layouts; the published Phase 6A3 Save/Open workflow now preserves supported drawings. Ambiguous drawings show a warning plus the exact topology. Limits are 40 components, 240 vertices and 320 wires; controlled-source v1 and all v2/v3 remain unsupported in Graphical. Accepted implementation `2d1a725` passed main validation and Pages deployment; public graphical construction, history, file round trips and legacy checks passed. See the release evidence in [DECISIONS](docs/DECISIONS.md).
 

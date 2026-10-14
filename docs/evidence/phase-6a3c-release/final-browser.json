@@ -1,0 +1,36 @@
+[
+  {
+    "name": "explicit safe fallback",
+    "text": "Drawing layoutThe provisional drawing and exact topology remain available.\n      \n      Positive layout portChoose a node0abxNegative layout portChoose a node0abxLayout ports control drawing orientation only. They do not change the circuit or its reference node.Suggest layoutNo supported structural template for this circuit or size.\n      "
+  },
+  {
+    "name": "active synthesis cancellation",
+    "status": "Batch cancelled; completed current method results remain usable, unfinished methods were retired",
+    "lifecycle": [
+      {
+        "method": "Target.targetCreated",
+        "params": {
+          "targetInfo": {
+            "targetId": "7E1D6A757F68C6929E81D6B15C04FDDD",
+            "type": "worker",
+            "title": "",
+            "url": "",
+            "attached": false,
+            "parentId": "6D8524D22099318703AF43C4C16671A1",
+            "canAccessOpener": false,
+            "parentFrameId": "6D8524D22099318703AF43C4C16671A1",
+            "browserContextId": "1BE22FA8B12692FA948DDDCEAAE3DE26"
+          }
+        },
+        "time": 1792004265323
+      },
+      {
+        "method": "Target.targetDestroyed",
+        "params": {
+          "targetId": "7E1D6A757F68C6929E81D6B15C04FDDD"
+        },
+        "time": 1792004265343
+      }
+    ]
+  }
+]

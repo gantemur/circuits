@@ -224,5 +224,6 @@ Saved content is separate from Apply. A completed download initiation records an
 export checkpoint; the UI does not claim the OS wrote a file. Pending text or
 active wire/move gestures block Save and cannot appear safely saved. Opened files
 without a viewport retain that absence until an explicit pan/zoom/fit action.
-File history, sessions and ownership tokens are never serialized. No autosave,
-layout recognition or migration is implemented.
+File history, sessions and ownership tokens are never serialized. No autosave or
+migration is implemented. Published Phase 6A3c2 adds bounded initial layout recognition
+and explicit suggestions; it never automatically rearranges an opened project.

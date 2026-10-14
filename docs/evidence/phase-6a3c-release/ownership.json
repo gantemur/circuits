@@ -1,0 +1,34 @@
+[
+  {
+    "scenario": "edit",
+    "retired": true
+  },
+  {
+    "scenario": "text-restore",
+    "retired": true
+  },
+  {
+    "scenario": "science-restore",
+    "retired": true
+  },
+  {
+    "scenario": "new-example",
+    "retired": true
+  },
+  {
+    "scenario": "discard",
+    "retired": true
+  },
+  {
+    "scenario": "open-project",
+    "retired": true
+  },
+  {
+    "scenario": "replace-candidate",
+    "retired": true
+  },
+  {
+    "scenario": "rotate/adopt saved checkpoint and unchanged analyzed export",
+    "passed": true
+  }
+]
