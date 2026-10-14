@@ -136,3 +136,49 @@ Native v1/v2/v3 formats and browser controls are unchanged. Export does not Appl
 use the draft-aware export with all pending-text and gesture state. Invalid drawing
 results retain a successfully validated native document for a future explicit
 native-only recovery choice, never automatic repair.
+
+## Phase 6A3c1 headless initial layouts (not browser-integrated)
+
+`web/topology-layout.ts` exports `generateTopologyLayout(unknown, {port?: [p,q]})`.
+It accepts strict **native documents only**, never a portable project or editor
+session. It does not mutate input or own Apply, history, drafts or revisions.
+A valid unsupported document is retained; an invalid native input returns `invalid`.
+
+- `generated`: native copy, structural `witness`, editable `graph`, validated
+  `project`, and independent `evidence`.
+- `unrecognized`: reason and intact validated document (including absent/invalid
+  ports, unsupported topology or recognition limits).
+- `unsupported`: intact valid scientific document outside v1 R/C/L/V/I.
+- `quality-rejected`: intact document and reason, with verification evidence when
+  available. No partial graph is offered as a successful drawing.
+
+Source-free inputs require explicit, distinct, existing ordered port nodes. With
+one voltage source the default port is its native p,n; an explicit reversed pair
+is allowed. Neither port is implicitly ground. Multiple sources/current-source
+patterns, self-loops, disconnected branches and unconsumed devices are outside
+these templates. Unused native nodes are preserved separately. Recognition limits
+are 16 devices and 32 nodes; geometric aspect/label limits can reject smaller
+recognized networks. These limits never change native validity.
+
+Recognition uses native array indices as stable handles in a witness. Precedence:
+five-R bridge; driven unique series/shunt path or source-free RC ladder;
+source-free series-of-R/C bundles with at least one parallel RC pair (Foster I);
+parallel internally disjoint paths (Foster II when each path is a single R/C or
+series RC pair and at least one pair exists). This labels **structure**, not the
+synthesis provenance or a mathematical certificate. A simple network can admit
+more than one description; precedence resolves that overlap deterministically.
+The path recognizer permits at most one shunt and one forward edge per stage.
+Consequently some terminal parallel-RC Cauer endings and more complex ladders
+receive another supported structural label or an explicit fallback.
+
+Lower-level exports are `recognizeLayout`, `constructLayout` and `verifyLayout`.
+The constructor is for a matching trusted witness, not an unchecked import API.
+The verifier reconstructs native science, exports through the strict project API,
+and separately examines the entire bounded orthogonal geometry. Evidence reports
+native/project validity, whether geometry inspection completed, segment/pair counts,
+and issue codes. Zero issues from the older optional warning scan is never used
+as certification. Exact arbitrary-font typography is not certified.
+
+See [PHASE_6A3C1_SPECIFICATION.md](PHASE_6A3C1_SPECIFICATION.md) and the
+[visual evidence](evidence/phase-6a3c1/README.md). A later browser integration must
+keep saved drawings untouched and separately design explicit preview/undo ownership.

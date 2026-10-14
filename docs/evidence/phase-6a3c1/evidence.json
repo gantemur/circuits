@@ -1,0 +1,74 @@
+[
+  {
+    "example": "divider",
+    "family": "chain",
+    "evidence": {
+      "nativeEqual": true,
+      "projectValid": true,
+      "geometryComplete": true,
+      "segmentCount": 13,
+      "segmentPairs": 78,
+      "issues": []
+    }
+  },
+  {
+    "example": "rc-low",
+    "family": "chain",
+    "evidence": {
+      "nativeEqual": true,
+      "projectValid": true,
+      "geometryComplete": true,
+      "segmentCount": 13,
+      "segmentPairs": 78,
+      "issues": []
+    }
+  },
+  {
+    "example": "bridge-unbalanced",
+    "family": "bridge",
+    "evidence": {
+      "nativeEqual": true,
+      "projectValid": true,
+      "geometryComplete": true,
+      "segmentCount": 31,
+      "segmentPairs": 465,
+      "issues": []
+    }
+  },
+  {
+    "example": "cauer",
+    "family": "cauer",
+    "evidence": {
+      "nativeEqual": true,
+      "projectValid": true,
+      "geometryComplete": true,
+      "segmentCount": 16,
+      "segmentPairs": 120,
+      "issues": []
+    }
+  },
+  {
+    "example": "foster-I",
+    "family": "foster-I",
+    "evidence": {
+      "nativeEqual": true,
+      "projectValid": true,
+      "geometryComplete": true,
+      "segmentCount": 12,
+      "segmentPairs": 66,
+      "issues": []
+    }
+  },
+  {
+    "example": "foster-II",
+    "family": "foster-II",
+    "evidence": {
+      "nativeEqual": true,
+      "projectValid": true,
+      "geometryComplete": true,
+      "segmentCount": 12,
+      "segmentPairs": 66,
+      "issues": []
+    }
+  }
+]

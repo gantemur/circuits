@@ -10,6 +10,13 @@ The repository is named `circuits`. **Circuits Unfolded** is the working applica
 
 ## Status
 
+**Phase 6A3c1 is headless task-branch work, not published:**
+[deterministic initial layouts](docs/PHASE_6A3C1_SPECIFICATION.md) recognize bounded
+native circuit families and generate strictly checked portable drawings. The
+published editor still uses its existing provisional native-only importer. See the
+[API](docs/WIRING_API.md) and [visual inspection](docs/evidence/phase-6a3c1/README.md).
+Browser Arrange and automatic replacement of saved geometry are not implemented.
+
 **Phases 6A3a–6A3b are published:** the [portable project core](docs/PROJECT_FORMAT.md)
 pairs unchanged native scientific JSON with a strictly checked drawing. Graphical
 Save project downloads a completed draft and its geometry as `.cuf.json`; Open
@@ -20,7 +27,7 @@ ongoing work. Accepted implementation `0a881fd` was fast-forwarded with all five
 reviewed commits preserved; public completed-download/reimport and scientific
 checks passed. See the [browser project specification](docs/PHASE_6A3B_SPECIFICATION.md)
 and [release evidence](docs/DECISIONS.md). Autosave, crash recovery and autorouting
-remain deferred; no subsequent milestone is authorized.
+remain deferred. The separately authorized headless layout task is described above.
 
 **Phase 6A2 is published:** [Graphical](docs/PHASE_6A2_SPECIFICATION.md) joins Form and JSON within Edit circuit. It constructs strict v1 R/C/L/V/I circuits with explicit wiring, junctions, source/storage/observation properties, undo/redo, and guarded Apply. Three independent drafts retain pending text and conflicts. Native-only imports have provisional layouts; the published Phase 6A3 Save/Open workflow now preserves supported drawings. Ambiguous drawings show a warning plus the exact topology. Limits are 40 components, 240 vertices and 320 wires; controlled-source v1 and all v2/v3 remain unsupported in Graphical. Accepted implementation `2d1a725` passed main validation and Pages deployment; public graphical construction, history, file round trips and legacy checks passed. See the release evidence in [DECISIONS](docs/DECISIONS.md).
 

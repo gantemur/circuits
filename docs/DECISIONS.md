@@ -1411,3 +1411,103 @@ asset verification complete. Earlier task-branch evidence above is preserved.
 Human OS-picker operation, OS crash durability and exhaustive drawing collision
 certification remain outside the evidence. No autosave, crash recovery, routing,
 new models or next milestone is authorized by this publication.
+
+## Phase 6A3c1 — bounded headless topology layouts (not published)
+
+Released main and fetched origin/main were both
+`632a1e34db25ef3ad95b43790d28212afeac5663`; tracked state was clean. The task branch
+`codex/phase-6a3c1-topology-layout` was created from that baseline. Its specification
+was written before implementation. No kernel, schema, existing test, renderer,
+production entry point, dependency or lockfile changed. No merge or deployment.
+
+### Design and preservation
+
+Three pure layers operate on typed multigraph structure, explicit witnesses and
+independently checked drawings. Native input order breaks symmetries; exact names
+and values do not select a family. Source-free networks require ordered caller
+ports. A single V source can supply the default pair without redefining ground.
+The native-only API rejects project envelopes and owns no application revisions.
+
+Implemented templates cover driven R/RL/RLC paths with shunts (including divider
+and RC low/high pass), parallel paths, five-R bridges independent of balance,
+Cauer RC ladders, Foster I series-of-parallel sections and Foster II parallel
+series-RC branches. Classification denotes actual topology, not a synthesis
+certificate. Fixed precedence handles overlapping simple descriptions. Explicit
+limits/fallbacks are documented in WIRING_API and the milestone specification.
+
+Construction retains importWiring's scientific fields, creates prescribed-net
+rails, splits only same-native-net rails at explicit junctions, and suppresses
+non-anchor degree-two construction dots into bends. Ordered native p/n roles
+control quarter-turn rotations. Every native node, including unused ones, retains
+its name/order; observations and reference retain exact anchored membership.
+The independent verifier compares reconstructed native data and runs strict
+portable validation, then completely inspects its bounded orthogonal geometry.
+It does not rely on the older optional warning scan's absence of warnings.
+
+Review of the recognizer exposed a consumed-but-dangling path that did not actually
+reach the designated return. The new recognizer now requires a terminating shunt;
+a dedicated regression covers both driven and source-free forms. This was a new
+layout implementation issue, not a discovered scientific-kernel defect.
+
+### Actual automated validation
+
+Clean candidate and baseline snapshots were built under `/tmp/6a3c1`, excluding
+ignored workspace content. `npm ci` passed (the existing esbuild allow-scripts
+notice was nonblocking). Focused `node --test test/topology-layout.test.mjs` passed
+**40/40**; complete `npm test` passed **513/513**, retaining all **473** existing
+tests unchanged. Typecheck, kernel/application/site builds, all six demos
+(`demo`, `demo:diode`, `demo:diode-transient`, `demo:bjt`, `demo:rc-synthesis`,
+`demo:foster`) and `git diff --check` passed.
+
+Independent checks include exact wire-component partitions and native fields,
+project validation and three export/reopen cycles, values/ID renaming invariance,
+reversed roles and ordered ports, prototype-like/markup IDs, unused nodes and an
+internal ground reference. Divider is 8 V, 4 mA, source −4 mA / −48 mW; RC low/high
+and RL transfer values are checked against elementary laws, RLC against −10j at
+ω=10000. Balanced bridge gives 5 V/5 V/0 A; unbalanced gives 70/13 V, 80/13 V and
+−1/1300 A. Cauer and Foster I/II each give 1200−1600j Ω at ω=1000 with their distinct
+physical topology. Parallel resistance and RC loading have independent equations.
+Geometry corruption, unsupported/unknown/oversized patterns, saved project input
+and quality-rejected long layouts preserve input and never return partial success.
+
+A separate ES-module VM imported the neutral layout bundle and browser kernel with
+no DOM, window, document, process, storage or module imports, generated the divider
+and solved it to 8 V. The VM supplied TextEncoder/TextDecoder and a realm-local
+JSON-only structuredClone shim for these plain model graphs. An initial host-realm
+clone was correctly rejected by strict project prototype validation; fixing the
+smoke harness required no application change. This smoke is not a general-purpose
+structuredClone conformance test.
+
+### Actual visual evidence and limits
+
+Six generated/provisional SVG pairs were rendered with the unchanged production
+renderer/CSS and inspected in isolated Chrome at 1400×620. Committed
+[evidence](evidence/phase-6a3c1/README.md) includes SVG pairs, generated screenshots,
+regeneration instructions and complete pair counts. Generated divider/RC drawings
+have supply left, series path and return; bridge midpoints/cross branch are clear;
+Cauer section order and Foster series-versus-parallel forms remain distinct.
+The provisional views show crossing/obscured regions avoided by these templates.
+
+The unchanged renderer puts value text below vertical symbols. Deliberate lower-lead
+rectangular detours preserve label visibility but are less conventional than side
+labels. Raw SI numbers, hollow junction circles, small fit-to-view bridge labels
+and arbitrary Unicode/font metrics remain presentation limitations. No mobile
+editor interactions, browser Save/Open or human file-picker/download checks were
+performed for this headless change; historical evidence remains unchanged.
+
+### Publishing isolation and next review gate
+
+The clean publishing directory contains exactly index.html, app.js and style.css,
+with existing relative content-version references. All three match a fresh build
+of released main byte for byte:
+
+- HTML `cd0a83961654a0311a2ce5a570075ba3f40a7873c33ff640ec68783640dd0922`
+- JS `707b3b386b76afcfd2e1babdeff84700e3744bae4f91543530f15cdc5762d50a`
+- CSS `861e237d05890d3c5665097a163ecc9ab6c3ad30d724e081cfe1d1a57b1d535a`
+
+The layout engine is reachable only through its headless API/test bundle. The
+published editor, main and ignored files remain unchanged. Controller review of
+witnesses, quality limits and visuals precedes any Phase 6A3c2 authorization.
+A later integration should explicitly preview/adopt native-only initial drawings
+and design undo/conflict ownership separately; it must preserve saved geometry.
+No Arrange button, rerouting UI, autosave, new models or synthesis extension added.

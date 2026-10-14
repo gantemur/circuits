@@ -206,3 +206,31 @@ opened geometry from clean synchronization. Follow existing Apply for the one
 scientific transition. `test/project-browser.test.mjs` exercises these production
 paths, with deferred promises for races, independently authored layouts and kernel
 checks. The accepted headless validator and native schemas are unchanged.
+
+### Reading a generated initial drawing
+
+The headless Phase 6A3c1 path is deliberately absent from `web/main.ts`.
+`generateTopologyLayout` in `web/topology-layout.ts` validates a native-only input.
+Read `recognizeLayout` in `web/layout-recognition.ts` next: devices are multigraph
+edges; native indices give deterministic tie-breaking, while values and ID spelling
+never select a family. Its witness lists the actual path, shunts, parallel sections
+or bridge arms. It is not a synthesis certificate.
+
+`constructLayout` in `web/layout-construction.ts` preserves the native import's
+scientific fields and creates explicit prescribed-net rails. Splitting a rail only
+joins vertices already declared to belong to that same native node. Degree-two
+construction junctions become bends; naming and observation anchors remain.
+Quarter-turn rotations preserve p/n, including reversed sources and passives.
+
+Finally read `verifyLayout` in `web/layout-verification.ts`: native reconstruction
+and strict portable-project export are independent of recognition. Complete bounded
+segment comparisons reject crossings without shared vertices, wire/body collisions,
+hidden dots, value-label collisions and excessive aspect ratio. Failure never
+changes the circuit. The independent tests in `test/topology-layout.test.mjs` walk
+wire partitions themselves, compare exact native fields, check drift-free projects,
+and use divider, RC/RL/RLC, bridge and synthesis equations for scientific evidence.
+
+After `npm run build:app`, `node scripts/layout-evidence.mjs /tmp/layout-evidence`
+recreates generated/provisional SVG pairs with the **unchanged** editor renderer.
+The [committed inspection record](evidence/phase-6a3c1/README.md) separates geometry
+checks from actual visual judgment and lists remaining rendering limitations.

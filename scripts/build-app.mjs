@@ -90,3 +90,7 @@ await build({ entryPoints: ['test/support/wiring-ui-entry.ts'], bundle: true, pl
 // Portable project core remains DOM-free; browser orchestration is tested separately.
 await build({ entryPoints: ['test/support/project-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/project-test.js', logLevel: 'silent' });
+
+// Headless initial-layout experiments are deliberately absent from web/main.ts.
+await build({ entryPoints: ['test/support/layout-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/layout-test.js', logLevel: 'silent' });
