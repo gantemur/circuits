@@ -170,7 +170,8 @@ Phase 6A3b must prepare and validate before replacement, ask before replacing di
 Graphical work, preserve Form/JSON, and recheck applied document identity, revision
 and serialized content after asynchronous reading and confirmation. Also recheck
 Graphical scientific/geometry revisions plus pending-text/gesture changes (those
-are not all represented by the current graph revision). An obsolete confirmation
+are not all represented by the current graph revision). Use a generation or full
+snapshot of pending content, not merely its count. An obsolete confirmation
 must not overwrite intervening work. New history starts fresh. The opened project
 remains unapplied until explicit Apply invokes the existing shared native path once.
 

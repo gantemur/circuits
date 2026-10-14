@@ -1,6 +1,6 @@
 # Phase 6A3a — portable circuit-and-drawing project core
 
-Status: implementation task on `codex/phase-6a3a-portable-project-core`, based on
+Status: implemented and locally validated; awaiting independent review on `codex/phase-6a3a-portable-project-core`, based on
 released `64e04525a98839f61a5587b24b1ba6c0fc61f45e`. No browser UI, merge or deployment.
 
 ## Contract fixed before implementation

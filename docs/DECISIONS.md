@@ -1111,3 +1111,83 @@ warnings; leftover anchors are not silently removed.
 This documentation-only status update follows successful initial publication and
 public acceptance. Its final SHA must also pass validation/Pages and public-byte
 comparison before the release is reported complete. No next phase is begun.
+
+## Phase 6A3a — portable project core (task branch, not published)
+
+Implemented on `codex/phase-6a3a-portable-project-core` from released
+`64e04525a98839f61a5587b24b1ba6c0fc61f45e`. The specification was written before
+substantive source changes. No existing scientific/editor test expectations or
+production entry points were changed. Main remains at the released baseline.
+
+Version 1 uses a separate `circuits-unfolded-project` envelope with strict native
+`document` and drawing version 1. Scientific values occur only in the native
+payload. Drawing records contain placements, semantic terminal identities, explicit
+vertices/edges/bends, exact native-node bindings, ground/voltage-probe anchors and
+optional viewport. No editor counters, history, source duplicates or certificates
+are serialized. The actual fields and API are in [PROJECT_FORMAT.md](PROJECT_FORMAT.md).
+
+Connectivity validation follows wires only. A complete bijection between wire
+components and declared native nodes catches hidden shorts, splits, extra islands
+and omitted unused nodes. Ordered component roles and voltage anchors must agree
+with native terminals; reference must lie on node 0. Coincidence/crossing is never
+connection. Reconstruction obtains scientific values from the accepted adapter,
+allocates fresh deterministic handles, and runs nativeCandidate plus exact ordered
+scientific-content comparison. Free/open endpoints and alternate physical probe
+anchors survive. Fatal geometry errors are separate from conservative nonfatal
+quality warnings; no layout is repaired automatically.
+
+All entry points are pure. Unsupported valid scientific schemas retain their
+validated document; drawing-stage failures retain it for a future explicit
+native-only Open choice. Export does not Apply. Draft-aware export requires no
+pending text/gesture; raw-graph export cannot inspect state outside that graph.
+Saved-content comparison ignores object key/file-ID spelling but preserves the
+scientific arrays, ordered vertices/edges, anchors, coordinates and viewport.
+Future Open must guard both applied ownership and Graphical edits, preserve Form/
+JSON, begin fresh history and remain unapplied. Browser integration is deferred.
+
+Inputs have documented byte/tree/record/geometry limits; native array budgets are
+checked before native cross-reference work. File data uses arrays/Maps with exact
+strings and no dynamic prototype assignments. No general migration framework or
+third-party runtime dependency was introduced. Reconstruction is exposed only
+through the checked validate/import result, not an unchecked builder.
+
+### Actual validation
+
+Clean archives of implementation `73bc906` and released main were built separately.
+Fresh clean npm ci, full npm test **446/446** (393 preserved + **53 new project
+cases**), focused project tests **53/53**, typecheck, explicit kernel/app/site
+builds, all six numerical demos and git diff --check passed. Positive cases use
+independently authored native documents and declared drawing terminal groups,
+not merely exporter output. They assert coordinates, rotations, routes, graph
+endpoints, ground and each physical observation anchor directly, and repeatedly
+serialize/parse/export without drift. Corruption tests cover strict fields,
+versions, missing/duplicate records, references, shorts/splits, native failures,
+bounds and unsafe names, with nonmutation assertions.
+
+Independent post-round-trip science: divider 8 V, +4 mA resistor/−4 mA source;
+RC H(i1000)=0.5−0.5i; RLC H(i10000)=−10i; bridge 5 V/5 V/zero cross current then
+70/13 V, 80/13 V and −1/1300 A. Cauer/Foster I/Foster II native generation and
+distinct graphical layouts round-trip successfully. Source optional AC and
+constant/step/sinusoid data, storage, exact Unicode/whitespace/markup/prototype-like
+IDs, unused nodes and intentionally open terminals are retained.
+
+A neutral VM bundle exercised project parse/export/serialization/reconstruction
+and the 8 V kernel without window, document or process. The VM supplied TextEncoder
+and a realm-local JSON-record clone shim because Node VM contexts do not supply
+structuredClone; normal tests use the real runtime clone. No SVG renderer or
+browser file API is imported by the project core.
+
+The isolated publishing package contains exactly index.html, app.js, style.css,
+with relative matching content versions. All three bytes equal the fresh released
+baseline build:
+
+- HTML: `6b9eacb72a72f44dd2665c2b2a0bf4833df78864a09a712aad5ecf5a34805bfa`
+- JS: `d758c971523ad9a4e71deb1c8aec0d725a635c5c275b23ec98af9437bbdbd467`
+- CSS: `861e237d05890d3c5665097a163ecc9ab6c3ad30d724e081cfe1d1a57b1d535a`
+
+No new browser Save/Open/file-operation evidence is claimed: this milestone has
+no such controls, and the production assets are unchanged. Phase 6A3b still needs
+consent UX, asynchronous ownership rechecks, saved-state UI and completed project
+download/file-input tests. Persistent recovery, autosave, layout recognition,
+autorouting and multi-terminal editing remain deferred. Independent controller
+review is the next gate; no merge or deployment was performed.
