@@ -91,7 +91,9 @@ export class WiringSession {
   }
   history(redo: boolean): void {
     if (!this.draft) return;
-    const previous=this.draft.graph;
+    // Undo/Redo restores graph fields in place. Keep an independent, bounded
+    // snapshot so retained handles cannot conceal terminal/anchor identity changes.
+    const previous=structuredClone(this.draft.graph);
     this.moving=false;
     (redo ? redoWiring : undoWiring)(this.draft);
     this.reconcileReferences(previous);

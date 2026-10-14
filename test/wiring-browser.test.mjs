@@ -227,3 +227,45 @@ test('shared ownership blocks change-and-restore and pending inspector text, cle
   const root=new Root(),ui=new WiringUI(root,()=>h.state,()=>assert.fail('unsafe import'),()=>true);ui.render();
   root.dispatch('click',new Element({wAction:'apply'}));assert.equal(ui.session.issue.code,'inspector-pending');
 });
+
+test('history redo retires terminal gesture when deletion restores a free anchor (production handlers)',()=>{
+  const h=uiHarness();h.action('new');const device=h.add('R','R',1000),pin=h.pin(device,'p');
+  h.action('delete-device');const deleted=structuredClone(h.ui.session.draft.graph);
+  h.action('undo');h.control('endpoint',pin);h.action('start');assert.equal(h.ui.session.gesture.start,pin);
+  h.text('probe-id','unfinished probe');h.ui.session.pending.set('unrelated:value','1e-');
+  const state=structuredClone(h.state),document=h.state.document,workspace=structuredClone(h.workspace);
+  const entry=structuredClone(h.ui.session.draft.redo.at(-1));
+  h.action('redo');assert.equal(h.ui.session.gesture,null);
+  assert.deepEqual(h.ui.session.draft.graph,deleted);assert.deepEqual(h.ui.session.draft.history.at(-1),entry);
+  assert.equal(h.ui.session.finish(deleted.reference),false);assert.deepEqual(h.ui.session.draft.graph,deleted);
+  assert.equal(h.state.document,document);assert.deepEqual(h.state,state);assert.deepEqual(h.workspace,workspace);
+  assert.equal(h.ui.session.pending.get('unrelated:value'),'1e-');assert.match(h.root.innerHTML,/unfinished probe/);
+});
+test('history undo retires a free-anchor gesture when its resistor terminal is restored',()=>{
+  const state=createLab(),s=new WiringSession(()=>state);s.blank();
+  const device=s.execute({type:'add-device',deviceType:'R',id:'R',value:'1000'})[0];
+  const pin=s.draft.graph.devices[0].terminals[0].vertex;
+  assert.ok(s.execute({type:'connect',a:pin,b:s.draft.graph.reference,survivingName:'0'}));
+  const connected=structuredClone(s.draft.graph),native=nativeCandidate(connected),applied=state.document,revision=state.revision;
+  s.execute({type:'delete-device',device});s.begin(pin);assert.equal(s.gesture.start,pin);
+  s.history(false);assert.equal(s.gesture,null);assert.deepEqual(s.draft.graph,connected);
+  assert.deepEqual(nativeCandidate(s.draft.graph),native);assert.equal(state.document,applied);assert.equal(state.revision,revision);
+});
+test('history preserves unchanged terminal gesture through unrelated rotation undo and redo',()=>{
+  const s=new WiringSession(()=>createLab());s.blank();
+  s.execute({type:'add-device',deviceType:'R',id:'R1',value:'1000'});
+  const pin=s.draft.graph.devices[0].terminals[0].vertex;
+  const other=s.execute({type:'add-device',deviceType:'R',id:'R2',value:'2000'})[0];
+  s.execute({type:'rotate-device',device:other,quarterTurns:1});
+  const scientific=s.draft.scientificRevision,history=structuredClone(s.draft.history);
+  s.begin(pin);s.history(false);assert.equal(s.gesture.start,pin);
+  s.history(true);assert.equal(s.gesture.start,pin);assert.deepEqual(s.draft.history,history);
+  assert.equal(s.draft.scientificRevision,scientific);
+  assert.equal(s.finish(s.draft.graph.reference,'0'),true);assert.equal(s.draft.graph.edges.length,1);
+});
+test('undoing device creation retires its removed starting terminal without a connection',()=>{
+  const s=new WiringSession(()=>createLab());s.blank();const blank=structuredClone(s.draft.graph);
+  s.execute({type:'add-device',deviceType:'R',id:'R',value:'1000'});
+  s.begin(s.draft.graph.devices[0].terminals[0].vertex);s.history(false);
+  assert.equal(s.gesture,null);assert.equal(s.finish(blank.reference),false);assert.deepEqual(s.draft.graph,blank);
+});
