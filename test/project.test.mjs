@@ -205,3 +205,68 @@ test('file-local handle renaming preserves saved-content comparison without deli
   p.drawing.observations.forEach(o=>{o.p=map.get(o.p);o.n=map.get(o.n);});
   assert.equal(ok(projectContentKey(p)).key,key);cycle(p);
 });
+
+// A legal but deliberately redundant drawing; all wires belong to native ground.
+function parallelWireProject(edgeCount = 320, bendCount = 64) {
+  return envelope({circuit:{schemaVersion:1,nodes:['0'],components:[],observations:[]},
+    experiment:{schemaVersion:1,sources:[],initial:{kind:'equilibrium'}}}, {
+    drawingVersion:1, placements:[],
+    vertices:[{id:'a',kind:'junction',x:0,y:0},{id:'b',kind:'free',x:100,y:0}],
+    edges:Array.from({length:edgeCount},(_,i)=>({id:`wire${i}`,a:'a',b:'b',
+      bends:Array.from({length:bendCount},(_,j)=>({x:j,y:i}))})),
+    bindings:[{node:'0',vertex:'a'}],reference:'a',observations:[],
+  });
+}
+import {inspectProjectWarnings, PROJECT_WARNING_PAIR_LIMIT} from '../dist/project-test.js';
+test('maximum legal multi-bend drawing bounds every examined pair, including skipped pairs',()=>{
+  const p=parallelWireProject();
+  assert.ok(Buffer.byteLength(JSON.stringify(p)) < PROJECT_LIMITS.bytes);
+  const r=cycle(p), scan=inspectProjectWarnings(r.graph);
+  assert.equal(scan.segmentCount,20800);
+  assert.equal(scan.pairsInspected,PROJECT_WARNING_PAIR_LIMIT);
+  assert.equal(scan.budgetExhausted,true);
+  assert.deepEqual(r.warnings,scan.warnings);
+  assert.equal(r.warnings[0].code,'drawing-inspection-incomplete');
+});
+test('small overlap and clear drawings keep ordinary warning behavior',()=>{
+  const p=parallelWireProject(1,0);
+  p.document.circuit.nodes.push('other');
+  p.drawing.vertices.push({id:'c',kind:'free',x:50,y:-50},{id:'d',kind:'free',x:50,y:50});
+  p.drawing.edges.push({id:'crossing',a:'c',b:'d',bends:[]});
+  p.drawing.bindings.push({node:'other',vertex:'c'});
+  assert.equal(cycle(p).warnings[0].code,'possible-wire-overlap');
+  p.drawing.vertices[2].x=200;p.drawing.vertices[3].x=200;
+  const scan=inspectProjectWarnings(cycle(p).graph);
+  assert.deepEqual(scan.warnings,[]);assert.equal(scan.pairsInspected,1);assert.equal(scan.budgetExhausted,false);
+});
+test('budget threshold counts shared endpoints and does not falsely truncate a finished scan',()=>{
+  for(const [edges,exhausted] of [[141,false],[142,true]]) {
+    const r=cycle(parallelWireProject(edges,0)),scan=inspectProjectWarnings(r.graph);
+    assert.equal(scan.budgetExhausted,exhausted);
+    assert.equal(scan.pairsInspected,Math.min(edges*(edges-1)/2,PROJECT_WARNING_PAIR_LIMIT));
+    assert.equal(r.warnings.length,exhausted?1:0);
+  }
+});
+test('bounded warning path preserves real components, terminal assignments, ground and probes',async()=>{
+  const p=await divider(),edge=p.drawing.edges[0];
+  for(let i=0;i<160;i++)p.drawing.edges.push({id:`parallel${i}`,a:edge.a,b:edge.b,
+    bends:Array.from({length:64},(_,j)=>({x:j,y:i}))});
+  // Put redundant pairs first so the budget is reached before other heuristic pairs.
+  p.drawing.edges.unshift(...p.drawing.edges.splice(-160));
+  const r=cycle(p);
+  assert.equal(r.warnings[0].code,'drawing-inspection-incomplete');
+  const dc=ok(solveDC(assemble(r.project.document.circuit),r.project.document.experiment));
+  near(dc.observations.out.value.re,8);
+});
+test('large drawings still fully reject structural and geometry corruption before warnings',()=>{
+  for(const [change,code] of [
+    [p=>p.drawing.edges[319].b='missing','missing-vertex'],
+    [p=>p.drawing.edges[319].bends[63].x=1e6+1,'coordinate'],
+    [p=>p.drawing.vertices.push({id:'island',kind:'free',x:0,y:0}),'unbound-component'],
+    [p=>p.document.circuit.nodes.push('unbound'),'node-coverage'],
+  ]) {
+    const p=parallelWireProject();change(p);const before=structuredClone(p),r=validateProject(p);
+    assert.equal(r.status,'invalid');assert.equal(r.diagnostics[0].code,code);
+    assert.deepEqual(p,before);
+  }
+});

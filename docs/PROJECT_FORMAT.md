@@ -158,6 +158,26 @@ text API uses JSON.parse, followed by those checks. Nonfinite parsed numbers are
 rejected. Object tree work and text bytes are bounded before native validation and
 reconstruction. Unknown versions/fields fail; no migration engine exists in v1.
 
+### Optional drawing-warning work bound
+
+After full structural, partition, terminal, ground, observation and geometry-bound
+validation, the conservative warning scan enumerates at most 20,800 segments.
+It inspects at most **10,000 segment pairs**, counting even pairs skipped because
+they share an edge or endpoint. Indexed iteration avoids quadratic suffix-array
+allocation. An overlap found within the budget retains the ordinary warning.
+If another pair remains at the limit, `drawing-inspection-incomplete` is returned
+as a nonfatal diagnostic; remaining wire pairs and symbol proximity are unchecked.
+Otherwise the existing symbol proximity scan uses at most 780 pairs (40 devices).
+An empty warning list is never returned because of budget exhaustion. Even a
+completed heuristic scan is not collision certification.
+
+The internal `inspectProjectWarnings` result exposes segment count, examined-pair
+count and `budgetExhausted` for deterministic work evidence; `projectWarnings`
+retains its diagnostic-array interface. The stable diagnostic code supports future
+render-time localization; its technical message remains English. The budget does
+not reject projects, alter data, skip structural checks or change saved-content
+keys. Segment construction is linear in segment count, with bounded graph lookups.
+
 ## Save, Apply and future Open ownership
 
 A completed unapplied graph may be exported. The saved native data describes that

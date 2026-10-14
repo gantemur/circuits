@@ -1191,3 +1191,43 @@ consent UX, asynchronous ownership rechecks, saved-state UI and completed projec
 download/file-input tests. Persistent recovery, autosave, layout recognition,
 autorouting and multi-terminal editing remain deferred. Independent controller
 review is the next gate; no merge or deployment was performed.
+
+## Phase 6A3a correction — deterministic drawing-warning work budget
+
+Preflight confirmed reviewed branch `8deaefff97c9ff2a3fa73414dc11b23232763942`,
+clean tracked worktree, ancestry from unchanged main `64e04525a98839f61a5587b24b1ba6c0fc61f45e`,
+and [successful validation](https://github.com/gantemur/circuits/actions/runs/38588755204).
+
+A valid single-ground project with two vertices, 320 parallel wires and 64 bends
+per wire occupied 351,060 JSON bytes. The original validator accepted it with no
+warnings. Instrumenting its segment suffix slices counted 20,800 segments,
+20,800 suffix allocations and **216,309,600 pair visits/copied suffix entries**;
+one local run took about 1.01 seconds. Timing is illustrative, not acceptance.
+
+The optional warning path now examines at most **10,000 segment pairs**, counting
+same-edge and shared-endpoint pairs before skipping them. Indexed loops avoid
+suffix allocations. Exhaustion returns nonfatal `drawing-inspection-incomplete`,
+explicitly covering remaining wire and symbol checks. Small drawings retain their
+existing overlap/proximity heuristics. The internal inspection result exposes
+pair counts for deterministic regression evidence; the existing warning-array
+interface remains intact. No native/schema, topology, reconstruction, allocation,
+solver, Apply or ownership behavior changed. Full structural and geometry bounds
+still precede the heuristic. This is not exhaustive collision certification.
+
+An isolated clean source tree passed npm ci, **58/58 focused project tests** and
+**451/451 full tests** (all 446 previous expectations retained), typecheck, explicit
+kernel/application/site builds, all six demos and git diff --check. New tests cover
+the maximum valid drawing, budget thresholds including skipped pairs, ordinary
+crossing and clear drawings, complete native/placement/terminal/route/ground/probe
+preservation and stable repeated exports/content keys. A real divider still solves
+to 8 V after the bounded path. Late-edge geometry/reference corruption, extra wire
+components and missing native bindings remain fatal and nonmutating.
+
+The neutral VM smoke passed parse/export/serialize/reconstruction and the 8 V
+kernel without DOM or process; it retains the previously documented realm-local
+JSON-clone shim limitation. Clean publish contains exactly index.html, app.js and
+style.css with matching relative content versions. All three match the clean
+released-baseline package byte for byte, with the same hashes recorded above.
+No browser interaction evidence is claimed or needed for this headless-only change.
+No merge or deployment occurred. Phase 6A3a is ready for controller review and
+possible authorization of Phase 6A3b; Save/Open, autosave and routing remain deferred.

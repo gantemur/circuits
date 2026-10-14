@@ -184,21 +184,59 @@ function reconstruct(document: CircuitProject['document'], d: ProjectDrawing): W
   if(documentMeaning(candidate.document)!==documentMeaning(document))fail('scientific-mismatch','drawing','Reconstructed scientific content differs');
   return g;
 }
-/** Conservative, nonfatal quality evidence independent of SVG. Overlapping
- * segment boxes can warn even for safe diagonal arrangements; no repair occurs. */
+/** Optional quality evidence has a separate budget from complete structural checks.
+ * Count even same-edge/shared-endpoint pairs: skipping their geometry must not
+ * leave an unbounded quadratic walk. Valid input has at most 20,800 segments. */
+export const PROJECT_WARNING_PAIR_LIMIT = 10_000;
+
+/** Inspection counters describe work, not a collision-free geometry certificate.
+ * Segment boxes can warn for safe diagonal arrangements; no repair occurs. */
+export function inspectProjectWarnings(g: WiringGraph): {
+  warnings: ProjectDiagnostic[]; segmentCount: number; pairsInspected: number; budgetExhausted: boolean;
+} {
+  const segments = g.edges.flatMap(edge => {
+    const points = wirePoints(g, edge.key);
+    return points.slice(1).map((b, i) => ({ edge, a: points[i]!, b }));
+  });
+  let pairsInspected = 0;
+  const result = (warnings: ProjectDiagnostic[], budgetExhausted = false) =>
+    ({ warnings, segmentCount: segments.length, pairsInspected, budgetExhausted });
+  const overlap = (a: number, b: number, c: number, d: number) =>
+    Math.max(Math.min(a, b), Math.min(c, d)) <= Math.min(Math.max(a, b), Math.max(c, d));
+
+  for (let i = 0; i < segments.length; i++) {
+    for (let j = i + 1; j < segments.length; j++) {
+      if (pairsInspected === PROJECT_WARNING_PAIR_LIMIT) {
+        return result([{
+          code: 'drawing-inspection-incomplete', path: 'drawing.edges',
+          message: 'Drawing-quality inspection reached its segment-pair budget; unchecked wire and symbol overlaps may remain. Electrical topology and geometry bounds were fully validated.',
+        }], true);
+      }
+      pairsInspected++;
+      const a = segments[i]!, b = segments[j]!;
+      if (a.edge.key === b.edge.key || a.edge.a === b.edge.a || a.edge.a === b.edge.b ||
+          a.edge.b === b.edge.a || a.edge.b === b.edge.b) continue;
+      if (overlap(a.a.x, a.b.x, b.a.x, b.b.x) && overlap(a.a.y, a.b.y, b.a.y, b.b.y)) {
+        return result([{ code: 'possible-wire-overlap', path: 'drawing.edges',
+          message: 'Wire segment boxes overlap; inspect crossings. This is not an electrical connection.' }]);
+      }
+    }
+  }
+  // At most 40 placements: the unchanged proximity heuristic needs <=780 pairs.
+  for (let i = 0; i < g.placements.length; i++) {
+    for (let j = i + 1; j < g.placements.length; j++) {
+      const a = g.placements[i]!, b = g.placements[j]!;
+      if (Math.abs(a.x - b.x) < 65 && Math.abs(a.y - b.y) < 65) {
+        return result([{ code: 'possible-symbol-overlap', path: 'drawing.placements',
+          message: 'Nearby symbols may overlap; inspect the drawing.' }]);
+      }
+    }
+  }
+  return result([]);
+}
+
 export function projectWarnings(g: WiringGraph): ProjectDiagnostic[] {
-  const segments=g.edges.flatMap(edge=>{const points=wirePoints(g,edge.key);return points.slice(1).map((b,i)=>({edge,a:points[i]!,b}));});
-  const overlap=(a:number,b:number,c:number,d:number)=>Math.max(Math.min(a,b),Math.min(c,d))<=Math.min(Math.max(a,b),Math.max(c,d));
-  for(let i=0;i<segments.length;i++)for(const b of segments.slice(i+1)){
-    const a=segments[i]!;
-    if(a.edge.key===b.edge.key||[a.edge.a,a.edge.b].some(v=>v===b.edge.a||v===b.edge.b))continue;
-    if(overlap(a.a.x,a.b.x,b.a.x,b.b.x)&&overlap(a.a.y,a.b.y,b.a.y,b.b.y))return [{code:'possible-wire-overlap',path:'drawing.edges',message:'Wire segment boxes overlap; inspect crossings. This is not an electrical connection.'}];
-  }
-  for(let i=0;i<g.placements.length;i++)for(const b of g.placements.slice(i+1)){
-    const a=g.placements[i]!;
-    if(Math.abs(a.x-b.x)<65&&Math.abs(a.y-b.y)<65)return [{code:'possible-symbol-overlap',path:'drawing.placements',message:'Nearby symbols may overlap; inspect the drawing.'}];
-  }
-  return [];
+  return inspectProjectWarnings(g).warnings;
 }
 export function projectIssue(error: unknown): ProjectDiagnostic {
   if(error instanceof ProjectError)return error.issue;
