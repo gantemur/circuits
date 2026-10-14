@@ -233,3 +233,11 @@ The three output stages follow Phase 5A1:
 - `verification`: the unchanged physical check result with seven Z/Y sample pairs, full solver diagnostics and RMS-only signed-power evidence. The native realization is verified only when all three stages succeed. Numerical limits do not revoke exact certificates.
 
 All Phase 5A1 ceilings/tolerances remain unchanged. Raw finite terms are additionally capped at `rawDegree` (default 16); reconstructed numerator/denominator degree is at most 8. Budget failures name the stage. Low-level `parseFoster`, `fosterSections`, `generateFosterNetlist`, `convertRcElement` and `validateRcNetwork` are exposed for teaching/testing, with their documented validated-input preconditions; use the high-level entry for untrusted requests. Run `npm run demo:foster` to compare the three physical realizations. See [the Foster specification](PHASE_5A2_SPECIFICATION.md).
+
+## Headless graphical draft boundary
+
+Phase 6A1 provides a separate, DOM-free editor model under `web/wiring-*.ts`.
+It converts explicit ideal-wire graphs into the same strictly validated native v1
+R/C/L/V/I documents. It does not change kernel exports, native schemas or numerical
+methods. See [WIRING_API.md](WIRING_API.md) for transaction, completion, history and
+ownership contracts; geometric drafts never become scientific JSON metadata.

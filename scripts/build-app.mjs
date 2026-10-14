@@ -80,3 +80,6 @@ await build({ entryPoints: ['test/support/bjt-presentation-entry.ts'], bundle: t
 
 await build({ entryPoints: ['test/support/synthesis-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
   target: 'es2022', outfile: 'dist/synthesis-test.js', logLevel: 'silent' });
+
+await build({ entryPoints: ['test/support/wiring-entry.ts'], bundle: true, platform: 'neutral', format: 'esm',
+  target: 'es2022', outfile: 'dist/wiring-test.js', logLevel: 'silent' });

@@ -662,3 +662,105 @@ One initial asset comparison request returned HTTP 503; retry succeeded and all 
 Completed protocol file selection/downloads do not establish manual operation of a native OS picker or every browser/profile. Exact arithmetic resource bounds, supplied Foster decomposition and the accepted numerically unresolved construction remain explicit scientific limits. No LC/RL synthesis, factorization, optimization or subsequent development milestone was begun.
 
 After these successful public checks, this separate documentation-only commit updates README, AGENTS and specification status while preserving historical evidence. The final release revision is the commit containing this entry, a direct documentation-only child of accepted main `55ba7cb77a88153fff706f18a62d3625848ca73b`; its exact SHA and final validation/Pages run links are supplied in the release handoff after deployment. A commit cannot include its own eventual SHA without changing that SHA. Final publication is contingent on that child commit's successful workflows and repeated public-package comparison; the implementation package hashes above remain the expected values.
+
+## 2026-10-14 — Phase 6A1 headless graphical connectivity and editing
+
+Started from fetched released main `3c52eff2c7cc7f8c827d7eb13a13975d0f82542c`
+on `codex/phase-6a1-graphical-connectivity`, with a clean tracked tree. The
+Phase 6A1 specification was written before implementation. This is an unmerged
+headless editor milestone; the released application and scientific kernel remain
+unchanged. Main and ignored local files, including publish synchronization copies,
+were preserved.
+
+### Implemented contracts
+
+Four DOM-free TypeScript modules separate explicit wire connectivity/geometry,
+atomic transactions, strict native conversion, and ownership/history. BFS follows
+only ideal wires; device interiors and coincident coordinates never connect nets.
+Pending/open/connected terminals are distinct. Last-wire removal becomes pending;
+intentional opens remain real singleton nodes without leakage. Import uses one hub
+per native node, including unused and singleton nodes. Exact IDs, labels, ordering,
+source optional fields and storage data round-trip. Unsupported controlled-source
+v1 and nonlinear v2/v3 return intact read-only documents.
+
+Merging non-ground names requires an explicit survivor. Ground wins automatically.
+Splits keep names with physical anchors, propose fresh names elsewhere, and keep
+voltage probes on their own vertices. Set reference swaps native names with `0`
+without adding wires or reversing devices. Device deletion blocks dependent current
+probes unless explicitly included; own source/storage data is removed atomically.
+External wires and voltage anchors remain as free endpoints. Copies receive new
+identities and pending terminals, without inherited external wiring.
+
+Wire splitting, endpoint-to-segment attachment and explicit crossing joins retain
+routes and endpoints. Attachment is one atomic undo step. Selected junction-edge
+separation affects only those edges. Geometry has finite coordinate and route-count
+bounds, integer quarter turns and a drawing-unit determinant roundoff guard for
+unresolved near-parallel crossings. None of these are circuit tolerances. Geometry
+alone does not alter scientific revisions or replace an applied document.
+
+History holds changed model collections/metadata, bounded to 100 steps by default
+(configurable 1–1000); no DOM snapshots. Undo/redo restores exact handles, values,
+connections and geometry. Apply checks document identity, revision and serialized
+snapshot, including in-place mutation; equal scientific candidates preserve applied
+identity/revision. Dirty scientific or geometric drafts survive external changes
+as conflicts. Undo after Apply changes only the draft. The existing Form/JSON and
+synthesis interfaces are untouched.
+
+### Actual automated evidence
+
+New `test/wiring.test.mjs`: **37/37**. Full suite: **364/364**, comprising the
+unchanged 327 released tests plus those 37. Physical circuits were constructed
+through graph transactions rather than imported as expected converter outputs:
+
+- Divider: V(out)=8 V, both resistor currents 0.004 A, source current −0.004 A.
+  Set output as reference: V(in)=4 V, former ground=−8 V; physical probe differences
+  and currents are unchanged. Resistor powers are 0.016/0.032 W and source power
+  −0.048 W.
+- RC low-pass: R=1000 Ω, C=1 µF, H(j1000)=0.5−0.5j. Ten backward-Euler steps at
+  0.1 ms follow the independently computed recurrence `(v+0.1)/1.1`.
+- Four-arm 1 kΩ bridge with a 1 kΩ cross branch: 5 V midpoints and zero bridge
+  current. Changing only the right lower arm to 2 kΩ gives 70/13 and 80/13 V,
+  with left-to-right bridge current −1/1300 A.
+- Explicit opens and floating subnetworks remain native-valid but nonunique in
+  MNA; incompatible voltage sources remain native-valid but fail analysis. A
+  ground-shorted resistor is native-valid and has a successful zero-state solve.
+
+Round-trips cover divider/RC/high-pass/RLC/bridge/current-source fixtures, unused
+nodes, singleton assignments, arbitrary node order, labels, optional AC/waveforms,
+storage values and exact punctuation/whitespace/markup/prototype-like names.
+Accepted Cauer and Foster I/II source-free generated documents also round-trip
+structurally. Atomic rejection, cycle versus true split, crossing versus junction,
+name/reference dependencies, geometry, bounded history, stale clean Apply,
+dirty conflicts, explicit discard and mutation-aware ownership are tested.
+
+A clean archived source copy with the tracked/new task files overlaid passed
+`npm ci`, focused tests, `npm test`, `npm run typecheck`, `npm run build`, application
+and site builds, all six existing numerical demos, and `git diff --check` in the
+working repository. A separate ES-module VM loaded the neutral wiring bundle and
+browser kernel without window, document, process or runtime imports; a divider
+round-trip/8 V solve and geometry-only source rotation passed. The existing esbuild
+allow-scripts notice was nonblocking.
+
+A second clean archive of released main independently built its publishing package.
+The candidate and baseline both contain exactly `index.html`, `app.js`, `style.css`;
+all three compare byte for byte. Relative asset URLs carry matching content versions:
+
+- `index.html`: `48df09939558408f8d5d39d6921864c34ed23f55b3f87cbe0c737ab450717802`
+- `app.js`: `497ab6c54bf4ddf40395d786bfca0b01e243fd11b439c71ec62ca01fbe34d4b8`
+- `style.css`: `7e837db231cfd897d065d2380462d1cb6be21783cd8086500c7c598b1e016615`
+
+### Boundaries and review gate
+
+No production renderer, pointer/keyboard interaction, localization surface, layout
+sidecar, autorouter, mirroring, multi-terminal editing or cleanup UI is introduced.
+Provisional geometry does not certify drawing readability. Graphical browser
+interactions and file-picker/download interactions were not retested here; prior
+release evidence and limits remain historical, not newly claimed checks. Every
+explicit graph component, including leftover free anchors, remains a native node;
+future cleanup must be an explicit operation rather than silent topology loss.
+
+The API documents read-only unsupported conversion, first-blocking diagnostics,
+collection-scoped history costs and the requirement that a future browser adapter
+Apply against the actual shared authority. No numerical correctness defect was
+found or repaired. Independent controller review of this contract precedes any
+Phase 6A2 browser integration. No merge or deployment was performed.

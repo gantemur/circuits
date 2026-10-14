@@ -114,3 +114,33 @@ Begin with `web/synthesis-state.ts:synthesisPreset` and the exact coefficient/de
 `adoptSynthesis` uses strict native serialization/import only after a current passed result and any required draft confirmation. `synthesisPortHandoff` explicitly adds or replaces one port-frequency panel, preserving other settings. It uses the adopted document snapshot and the verifier's reference-frequency sample. The source-free circuit has no ordinary transfer input. JSON/CSV are guarded by current result ownership; native schemas contain no synthesis UI state.
 
 Run `npm run build:app && node --test test/synthesis-browser.test.mjs`. These production-adapter/lifecycle/UI tests use independently evaluated F(j)=6/5−8j/5 and G(j)=3/10+4j/10, physical topology, an actual embedded worker in a separate test thread, strict adoption, and retained drafts. Follow with the unchanged full scientific suite and actual browser checks. Browser file-picker/download completion is separate from serialization coverage.
+
+## Reading the Phase 6A1 headless wiring editor model
+
+The editor modules live under `web/`, but have no DOM, rendering, storage or event
+handler dependencies and are not imported by the application entry point.
+[PHASE_6A1_SPECIFICATION.md](PHASE_6A1_SPECIFICATION.md) defines the scope and
+[WIRING_API.md](WIRING_API.md) describes calls and ownership.
+
+Read `wiring-graph.ts` first: `partitions` follows explicit wire edges using BFS;
+it never follows a resistor or source interior. `reconcileNames` keeps names on
+physical anchors after splits and requires a survivor for non-ground merges.
+`vertexPoint` rotates drawing positions without swapping the ordered p/n roles.
+Then read `transact` in `wiring-transactions.ts`: edits take place on a copy,
+completion and names are reconciled, geometry is checked, and only a successful
+result can be committed. `splitWire` preserves route bends; `attach-to-segment`
+combines splitting and connection into one undoable wire operation.
+
+`wiring-native.ts` imports each native node as an explicit hub. `nativeCandidate`
+resolves graph components to names, resolves physically anchored probes and
+stable device references, converts finite numeric text, and finally calls the
+existing strict v1 validator. It does not run a solver or repair a floating circuit.
+`wiring-draft.ts` adds collection-scoped history and document identity/revision/
+snapshot ownership; undo changes only the draft, including after Apply.
+
+In `test/wiring.test.mjs`, start with the transaction-built divider and reference
+change, then RC low-pass and bridge. Their expected answers come from elementary
+circuit equations, while the unchanged kernel independently analyzes the exported
+native circuits. The other tests cover graph partitions, completion, exact IDs,
+round-trips, dependencies, geometry and ownership. No graphical interaction is
+claimed by these headless tests.
