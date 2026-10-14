@@ -193,6 +193,7 @@ test('record limits and compact serialization bound work before graph reconstruc
     const p=await divider();p.drawing[field]=Array.from({length:limit+1},()=>structuredClone(p.drawing[field][0]));
     assert.equal(validateProject(p).diagnostics[0].code,'record-limit');
   }
+  const wide=await divider();wide.document.circuit.components=Array.from({length:41},()=>({...wide.document.circuit.components[0]}));assert.equal(validateProject(wide).diagnostics[0].code,'record-limit');
   const p=await divider();p.document.circuit.label='a'.repeat(PROJECT_LIMITS.bytes);assert.equal(validateProject(p).diagnostics[0].code,'file-limit');
   const arr=[null];delete arr[0];arr.hidden='a';assert.equal(validateProject(arr).diagnostics[0].code,'non-json');
 });

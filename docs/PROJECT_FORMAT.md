@@ -148,7 +148,9 @@ export/parse/export cycles are stable without geometric drift.
 Limits are 2 MiB UTF-8 JSON, nesting depth 32, 100000 values, 40 components,
 240 vertices/native nodes/observations, 320 edges and 64 bends per edge. These match
 current editor component/vertex/edge/route bounds; node/observation and file/tree
-limits additionally bound the portable input. Limits apply before graph work.
+limits additionally bound the portable input. Native collection budgets are checked before scientific cross-reference validation;
+source/storage arrays are capped at 40. Oversized input is rejected as a resource
+failure even when its scientific schema might otherwise be supported.
 
 The object API accepts plain JSON trees, not class instances, cycles, aliased
 objects, accessors, sparse/decorated arrays, hidden fields or non-JSON values. The

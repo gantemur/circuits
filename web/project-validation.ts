@@ -212,7 +212,20 @@ export function validateProject(value: unknown): ProjectResult {
     const p=record(copy,'$',['format','projectVersion','document','drawing']);
     if(p.format!=='circuits-unfolded-project')fail('project-format','format','Not a Circuits Unfolded project');
     if(p.projectVersion!==1)fail('project-version','projectVersion','Unsupported project version');
-    stage='native';document=parseBrowserDocument(JSON.stringify(p.document));
+    stage='native';
+    // Bound native collections before invoking validators that may cross-reference
+    // arrays. This is a resource guard, not a replacement scientific validator.
+    const native=p.document as {circuit?:RecordValue;experiment?:RecordValue}|null;
+    const limit=(value:unknown,max:number,path:string)=>{
+      if(Array.isArray(value)&&value.length>max)fail('record-limit',path,'Native collection exceeds project limits');
+    };
+    limit(native?.circuit?.components,L.components,'document.circuit.components');
+    limit(native?.circuit?.nodes,L.nodes,'document.circuit.nodes');
+    limit(native?.circuit?.observations,L.observations,'document.circuit.observations');
+    limit(native?.experiment?.sources,L.components,'document.experiment.sources');
+    const initial=native?.experiment?.initial as RecordValue|null|undefined;
+    limit(initial?.values,L.components,'document.experiment.initial.values');
+    document=parseBrowserDocument(JSON.stringify(p.document));
     if(!isLinearDocument(document)||document.circuit.components.some(c=>!['R','C','L','V','I'].includes(c.type)))
       return {status:'unsupported',document,diagnostics:[{code:'drawing-scope',path:'document',message:'Drawing supports native v1 R/C/L/V/I only'}]};
     stage='drawing';
