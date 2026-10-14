@@ -893,3 +893,109 @@ unsolvable. Undo, explicit connection or JSON editing is available; no automatic
 node cleanup is introduced. Native export does not preserve layout or transfer a
 synthesis certificate to later edits. Independent controller review remains the
 next gate. No merge or deployment was performed.
+
+## Phase 6A2 focused acceptance correction — 2026-10-14
+
+### Baseline and bounded changes
+
+Started from the clean reviewed branch at
+`6506ca0d8368bf7accc8a6333677d052844352a7`. Its [GitHub validation](https://github.com/gantemur/circuits/actions/runs/38519581914)
+succeeded. Main/origin main remained
+`3c52eff2c7cc7f8c827d7eb13a13975d0f82542c`, an ancestor of the task branch.
+A clean build of that released source matched the public HTML, JS and CSS bytes.
+No numerical solver, source model, native schema, physical tolerance or deployment
+was changed in this correction.
+
+Actual isolated Chrome reproduced the stale split-wire selection (displayed new
+wire but action addressed the removed handle) and the checkbox Escape
+`InvalidStateError` from `setSelectionRange`. Correction commit
+`66cd302a6b945072d1f9d4c5cc8e37c386a2e773` reconciles all selector options before
+deriving dependent UI, reads actual displayed selections, and requests explicit
+reselection for removed references. Component selection and destructive actions
+share the same selected handle. Pending text is separately owned. Valid wire
+gestures survive unrelated Undo/Redo; removed endpoints and terminals converted to
+anchors retire the gesture. Focus restoration uses text-selection APIs only for
+supported input types. Stable incident-checkbox IDs and retained checkbox choices
+preserve usable focus across renders; deletion consent follows its selected device.
+
+### Automated and clean-package evidence
+
+From an isolated archive of the committed correction: clean `npm ci`, `npm test`
+(**389/389**, all 382 existing expectations retained), focused
+`node --test test/wiring.test.mjs test/wiring-browser.test.mjs` (**62/62**),
+`npm run typecheck`, kernel/application/site builds and `git diff --check` passed.
+All six demos passed: linear, diode, diode transient, BJT, Cauer and Foster.
+The DOM-free VM smoke loaded the kernel, graph and session without window,
+document or process; it checked the 8 V divider and geometry-only Apply retaining
+scientific document identity/revision. Production tests also cover native import
+notification ownership and independent draft guards.
+
+The publishing package contains exactly `index.html`, `app.js`, `style.css`, with
+relative asset URLs and matching SHA-256 content-version references. Tested JS
+SHA-256 is `4c99959df63a39f3cd75c06e3572eda0b9da2cf0f79485e3de4b89401f89b201`;
+CSS is `861e237d05890d3c5665097a163ecc9ab6c3ad30d724e081cfe1d1a57b1d535a`.
+The delivery check rebuilds the final documentation commit from a separate clean
+archive and compares all three bytes against this browser-tested package.
+
+### Actual Chrome acceptance
+
+Used a fresh isolated Chrome profile with extensions disabled and CDP against the
+clean package under `/circuits/`. Browser constructions started with blank
+Graphical drafts, rather than imported fixture topology:
+
+- Divider: 12 V, 1 kΩ/2 kΩ, correct terminal connectivity, 8 V output, +4 mA
+  resistor currents and −4 mA source current. Changing reference gave 4 V/−8 V.
+- RC: 1 kΩ/1 µF, configured DC/AC/step source and zero capacitor initial state.
+  Frequency inspection at 1000 rad/s displayed 0.5−0.5j V RMS; transient rendered
+  the step plot and 102 samples. Downloaded experiment fields were checked.
+- Bridge: five resistor branches, balanced 5 V midpoints and numerical cross
+  current −8.67e−19 A; unbalanced values agreed with 70/13 V, 80/13 V and
+  −1/1300 A. Independent kernel evaluation of downloaded circuits also checked
+  these equations and the actual topology.
+
+Actual completed Chrome downloads were captured, their saved bytes strictly
+parsed, and the divider/RC files selected through the real browser file-input
+path. Reanalysis and repeat export preserved native documents, including AC,
+waveform, observations and initial storage. Exact source ID `<b>Vs</b> & "Q"`
+remained literal and survived the round trip. Malformed JSON and negative-resistor
+invalid-native files were rejected while current analysis and pending `1e-`
+Graphical text remained; correction and Apply then succeeded. These are completed
+protocol file selections/downloads, not merely export clicks or serializer tests.
+The human-operated OS picker was not exercised.
+
+Browser interactions covered split/delete/reselect, copy, Undo/Redo, disappearing
+net names, explicit crossing versus junction, selected junction separation,
+pending-wire Escape, real pointer wire completion, checkbox focus on Escape and
+language switches, text cursor preservation, and invalid-property recovery.
+Clean drafts followed example changes; dirty change-and-restore drafts stayed
+conflicted. Graphical/Form/JSON pending text survived navigation and translation.
+Inspector pending text blocked replacement. Both Transform and Synthesize asked
+confirmation with a Graphical-only draft. Unsupported controlled-source v1,
+diode v2 and BJT v3 remained intact and exported valid native documents.
+
+English/Mongolian were inspected at 1280, 390 and 320 CSS pixels. Page scroll
+widths were 1265/375/305 (the vertical scrollbar accounts for 15 pixels), with no
+horizontal page overflow. Local SVG scrolling, Fit/Zoom/Pan and focused controls
+worked; narrow screenshots were visually inspected. Existing diode worker
+completed and a 3000-interval run cancelled before results. Synthesis completed
+all three default methods; an independently specified degree-eight Stieltjes
+function `1 + Σ(k/(z+k)), k=1..8` kept Cauer active long enough to observe the live
+worker and enabled Cancel, then its termination and cancelled status.
+
+The successful fresh-profile comparison of a simple page, published application
+and corrected package recorded no runtime/application console errors. An earlier
+comparison navigation recorded only the public site's unrelated `/favicon.ico`
+404. Previously recorded asynchronous message-channel errors did not recur; no
+source/stack evidence proves their cause, and no messages were suppressed or
+unrelated application code changed. Test-harness locator errors during script
+development were corrected and are not reported as application defects.
+
+### Remaining limits and gate
+
+This pass supersedes the earlier file-protocol and active-synthesis-cancellation
+verification limits for these checked cases. It does not establish a human OS
+picker, persistent geometry, automatic layout quality, or devices outside the
+existing R/C/L/V/I graphical scope. Geometry remains session-only; existing size,
+collision-warning and leftover-anchor behavior remains unchanged. Ready for a
+separate controller publication decision; main is unchanged and this branch has
+not been merged or deployed.

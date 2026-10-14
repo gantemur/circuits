@@ -89,3 +89,19 @@ endpoint dots, obscured vertices, wire-through-body and symbol overlaps. Warning
 are presentation diagnostics, never a claim of electrical connection. Names on
 terminal anchors and exact topology supplement the provisional diagram. No
 collision-free automatic layout or persistent geometry is promised.
+
+## Focused acceptance correction
+
+Selectors reconcile their stable handles before rendering dependent controls. A
+removed wire, device, endpoint or net name requires explicit reselection; a
+browser-selected replacement must never disagree with the action's cached value.
+Unrelated property, observation and net-name text remains pending. Wire gestures
+survive unrelated history/navigation but retire when their starting endpoint is
+removed or ceases to be the same terminal. Checkbox/select focus is restored
+without text-selection APIs; text inputs and textareas retain selection ranges.
+
+The focused acceptance pass preserves all 382 previous tests and adds seven
+production-path regressions (389 total; 62 focused graph/editor tests). Isolated
+Chrome protocol downloads and file-input reimports now establish actual native
+file round trips for constructed divider/RC circuits, separately from a human OS
+picker. See the appended decision record for browser, worker and package evidence.
