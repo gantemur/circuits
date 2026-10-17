@@ -23,3 +23,7 @@ The maintained TypeScript in `src/` is mathematical teaching material, not merel
 - Respect the repository [MIT license](../LICENSE); the independently authored companion book and third-party material are not included in that grant.
 
 These are product and contribution contracts, not private agent instructions or task authorization. Source changes should use reviewable commits and retain the published scientific behavior unless expressly scoped otherwise.
+
+## Reproducing graphical project behavior
+
+Native `{circuit, experiment}` JSON describes the scientific circuit without a drawing; a portable `.cuf.json` project contains a strictly validated native document and validated drawing geometry. Connections follow explicit ideal wires: coincident coordinates and crossing lines do not automatically join nets. A complete but unapplied Graphical draft can be saved as a project. Save/Open and layout suggestions do not Apply it to Analyze; saved drawings remain unchanged unless an explicit, guarded layout adoption replaces them. After Save and reopening, check component terminal order and roles, ground, ordered observation anchors and wire bends. Independently recheck representative electrical calculations after Apply. See [project format and Save/Open ownership](PROJECT_FORMAT.md) and [wiring and layout APIs](WIRING_API.md).
