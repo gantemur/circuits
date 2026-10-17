@@ -4,7 +4,7 @@
 
 Circuits Unfolded is a browser laboratory for learning and working with small electrical circuits. It aims to make ordinary calculations convenient while showing the element laws, assembled equations, modeling assumptions, and transformations that produce the answer.
 
-The maintained mathematical core is teaching material too: substantive methods favor explicit stages, documented equations and numerical choices, and independently checked results so students can understand, validate, fork, and modify them. See the binding [readability policy](AGENTS.md) and [code guide](docs/CODE_GUIDE.md). Generated browser bundles may remain optimized.
+The maintained mathematical core is teaching material too: substantive methods favor explicit stages, documented equations and numerical choices, and independently checked results so students can understand, validate, fork, and modify them. See the public [contribution and readability policy](docs/CONTRIBUTING.md) and [code guide](docs/CODE_GUIDE.md). Generated browser bundles may remain optimized.
 
 The repository is named `circuits`. **Circuits Unfolded** is the working application name.
 
@@ -156,7 +156,7 @@ The defining feature is the connection between three views: schematic and physic
 
 | Document | Purpose |
 | --- | --- |
-| [AGENTS.md](AGENTS.md) | Instructions for coding agents and contributors |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Public scientific-source, testing, and contribution principles |
 | [docs/VISION.md](docs/VISION.md) | Full product direction and staged development |
 | [docs/MVP_SPECIFICATION.md](docs/MVP_SPECIFICATION.md) | Exact scope and acceptance criteria for Phase 0 |
 | [docs/PHASE_1_SPECIFICATION.md](docs/PHASE_1_SPECIFICATION.md) | Scope and acceptance criteria for the Phase 1A browser lab |
@@ -170,9 +170,8 @@ The defining feature is the connection between three views: schematic and physic
 | [docs/PHASE_3A4_SPECIFICATION.md](docs/PHASE_3A4_SPECIFICATION.md) | Task-branch browser nonlinear transient lab scope and acceptance |
 | [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | English/Mongolian terminology and language-neutral export convention |
 | [docs/MATHEMATICAL_CONVENTIONS.md](docs/MATHEMATICAL_CONVENTIONS.md) | Terminal signs, matrix signs, phasors, units, and evidence conventions |
-| [docs/REFERENCE_WORKFLOW.md](docs/REFERENCE_WORKFLOW.md) | How the companion book is supplied and used without publishing it |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Settled choices and current milestone |
-| [docs/CODEX_START.md](docs/CODEX_START.md) | Ready-to-use first Codex prompts |
+| [docs/REFERENCE_WORKFLOW.md](docs/REFERENCE_WORKFLOW.md) | Public policy for optional private mathematical references |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Concise public technical decisions and published release record |
 | [docs/KERNEL_API.md](docs/KERNEL_API.md) | Implemented APIs, native schema, diagnostics, and limitations |
 | [docs/CODE_GUIDE.md](docs/CODE_GUIDE.md) | Reading paths from device laws through solutions and transformations |
 | [fixtures/README.md](fixtures/README.md) | Acceptance fixtures and independent expected equations |
